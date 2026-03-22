@@ -37,10 +37,10 @@
 |---|-------|--------|------|
 | 1 | Project skeleton | ✅ | 2026-03-21 |
 | 2 | Empty main scene | ✅ | 2026-03-21 |
-| 3 | Terrain tileset (32px pixel art) | ⬜ | — |
-| 4 | TileMapLayer + hardcoded test map | ⬜ | — |
-| 5 | Camera zoom + pan | ⬜ | — |
-| 6 | Procedural terrain (Perlin noise) | ⬜ | — |
+| 3 | Terrain generation (procedural)  | ✅ | — |
+| 4 | MapManager + rendered terrain    | ✅ | — |
+| 5 | Camera zoom + pan | ✅ | — |
+| 6 | Ocean boundaries + noise layers  | ✅ | — |
 | 7 | Nations + territory colors | ⬜ | — |
 | 8 | City sprites on map | ⬜ | — |
 | 9 | Rivers (Bézier curves) | ⬜ | — |
