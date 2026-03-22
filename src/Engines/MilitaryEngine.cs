@@ -1,7 +1,7 @@
 using Godot;
 using System;
-using System.Linq;
 using Warship.Core;
+using Warship.Events;
 using Warship.Data;
 
 namespace Warship.Engines;
@@ -106,5 +106,100 @@ public partial class MilitaryEngine : Node
             unit.TargetPixelX = targetPos.X;
             unit.TargetPixelY = targetPos.Y;
         }
+
+        // --- FA-7 COMBAT SIMULATION ---
+        // If swarms collide, they battle. Strength is heavily tied to the Nation's Leaders.
+        for (int i = 0; i < world.Units.Count; i++)
+        {
+            var u1 = world.Units[i];
+            if (!u1.IsAlive) continue;
+            
+            for (int j = i + 1; j < world.Units.Count; j++)
+            {
+                var u2 = world.Units[j];
+                if (!u2.IsAlive) continue;
+                if (u1.NationId == u2.NationId) continue;
+                
+                float dx = u1.PixelX - u2.PixelX;
+                float dy = u1.PixelY - u2.PixelY;
+                float distSq = dx * dx + dy * dy;
+                
+                // If within 20 pixels of each other (melee range)
+                if (distSq < 400f)
+                {
+                    float u1Strength = GetNationStrength(world, u1.NationId);
+                    float u2Strength = GetNationStrength(world, u2.NationId);
+                    
+                    if (_rng.NextDouble() * u1Strength > _rng.NextDouble() * u2Strength)
+                    {
+                        u2.IsAlive = false; // u1 wins
+                        // Check if u2 was a character? Characters aren't in world.Units, they are in world.Characters.
+                    }
+                    else
+                    {
+                        u1.IsAlive = false; // u2 wins
+                    }
+                }
+            }
+        }
+
+        // --- FA-7 CITY CAPTURE ---
+        // If an enemy troop gets close enough to a city, they capture it! 
+        // This is why eliminating leaders is powerful (troops die, leaving cities undefended).
+        foreach (var unit in world.Units)
+        {
+            if (!unit.IsAlive) continue;
+
+            foreach (var city in world.Cities)
+            {
+                if (city.NationId == unit.NationId) continue; // Already own it
+
+                float cx = city.TileX * 64 + 32;
+                float cy = city.TileY * 64 + 32;
+                float distSq = (unit.PixelX - cx) * (unit.PixelX - cx) + (unit.PixelY - cy) * (unit.PixelY - cy);
+
+                if (distSq < 900f) // Within 30 pixels (half a tile)
+                {
+                    // The city is captured!
+                    var oldOwner = world.Nations[int.Parse(city.NationId.Split('_')[1])];
+                    var newOwner = world.Nations[int.Parse(unit.NationId.Split('_')[1])];
+
+                    city.NationId = unit.NationId;
+                    
+                    // Adjust territories
+                    oldOwner.ProvinceCount = Math.Max(0, oldOwner.ProvinceCount - 1);
+                    newOwner.ProvinceCount++;
+                    
+                    // Force the ownership map to update visually for the surrounding area
+                    // Not writing the complex flood-fill for borders here, but we will notify!
+                    if (newOwner.IsPlayer)
+                    {
+                        EventBus.Instance?.Publish(new NotificationEvent($"We captured {city.Name} from {oldOwner.Name}!", "success"));
+                    }
+                    else if (oldOwner.IsPlayer)
+                    {
+                        EventBus.Instance?.Publish(new NotificationEvent($"{city.Name} has fallen to {newOwner.Name}!", "danger"));
+                    }
+                }
+            }
+        }
+    }
+
+    private float GetNationStrength(WorldData world, string nationId)
+    {
+        // Base military effectiveness
+        float maxTa = 10f; 
+        
+        // Find highest Territory Authority amongst ALIVE leaders.
+        // If leaders are assassinated, troops lose morale and logistical support, making them easy to slaughter.
+        foreach (var c in world.Characters)
+        {
+            if (c.NationId == nationId && c.Role != "Eliminated")
+            {
+                if (c.TerritoryAuthority > maxTa) maxTa = c.TerritoryAuthority;
+            }
+        }
+        
+        return maxTa / 10f; // Multiplier between 1.0 (dead leaders) and 10.0 (iron grip)
     }
 }
