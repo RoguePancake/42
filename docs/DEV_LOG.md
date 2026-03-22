@@ -1,5 +1,11 @@
-# WARSHIP — Dev Log
+# FULL AUTHORITY — Dev Log
 ## Update After Every Session
+
+> **🚨 MAJOR VISION PIVOT 🚨**
+> The game has shifted from "Warship" (a 4X conqueror) to **Full Authority** (a Political Thriller). 
+> The old 30-phase roadmap below is now OBSOLETE. 
+> Development now firmly follows the new **`docs/FA_PHASE_PLAN.md`** roadmap to track progress towards the 100 FAI win condition!
+> The technical foundation (Map, Tiles, Core Engines) from Phases 1-17 remains in place.
 
 ---
 
