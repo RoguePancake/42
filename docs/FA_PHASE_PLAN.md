@@ -28,7 +28,7 @@ All previous map, rendering, and architecture phases (1-14) successfully laid th
   2. Implement functional actions: e.g., "Fund Domestic Militia" (Costs Treasury, increases TA, lowers WA). 
   3. Add Risk factors: Sometimes actions backfire and drop BSA instead.
 
-## 🟡 NEXT: Phase FA-4 (The Turn Engine & Rival AI)
+## 🟢 COMPLETE: Phase FA-4 (The Turn Engine & Rival AI)
 - **Goal:** Advance time and make the world alive.
 - **Implementation:**
   1. Build the `TurnEngine` to handle End Turn logic (calculating monthly income and passive decay of Authority).
