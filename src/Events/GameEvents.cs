@@ -18,3 +18,7 @@ public record PoliticalActionEvent(string ActorId, string TargetId, string Actio
 // Results (PoliticalEngine -> UI)
 public record AuthorityChangedEvent(string CharacterId, string Meter, float OldValue, float NewValue, string Reason) : IGameEvent;
 public record NotificationEvent(string Message, string Type) : IGameEvent; // Type: "success", "warning", "danger", "info"
+
+// Crisis System
+public record CrisisTriggeredEvent(string CrisisId, string Title, string Description, string[] Choices) : IGameEvent;
+public record CrisisResolvedEvent(string CrisisId, int ChoiceIndex) : IGameEvent;

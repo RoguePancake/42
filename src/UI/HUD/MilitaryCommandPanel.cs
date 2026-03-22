@@ -13,10 +13,12 @@ public partial class MilitaryCommandPanel : Control
 
     public override void _Ready()
     {
-        // Position bottom-left
-        AnchorsPreset = (int)LayoutPreset.BottomLeft;
-        OffsetTop = -180;
-        OffsetRight = 200;
+        // Position bottom-left firmly
+        SetAnchorsPreset(LayoutPreset.BottomLeft, true);
+        OffsetTop = -220; // 200px tall
+        OffsetBottom = -20; // 20px padding from bottom
+        OffsetLeft = 20;
+        OffsetRight = 240; // 220px wide
 
         var bg = new Panel();
         var style = new StyleBoxFlat

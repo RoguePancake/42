@@ -12,6 +12,8 @@
 [ext_resource type="Script" path="res://src/Engines/AIEngine.cs" id="10"]
 [ext_resource type="Script" path="res://src/Engines/MilitaryEngine.cs" id="11"]
 [ext_resource type="Script" path="res://src/UI/HUD/MilitaryCommandPanel.cs" id="12"]
+[ext_resource type="Script" path="res://src/Engines/CrisisEngine.cs" id="13"]
+[ext_resource type="Script" path="res://src/UI/HUD/CrisisPanel.cs" id="14"]
 
 [node name="Main" type="Node2D"]
 
@@ -29,6 +31,9 @@ script = ExtResource("10")
 
 [node name="MilitaryEngine" type="Node" parent="."]
 script = ExtResource("11")
+
+[node name="CrisisEngine" type="Node" parent="."]
+script = ExtResource("13")
 
 [node name="Background" type="ColorRect" parent="."]
 anchors_preset = 15
@@ -84,3 +89,13 @@ script = ExtResource("9")
 layout_mode = 3
 anchors_preset = 0
 script = ExtResource("12")
+
+[node name="CrisisPanel" type="Control" parent="UILayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("14")
