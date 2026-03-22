@@ -1,80 +1,119 @@
-/*  McpBridge.cs  –  Godot 4 Editor Plugin
- *  Starts a lightweight TCP server inside the editor so an external
- *  MCP server process can query / control the running project.
- *
- *  Protocol:  JSON-RPC 2.0 over TCP  (one JSON object per line).
- *  Default port: 6030  (configurable via Editor Settings).
+/*  McpBridge.cs  –  Godot 4.5 Editor Plugin
+ *  Uses System.Net instead of Godot networking to avoid API breaks.
+ *  TCP server on port 6030 for MCP communication.
  */
 
 #if TOOLS
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 
 namespace Warship;
 
 [Tool]
 public partial class McpBridge : EditorPlugin
 {
-    private TcpServer? _server;
-    private StreamPeerTcp? _peer;
+    private TcpListener? _listener;
+    private TcpClient? _client;
+    private NetworkStream? _stream;
     private int _port = 6030;
+    private byte[] _buffer = new byte[4096];
+    private string _partial = "";
 
     public override void _EnterTree()
     {
-        _server = new TcpServer();
-        var err = _server.Listen((ushort)_port);
-        if (err != Error.Ok)
+        try
         {
-            GD.PrintErr($"[MCP] Failed to listen on port {_port}: {err}");
-            return;
+            _listener = new TcpListener(IPAddress.Loopback, _port);
+            _listener.Start();
+            _listener.Server.Blocking = false;
+            GD.Print($"[MCP] Bridge listening on tcp://127.0.0.1:{_port}");
         }
-        GD.Print($"[MCP] Bridge listening on tcp://127.0.0.1:{_port}");
+        catch (Exception ex)
+        {
+            GD.PrintErr($"[MCP] Failed to listen on port {_port}: {ex.Message}");
+        }
     }
 
     public override void _ExitTree()
     {
-        _peer?.DisconnectFromHost();
-        _server?.Stop();
+        try
+        {
+            _stream?.Close();
+            _client?.Close();
+            _listener?.Stop();
+        }
+        catch { }
         GD.Print("[MCP] Bridge stopped.");
     }
 
     public override void _Process(double delta)
     {
-        if (_server == null) return;
+        if (_listener == null) return;
 
-        if (_server.IsConnectionAvailable())
+        // Accept new connections (non-blocking)
+        try
         {
-            _peer?.DisconnectFromHost();
-            _peer = _server.TakeConnection();
-            GD.Print("[MCP] Client connected.");
+            if (_listener.Pending())
+            {
+                _stream?.Close();
+                _client?.Close();
+                _client = _listener.AcceptTcpClient();
+                _client.NoDelay = true;
+                _stream = _client.GetStream();
+                GD.Print("[MCP] Client connected.");
+            }
         }
+        catch { }
 
-        if (_peer == null || _peer.GetStatus() != StreamPeerTcp.Status.Connected)
+        if (_client == null || !_client.Connected || _stream == null)
             return;
 
-        int avail = _peer.GetAvailableBytes();
-        if (avail <= 0) return;
-
-        byte[] data = _peer.GetData(avail)[1].AsByteArray();
-        string raw = Encoding.UTF8.GetString(data);
-
-        foreach (string line in raw.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        // Read available data (non-blocking)
+        try
         {
-            try
+            if (!_stream.DataAvailable) return;
+
+            int bytesRead = _stream.Read(_buffer, 0, _buffer.Length);
+            if (bytesRead <= 0) return;
+
+            _partial += Encoding.UTF8.GetString(_buffer, 0, bytesRead);
+
+            // Process complete lines
+            while (_partial.Contains('\n'))
             {
-                var request = JsonSerializer.Deserialize<JsonElement>(line);
-                string method = request.GetProperty("method").GetString() ?? "";
-                var id = request.TryGetProperty("id", out var idEl) ? idEl.GetInt32() : 0;
-                var result = HandleMethod(method, request);
-                SendResponse(id, result);
+                int idx = _partial.IndexOf('\n');
+                string line = _partial.Substring(0, idx).Trim();
+                _partial = _partial.Substring(idx + 1);
+
+                if (string.IsNullOrEmpty(line)) continue;
+
+                try
+                {
+                    var request = JsonSerializer.Deserialize<JsonElement>(line);
+                    string method = request.GetProperty("method").GetString() ?? "";
+                    var id = request.TryGetProperty("id", out var idEl) ? idEl.GetInt32() : 0;
+                    var result = HandleMethod(method, request);
+                    SendResponse(id, result);
+                }
+                catch (Exception ex)
+                {
+                    GD.PrintErr($"[MCP] Parse error: {ex.Message}");
+                }
             }
-            catch (Exception ex)
-            {
-                GD.PrintErr($"[MCP] Error: {ex.Message}");
-            }
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"[MCP] Read error: {ex.Message}");
+            _stream?.Close();
+            _client?.Close();
+            _client = null;
+            _stream = null;
         }
     }
 
@@ -82,7 +121,7 @@ public partial class McpBridge : EditorPlugin
     {
         return method switch
         {
-            "ping" => new() { ["status"] = "ok", ["engine"] = "Godot 4", ["project"] = "WARSHIP" },
+            "ping" => new() { ["status"] = "ok", ["engine"] = "Godot 4.5", ["project"] = "WARSHIP" },
 
             "get_project_info" => new()
             {
@@ -92,12 +131,12 @@ public partial class McpBridge : EditorPlugin
 
             "list_scenes" => new()
             {
-                ["scenes"] = ListFilesRecursive("res://scenes", "*.tscn"),
+                ["scenes"] = ListFilesRecursive("res://scenes", ".tscn"),
             },
 
             "list_scripts" => new()
             {
-                ["scripts"] = ListFilesRecursive("res://src", "*.cs"),
+                ["scripts"] = ListFilesRecursive("res://src", ".cs"),
             },
 
             "get_scene_tree" => GetSceneTreeInfo(),
@@ -112,6 +151,7 @@ public partial class McpBridge : EditorPlugin
 
     private void SendResponse(int id, Dictionary<string, object?> result)
     {
+        if (_stream == null || !_stream.CanWrite) return;
         var response = new Dictionary<string, object?>
         {
             ["jsonrpc"] = "2.0",
@@ -119,10 +159,11 @@ public partial class McpBridge : EditorPlugin
             ["result"] = result,
         };
         string json = JsonSerializer.Serialize(response) + "\n";
-        _peer?.PutData(Encoding.UTF8.GetBytes(json));
+        byte[] bytes = Encoding.UTF8.GetBytes(json);
+        _stream.Write(bytes, 0, bytes.Length);
     }
 
-    private List<string> ListFilesRecursive(string path, string pattern)
+    private List<string> ListFilesRecursive(string path, string ext)
     {
         var files = new List<string>();
         var dir = DirAccess.Open(path);
@@ -134,8 +175,8 @@ public partial class McpBridge : EditorPlugin
         {
             string fullPath = $"{path}/{fileName}";
             if (dir.CurrentIsDir())
-                files.AddRange(ListFilesRecursive(fullPath, pattern));
-            else if (fileName.EndsWith(pattern.Replace("*", "")))
+                files.AddRange(ListFilesRecursive(fullPath, ext));
+            else if (fileName.EndsWith(ext))
                 files.Add(fullPath);
             fileName = dir.GetNext();
         }
