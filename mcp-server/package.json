@@ -1,0 +1,13 @@
+{
+  "name": "warship-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server bridging Claude AI to Godot editor for WARSHIP",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
