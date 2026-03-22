@@ -21,14 +21,14 @@ All previous map, rendering, and architecture phases (1-14) successfully laid th
   2. The panel displays their Role, Allegiance, and estimated Authority scores (hidden behind an intelligence "fog of war").
   3. Includes an empty **Action Menu** (e.g., "Investigate", "Bribe", "Threaten") for future use.
 
-## ⚪ Phase FA-3 (The Power Play Engine)
+## 🟢 COMPLETE: Phase FA-3 (The Power Play Engine)
 - **Goal:** Make the Authority meters shift based on decisions.
 - **Implementation:**
   1. Build the `PoliticalEngine` to process actions via the `EventBus`.
   2. Implement functional actions: e.g., "Fund Domestic Militia" (Costs Treasury, increases TA, lowers WA). 
   3. Add Risk factors: Sometimes actions backfire and drop BSA instead.
 
-## ⚪ Phase FA-4 (The Turn Engine & Rival AI)
+## 🟡 NEXT: Phase FA-4 (The Turn Engine & Rival AI)
 - **Goal:** Advance time and make the world alive.
 - **Implementation:**
   1. Build the `TurnEngine` to handle End Turn logic (calculating monthly income and passive decay of Authority).
