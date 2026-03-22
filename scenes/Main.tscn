@@ -1,4 +1,7 @@
-[gd_scene format=3 uid="uid://main_scene"]
+[gd_scene load_steps=3 format=3 uid="uid://main_scene"]
+
+[ext_resource type="Script" path="res://src/UI/Map/MapManager.cs" id="1"]
+[ext_resource type="Script" path="res://src/UI/Map/MapCamera.cs" id="2"]
 
 [node name="Main" type="Node2D"]
 
@@ -10,5 +13,8 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.039, 0.039, 0.102, 1)
 
+[node name="MapManager" type="Node2D" parent="."]
+script = ExtResource("1")
+
 [node name="MainCamera" type="Camera2D" parent="."]
-position = Vector2(640, 360)
+script = ExtResource("2")
