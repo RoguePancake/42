@@ -56,8 +56,15 @@ All previous map, rendering, and architecture phases (1-14) successfully laid th
   2. If a nation's troops capture an enemy city, ownership changes.
   3. **High-Value Targets:** Assassinating a rival nation's Leader (VIP) plummets that nation's Authority and troop strength, making them significantly easier to conquer. *Leaders are physical targets.*
 
-## ⚪ Phase FA-8 (The Ascension to Full Authority)
+## 🟢 COMPLETE: Phase FA-8 (The Ascension to Full Authority)
 - **Goal:** The Win condition.
 - **Implementation:**
-  1. Reaching an FAI of 100 triggers a victory sequence (e.g., seizing direct global control).
-  2. Option to "Continue Simulation" as the unchallenged dictator attempting to maximize World Authority globally.
+  1. `VictoryEngine` monitors the Player's FAI. Reaching an FAI of 90 triggers the victory condition.
+  2. `VictoryPanel` overlays the screen, forcing a pause and declaring the geopolitical domination.
+  3. Option to "Continue Simulation" as the unchallenged dictator attempting to maximize World Authority globally.
+
+## 🟢 COMPLETE: Phase FA-9 (The Start Screen)
+- **Goal:** A professional entry point instead of dropping right into the map.
+- **Implementation:**
+  1. Boot intro straight to `MainMenu.tscn`.
+  2. "New Campaign", "Continue", and "Exit" buttons.
