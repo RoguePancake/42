@@ -1,5 +1,6 @@
 using Godot;
 using Warship.World;
+using Warship.Data;
 
 namespace Warship.UI.Map;
 
@@ -14,7 +15,7 @@ public partial class MapManager : Node2D
     public const int MapHeight = 50;
     public const int Seed = 42;
 
-    private int[,]? _terrain;
+    private WorldData? _world;
 
     // SNES-style terrain colors
     private static readonly Color[] TerrainColors = new Color[]
@@ -44,21 +45,21 @@ public partial class MapManager : Node2D
 
     public override void _Ready()
     {
-        GD.Print("[MapManager] Generating terrain...");
-        _terrain = TerrainGenerator.Generate(MapWidth, MapHeight, Seed);
-        GD.Print($"[MapManager] Terrain generated: {MapWidth}×{MapHeight}, seed={Seed}");
+        GD.Print("[MapManager] Generating world...");
+        _world = WorldGenerator.CreateWorld(MapWidth, MapHeight, Seed);
+        GD.Print($"[MapManager] World generated: {MapWidth}×{MapHeight}, seed={Seed}");
         QueueRedraw();
     }
 
     public override void _Draw()
     {
-        if (_terrain == null) return;
+        if (_world == null || _world.TerrainMap == null || _world.OwnershipMap == null) return;
 
         for (int x = 0; x < MapWidth; x++)
         {
             for (int y = 0; y < MapHeight; y++)
             {
-                int t = _terrain[x, y];
+                int t = _world.TerrainMap[x, y];
                 var pos = new Vector2(x * TileSize, y * TileSize);
                 var size = new Vector2(TileSize, TileSize);
 
@@ -67,6 +68,36 @@ public partial class MapManager : Node2D
 
                 // Add pixel detail based on terrain type
                 DrawTileDetail(x, y, t, pos);
+            }
+        }
+        
+        // Draw borders ON TOP of terrain details
+        for (int x = 0; x < MapWidth; x++)
+        {
+            for (int y = 0; y < MapHeight; y++)
+            {
+                int owner = _world.OwnershipMap[x, y];
+                if (owner == -1) continue;
+                
+                var natColor = _world.Nations[owner].NationColor;
+                var pos = new Vector2(x * TileSize, y * TileSize);
+                
+                // Draw a simple 20% transparent overlay on the tile
+                DrawRect(new Rect2(pos, new Vector2(TileSize, TileSize)), new Color(natColor, 0.2f));
+                
+                // Draw opaque border lines if neighbor is different or unclaimed
+                // Top
+                if (y == 0 || _world.OwnershipMap[x, y - 1] != owner)
+                    DrawLine(pos, pos + new Vector2(TileSize, 0), natColor, 2);
+                // Bottom
+                if (y == MapHeight - 1 || _world.OwnershipMap[x, y + 1] != owner)
+                    DrawLine(pos + new Vector2(0, TileSize), pos + new Vector2(TileSize, TileSize), natColor, 2);
+                // Left
+                if (x == 0 || _world.OwnershipMap[x - 1, y] != owner)
+                    DrawLine(pos, pos + new Vector2(0, TileSize), natColor, 2);
+                // Right
+                if (x == MapWidth - 1 || _world.OwnershipMap[x + 1, y] != owner)
+                    DrawLine(pos + new Vector2(TileSize, 0), pos + new Vector2(TileSize, TileSize), natColor, 2);
             }
         }
     }
@@ -170,9 +201,9 @@ public partial class MapManager : Node2D
     /// <summary>Get terrain type at a tile coordinate.</summary>
     public int GetTerrain(int x, int y)
     {
-        if (_terrain == null || x < 0 || x >= MapWidth || y < 0 || y >= MapHeight)
+        if (_world == null || _world.TerrainMap == null || x < 0 || x >= MapWidth || y < 0 || y >= MapHeight)
             return 0;
-        return _terrain[x, y];
+        return _world.TerrainMap[x, y];
     }
 
     /// <summary>Convert pixel position to tile coordinate.</summary>

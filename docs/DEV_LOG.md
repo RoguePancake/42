@@ -41,7 +41,7 @@
 | 4 | MapManager + rendered terrain    | ✅ | — |
 | 5 | Camera zoom + pan | ✅ | — |
 | 6 | Ocean boundaries + noise layers  | ✅ | — |
-| 7 | Nations + territory colors | ⬜ | — |
+| 7 | Nations + territory colors | ✅ | — |
 | 8 | City sprites on map | ⬜ | — |
 | 9 | Rivers (Bézier curves) | ⬜ | — |
 | 10 | Unit sprite: tank on map | ⬜ | — |
