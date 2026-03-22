@@ -41,14 +41,23 @@ All previous map, rendering, and architecture phases (1-14) successfully laid th
   2. Generate crises (e.g., "Border Skirmish with China", "Data Leak").
   3. Force the player to make a choice that directly impacts TA, WA, or BSA.
 
-## ⚪ Phase FA-6 (Military Control & Loyalty)
-- **Goal:** Tie the physical map to political power.
+## 🟢 COMPLETE: Phase FA-6 (Swarm Military Control)
+- **Goal:** Command massive global forces in real-time.
 - **Implementation:** 
-  1. Military units (Tanks, Ships) on the map only follow orders if the Player's Territory Authority (TA) in that region is high enough.
-  2. If a rival General gains more TA than the player, those units defect and turn hostile.
+  1. Spawns 3,000 troops globally (500 per nation) rendered natively without performance loss.
+  2. Built `MilitaryEngine` to control troops as a continuous swarm.
+  3. Added the **Army Command Panel** to assign global orders (Stage, Attack, Border Watch, Patrol).
+  4. Players drop markers on the map to funnel entirely 500-troop armies across the world.
 
-## ⚪ Phase FA-7 (The Ascension to Full Authority)
+## 🟡 NEXT: Phase FA-7 (Combat & Military Conquest)
+- **Goal:** Make swarms capable of fighting and taking territory, heavily influenced by leader assassinations.
+- **Implementation:**
+  1. Swarms from different nations colliding will destroy each other (Combat simulation).
+  2. If a nation's troops capture an enemy city, ownership changes.
+  3. **High-Value Targets:** Assassinating a rival nation's Leader (VIP) plummets that nation's Authority and troop strength, making them significantly easier to conquer. *Leaders are physical targets.*
+
+## ⚪ Phase FA-8 (The Ascension to Full Authority)
 - **Goal:** The Win condition.
 - **Implementation:**
-  1. Reaching an FAI of 100 within a domestic nation triggers a victory sequence (e.g., seizing direct constitutional control or launching a successful purge without resistance).
+  1. Reaching an FAI of 100 triggers a victory sequence (e.g., seizing direct global control).
   2. Option to "Continue Simulation" as the unchallenged dictator attempting to maximize World Authority globally.

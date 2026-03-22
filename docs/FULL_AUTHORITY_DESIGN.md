@@ -22,8 +22,9 @@ Every VIP in the game is tracked across three massive metrics:
 The combination of these forms the **FAI**. 
 Depending on the regime (Democracy vs Junta), the ladder to 100 FAI is entirely different.
 
-### 3. VIP Characters on the Map
+### 3. VIP Characters on the Map (High Value Targets)
 Characters (VIPs) physically exist on the world map! `CharacterData` represents real targets. They can be selected, tracked, assassinated, or moved. The player themselves is a physical entity on the board.
+Because VIPs act as the anchors of a nation's Authority, **eliminating rival leaders directly weakens their country's stability**. Assassinating a foreign President or General will plummet their Territory Authority, making their country vastly easier to conquer by force. VIPs are not just stats—they are physical lynchpins of power that can be captured, bribed, threatened, or wiped from the map entirely.
 
 ### 4. Real World Focus
 Moving forward, procedurally generated blank-slate nations have been replaced by real-world equivalents (USA, China, Russia, EU, India, UK) to anchor the complex diplomacy systems in immediate reality.
