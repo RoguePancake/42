@@ -5,20 +5,29 @@
 
 ## Current Status
 
-**Phase:** 0 (not started)
-**Branch:** N/A
+**Phase:** 2 (complete)
+**Branch:** main
 **Tag:** N/A
-**Last Session:** N/A
+**Last Session:** 2026-03-21
 
 ---
 
 ## Session Log
 
-### Session 1 — [DATE]
-**Goal:** Phase 1-6 (project skeleton → terrain on screen)
-**Done:** 
-**Issues:**
-**Next:**
+### Session 1 — 2026-03-21
+**Goal:** Phase 1-2 (project skeleton + empty scene)
+**Done:**
+- Created fresh `~/Desktop/42/` project from scratch
+- `project.godot` — C# enabled, 1280×720, Main.tscn as main scene
+- `Warship.csproj` — .NET 8, Godot.NET.Sdk 4.3.0
+- All `src/` directories: Core, Engines, Player, AI, Data, Events, World, UI
+- All `assets/` directories: tilesets, sprites, fonts, themes, audio
+- Copied all design docs from rootfiles
+- `scenes/Main.tscn` — Node2D + dark ColorRect (#0a0a1a) + Camera2D
+- `dotnet build` — ✅ 0 errors
+- Git initialized, committed as `f710dab`
+**Issues:** None
+**Next:** Phase 3 — Terrain tileset (32×32 pixel art)
 
 ---
 
@@ -26,8 +35,8 @@
 
 | # | Phase | Status | Date |
 |---|-------|--------|------|
-| 1 | Project skeleton | ⬜ | — |
-| 2 | Empty main scene | ⬜ | — |
+| 1 | Project skeleton | ✅ | 2026-03-21 |
+| 2 | Empty main scene | ✅ | 2026-03-21 |
 | 3 | Terrain tileset (32px pixel art) | ⬜ | — |
 | 4 | TileMapLayer + hardcoded test map | ⬜ | — |
 | 5 | Camera zoom + pan | ⬜ | — |
@@ -63,7 +72,8 @@
 
 | # | Decision | Why |
 |---|----------|-----|
-| | | |
+| 1 | Fresh project at ~/Desktop/42/ | Clean start, no legacy baggage |
+| 2 | Godot.NET.Sdk 4.3.0 with .NET 8 | Matches locally cached SDK |
 
 ---
 
