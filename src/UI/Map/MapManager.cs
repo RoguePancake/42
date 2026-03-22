@@ -5,73 +5,154 @@ using Warship.Data;
 namespace Warship.UI.Map;
 
 /// <summary>
-/// Renders the terrain map as colored rectangles. 
-/// Simple and fast — no external tileset images needed.
+/// "AAA Graphics Update" Map Renderer
+/// Uses programmatically generated high-definition textures (64x64) for terrain,
+/// draws smooth rivers, isometric 3D-looking cities, and neon borders.
 /// </summary>
 public partial class MapManager : Node2D
 {
-    public const int TileSize = 32;
+    public const int TileSize = 64;  // Doubled from 32 for HD feel
     public const int MapWidth = 80;
     public const int MapHeight = 50;
     public const int Seed = 42;
 
     private WorldData? _world;
-
-    // SNES-style terrain colors
+    private Texture2D[] _terrainTextures = new Texture2D[8];
+    
+    // SNES-style base theme but cranked up
     private static readonly Color[] TerrainColors = new Color[]
     {
-        new Color(0.11f, 0.23f, 0.43f),  // 0: Deep Water — dark blue
-        new Color(0.16f, 0.39f, 0.66f),  // 1: Water — medium blue
-        new Color(0.83f, 0.72f, 0.44f),  // 2: Sand — warm tan
-        new Color(0.28f, 0.66f, 0.28f),  // 3: Grass — rich green
-        new Color(0.16f, 0.41f, 0.16f),  // 4: Forest — dark green
-        new Color(0.48f, 0.55f, 0.35f),  // 5: Hills — green-brown
-        new Color(0.54f, 0.46f, 0.38f),  // 6: Mountain — gray-brown
-        new Color(0.88f, 0.91f, 0.94f),  // 7: Snow — white-blue
-    };
-
-    // Secondary shading colors for tile detail
-    private static readonly Color[] TerrainAccents = new Color[]
-    {
-        new Color(0.08f, 0.18f, 0.35f),  // Deep Water accent
-        new Color(0.20f, 0.45f, 0.72f),  // Water highlight
-        new Color(0.75f, 0.65f, 0.38f),  // Sand shadow
-        new Color(0.35f, 0.72f, 0.30f),  // Grass flowers
-        new Color(0.12f, 0.30f, 0.10f),  // Forest shadow
-        new Color(0.55f, 0.50f, 0.30f),  // Hills highlight
-        new Color(0.70f, 0.65f, 0.60f),  // Mountain snow cap
-        new Color(0.95f, 0.97f, 1.00f),  // Snow sparkle
+        new Color(0.08f, 0.16f, 0.32f),  // 0: Deep Water
+        new Color(0.12f, 0.32f, 0.58f),  // 1: Water
+        new Color(0.85f, 0.76f, 0.50f),  // 2: Sand
+        new Color(0.32f, 0.62f, 0.30f),  // 3: Grass
+        new Color(0.18f, 0.40f, 0.20f),  // 4: Forest
+        new Color(0.48f, 0.56f, 0.38f),  // 5: Hills
+        new Color(0.55f, 0.48f, 0.42f),  // 6: Mountain
+        new Color(0.92f, 0.94f, 0.96f),  // 7: Snow
     };
 
     public override void _Ready()
     {
-        GD.Print("[MapManager] Generating world...");
+        GD.Print("[MapManager] Generating AAA world features...");
         _world = WorldGenerator.CreateWorld(MapWidth, MapHeight, Seed);
-        GD.Print($"[MapManager] World generated: {MapWidth}×{MapHeight}, seed={Seed}");
+
+        GenerateHDTextures();
+        
+        GD.Print($"[MapManager] World generated and textures baked!");
         QueueRedraw();
+    }
+
+    /// <summary>
+    /// Generates beautiful 64x64 textures for each terrain type using FastNoiseLite.
+    /// This gives us the "AAA" pixel-perfect seamless look without needing external images.
+    /// </summary>
+    private void GenerateHDTextures()
+    {
+        var noise = new FastNoiseLite();
+        noise.Seed = Seed;
+        noise.NoiseType = FastNoiseLite.NoiseTypeEnum.Perlin;
+        
+        var detailsNoise = new FastNoiseLite();
+        detailsNoise.Seed = Seed + 1;
+        detailsNoise.NoiseType = FastNoiseLite.NoiseTypeEnum.Cellular;
+        detailsNoise.CellularDistanceFunction = FastNoiseLite.CellularDistanceFunctionEnum.Euclidean;
+
+        for (int t = 0; t < 8; t++)
+        {
+            var img = Image.CreateEmpty(TileSize, TileSize, false, Image.Format.Rgba8);
+            Color baseColor = TerrainColors[t];
+            Color highlight = baseColor.Lightened(0.15f);
+            Color shadow = baseColor.Darkened(0.15f);
+
+            for (int px = 0; px < TileSize; px++)
+            {
+                for (int py = 0; py < TileSize; py++)
+                {
+                    // Blend base noise
+                    float n = noise.GetNoise2D(px * 15f + (t * 100), py * 15f); // Scale noise
+                    float cell = detailsNoise.GetNoise2D(px * 10f, py * 10f);
+                    
+                    Color pixelColor = baseColor;
+                    
+                    if (t == (int)TerrainType.DeepWater || t == (int)TerrainType.Water)
+                    {
+                        // Water gets wavy lateral noise
+                        pixelColor = n > 0.2f ? highlight : (cell < -0.2f ? shadow : baseColor);
+                    }
+                    else if (t == (int)TerrainType.Sand)
+                    {
+                        // Sand gets tiny speckles
+                        pixelColor = cell > 0.6f ? shadow : (cell < -0.6f ? highlight : baseColor);
+                    }
+                    else if (t == (int)TerrainType.Grass)
+                    {
+                        // Grass gets sweeping tufts
+                        pixelColor = n > 0.4f ? highlight : baseColor;
+                        if (cell > 0.7f) pixelColor = new Color(0.9f, 0.85f, 0.2f); // Tiny flowers
+                    }
+                    else if (t == (int)TerrainType.Forest)
+                    {
+                        // Forest gets cellular canopy patterns
+                        pixelColor = cell > 0.1f ? highlight : shadow;
+                    }
+                    else if (t == (int)TerrainType.Hills)
+                    {
+                        // Rolling gradients
+                        pixelColor = n > 0f ? highlight : shadow;
+                    }
+                    else if (t == (int)TerrainType.Mountain)
+                    {
+                        // Jagged crags
+                        pixelColor = cell > 0.2f ? shadow : baseColor;
+                        if (py < 12 && cell > -0.2f) pixelColor = Colors.White; // Snow caps natively in the texture!
+                    }
+                    else if (t == (int)TerrainType.Snow)
+                    {
+                        pixelColor = cell > 0.5f ? highlight : baseColor;
+                    }
+
+                    img.SetPixel(px, py, pixelColor);
+                }
+            }
+            
+            _terrainTextures[t] = ImageTexture.CreateFromImage(img);
+        }
     }
 
     public override void _Draw()
     {
         if (_world == null || _world.TerrainMap == null || _world.OwnershipMap == null) return;
 
+        // 1. Draw HD Terrain 
         for (int x = 0; x < MapWidth; x++)
         {
             for (int y = 0; y < MapHeight; y++)
             {
                 int t = _world.TerrainMap[x, y];
                 var pos = new Vector2(x * TileSize, y * TileSize);
-                var size = new Vector2(TileSize, TileSize);
-
-                // Base tile color
-                DrawRect(new Rect2(pos, size), TerrainColors[t]);
-
-                // Add pixel detail based on terrain type
-                DrawTileDetail(x, y, t, pos);
+                DrawTexture(_terrainTextures[t], pos);
             }
         }
-        
-        // Draw borders ON TOP of terrain details
+
+        // 2. Draw Rivers (Thick, meandering bezier-like lines)
+        var riverColor = TerrainColors[(int)TerrainType.Water].Lightened(0.2f);
+        foreach (var river in _world.RiverPaths)
+        {
+            if (river.Length < 2) continue;
+            var points = new Vector2[river.Length];
+            for (int i = 0; i < river.Length; i++)
+                points[i] = new Vector2(river[i].X * TileSize, river[i].Y * TileSize);
+            
+            // Draw wide river shadow
+            DrawPolyline(points, new Color(0,0,0,0.3f), 8, true);
+            // Draw flowing river
+            DrawPolyline(points, riverColor, 6, true);
+            // River center highlight
+            DrawPolyline(points, Colors.White, 2, true);
+        }
+
+        // 3. Draw Splendid Borders & Overlays
         for (int x = 0; x < MapWidth; x++)
         {
             for (int y = 0; y < MapHeight; y++)
@@ -82,119 +163,58 @@ public partial class MapManager : Node2D
                 var natColor = _world.Nations[owner].NationColor;
                 var pos = new Vector2(x * TileSize, y * TileSize);
                 
-                // Draw a simple 20% transparent overlay on the tile
-                DrawRect(new Rect2(pos, new Vector2(TileSize, TileSize)), new Color(natColor, 0.2f));
+                // Territory overlay tint
+                DrawRect(new Rect2(pos, new Vector2(TileSize, TileSize)), new Color(natColor, 0.15f));
                 
-                // Draw opaque border lines if neighbor is different or unclaimed
-                // Top
+                // Glowing Borders
+                float borderW = 4f;
+                Color glow = natColor; // Opaque color for the border
+                
                 if (y == 0 || _world.OwnershipMap[x, y - 1] != owner)
-                    DrawLine(pos, pos + new Vector2(TileSize, 0), natColor, 2);
-                // Bottom
+                    DrawLine(pos, pos + new Vector2(TileSize, 0), glow, borderW);
                 if (y == MapHeight - 1 || _world.OwnershipMap[x, y + 1] != owner)
-                    DrawLine(pos + new Vector2(0, TileSize), pos + new Vector2(TileSize, TileSize), natColor, 2);
-                // Left
+                    DrawLine(pos + new Vector2(0, TileSize), pos + new Vector2(TileSize, TileSize), glow, borderW);
                 if (x == 0 || _world.OwnershipMap[x - 1, y] != owner)
-                    DrawLine(pos, pos + new Vector2(0, TileSize), natColor, 2);
-                // Right
+                    DrawLine(pos, pos + new Vector2(0, TileSize), glow, borderW);
                 if (x == MapWidth - 1 || _world.OwnershipMap[x + 1, y] != owner)
-                    DrawLine(pos + new Vector2(TileSize, 0), pos + new Vector2(TileSize, TileSize), natColor, 2);
+                    DrawLine(pos + new Vector2(TileSize, 0), pos + new Vector2(TileSize, TileSize), glow, borderW);
             }
         }
-    }
 
-    /// <summary>
-    /// Adds SNES-style pixel detail to each tile — dots, lines, shapes.
-    /// Uses a deterministic hash so details are consistent.
-    /// </summary>
-    private void DrawTileDetail(int tx, int ty, int terrain, Vector2 pos)
-    {
-        int hash = (tx * 7919 + ty * 104729) & 0xFFFF;
-        Color accent = TerrainAccents[terrain];
-
-        switch (terrain)
+        // 4. Draw AAA Cities
+        foreach (var city in _world.Cities)
         {
-            case 0: // Deep Water — wave lines
-                if ((hash & 3) == 0)
-                {
-                    float waveY = pos.Y + 10 + (hash % 12);
-                    DrawLine(new Vector2(pos.X + 4, waveY), new Vector2(pos.X + 28, waveY), accent, 1);
-                }
-                break;
-
-            case 1: // Water — foam dots
-                if ((hash & 3) < 2)
-                {
-                    DrawCircle(new Vector2(pos.X + 8 + (hash % 16), pos.Y + 8 + ((hash >> 4) % 16)), 1.5f, accent);
-                }
-                break;
-
-            case 2: // Sand — pebble dots
-                for (int i = 0; i < 3; i++)
-                {
-                    int px = ((hash >> (i * 3)) % 24) + 4;
-                    int py = ((hash >> (i * 3 + 1)) % 24) + 4;
-                    DrawCircle(new Vector2(pos.X + px, pos.Y + py), 1, accent);
-                }
-                break;
-
-            case 3: // Grass — flower dots
-                for (int i = 0; i < 4; i++)
-                {
-                    int px = ((hash >> (i * 4)) % 26) + 3;
-                    int py = ((hash >> (i * 4 + 2)) % 26) + 3;
-                    Color flowerColor = (i % 2 == 0) ? accent : new Color(0.9f, 0.85f, 0.2f);
-                    DrawCircle(new Vector2(pos.X + px, pos.Y + py), 1, flowerColor);
-                }
-                break;
-
-            case 4: // Forest — tree shapes (trunk + canopy circle)
+            var pos = new Vector2(city.TileX * TileSize + (TileSize / 2f), city.TileY * TileSize + (TileSize / 2f));
+            var natColor = _world.Nations[int.Parse(city.NationId.Split('_')[1])].NationColor;
+            
+            // Draw a multi-layered isometric castle icon using polygons
+            if (city.IsCapital)
             {
-                int trees = 1 + (hash & 1);
-                for (int i = 0; i < trees; i++)
-                {
-                    float cx = pos.X + 8 + (i * 14) + (hash % 6);
-                    float cy = pos.Y + 12 + ((hash >> 2) % 8);
-                    // Trunk
-                    DrawLine(new Vector2(cx, cy + 4), new Vector2(cx, cy + 10), new Color(0.35f, 0.22f, 0.10f), 2);
-                    // Canopy
-                    DrawCircle(new Vector2(cx, cy), 5, accent);
-                    DrawCircle(new Vector2(cx, cy - 2), 3, TerrainColors[4]);
-                }
-                break;
+                // Shadow
+                DrawCircle(pos + new Vector2(0, 8), 16, new Color(0, 0, 0, 0.5f));
+                
+                // Keep base
+                DrawRect(new Rect2(pos.X - 12, pos.Y - 12, 24, 24), Colors.DarkGray);
+                DrawRect(new Rect2(pos.X - 12, pos.Y - 12, 12, 24), Colors.Gray); // left light
+                
+                // Roof
+                Vector2[] roof = { new Vector2(pos.X - 16, pos.Y - 12), new Vector2(pos.X + 16, pos.Y - 12), new Vector2(pos.X, pos.Y - 24) };
+                DrawPolygon(roof, new Color[] { natColor, natColor, natColor });
+                
+                // Nation Flag Pole
+                DrawLine(new Vector2(pos.X, pos.Y - 24), new Vector2(pos.X, pos.Y - 38), Colors.DarkGoldenrod, 2);
+                DrawRect(new Rect2(pos.X, pos.Y - 38, 10, 6), natColor);
+                
+                // Glow point
+                DrawCircle(pos, 3, Colors.LightYellow);
             }
-
-            case 5: // Hills — curved hill line
+            else // Minor town
             {
-                float cx = pos.X + 16;
-                float cy = pos.Y + 18;
-                DrawArc(new Vector2(cx, cy), 10, Mathf.Pi * 0.15f, Mathf.Pi * 0.85f, 8, accent, 2);
-                break;
+                DrawCircle(pos + new Vector2(0, 4), 10, new Color(0, 0, 0, 0.4f));
+                DrawRect(new Rect2(pos.X - 8, pos.Y - 8, 16, 16), Colors.SaddleBrown);
+                Vector2[] roof = { new Vector2(pos.X - 10, pos.Y - 8), new Vector2(pos.X + 10, pos.Y - 8), new Vector2(pos.X, pos.Y - 16) };
+                DrawPolygon(roof, new Color[] { natColor, natColor, natColor });
             }
-
-            case 6: // Mountain — triangle peak with snow cap
-            {
-                float cx = pos.X + 16;
-                float baseY = pos.Y + 28;
-                var peak = new Vector2(cx, pos.Y + 4);
-                var left = new Vector2(cx - 12, baseY);
-                var right = new Vector2(cx + 12, baseY);
-                // Mountain body
-                DrawLine(left, peak, accent, 2);
-                DrawLine(peak, right, accent, 2);
-                DrawLine(left, right, accent, 1);
-                // Snow cap
-                DrawCircle(new Vector2(cx, pos.Y + 7), 3, TerrainAccents[7]);
-                break;
-            }
-
-            case 7: // Snow — sparkle dots
-                for (int i = 0; i < 5; i++)
-                {
-                    int px = ((hash >> (i * 3)) % 28) + 2;
-                    int py = ((hash >> (i * 3 + 1)) % 28) + 2;
-                    DrawCircle(new Vector2(pos.X + px, pos.Y + py), 0.8f, accent);
-                }
-                break;
         }
     }
 
@@ -206,13 +226,11 @@ public partial class MapManager : Node2D
         return _world.TerrainMap[x, y];
     }
 
-    /// <summary>Convert pixel position to tile coordinate.</summary>
     public static Vector2I PixelToTile(Vector2 pixel)
     {
         return new Vector2I((int)(pixel.X / TileSize), (int)(pixel.Y / TileSize));
     }
 
-    /// <summary>Convert tile coordinate to pixel center.</summary>
     public static Vector2 TileToPixel(int tx, int ty)
     {
         return new Vector2(tx * TileSize + TileSize / 2f, ty * TileSize + TileSize / 2f);

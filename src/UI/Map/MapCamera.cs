@@ -35,7 +35,7 @@ public partial class MapCamera : Camera2D
 
         // Center camera on map
         Position = new Vector2(_mapWidth / 2f, _mapHeight / 2f);
-        _targetZoom = 0.8f; // Start slightly zoomed out so you can see more
+        _targetZoom = 0.4f; // Start zoomed out further for 64px tiles
 
         GD.Print("[MapCamera] Ready — WASD/arrows to pan, scroll to zoom, middle-click drag");
     }

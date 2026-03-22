@@ -17,6 +17,8 @@ public class WorldData
     public int[,]? OwnershipMap;  // nation index per cell, -1 = unclaimed
     
     public List<NationData> Nations = new();
+    public List<CityData> Cities = new();
+    public List<Vector2[]> RiverPaths = new();
 }
 
 public enum TerrainType
@@ -56,4 +58,14 @@ public class NationData
     // Map
     public int CapitalX, CapitalY;
     public int ProvinceCount;      // tiles owned
+}
+
+public class CityData
+{
+    public string Id = "";
+    public string NationId = "";
+    public string Name = "City";
+    public int TileX, TileY;
+    public bool IsCapital;
+    public int Size = 1;  // 1=town, 2=city, 3=capital
 }

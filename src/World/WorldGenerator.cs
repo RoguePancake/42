@@ -23,6 +23,13 @@ public static class WorldGenerator
         new Color(0.2f, 0.8f, 0.4f), // Green
         new Color(0.8f, 0.5f, 0.1f)  // Orange
     };
+    
+    // Add possible minor city names
+    private static readonly string[] CityNames = {
+        "Oakhaven", "Riverbend", "Ironforge", "Sunpeak", 
+        "Frostford", "Eldoria", "Grimwall", "Valewood", 
+        "Amberfall", "Windhelm"
+    };
 
     public static WorldData CreateWorld(int width, int height, int seed)
     {
@@ -136,6 +143,139 @@ public static class WorldGenerator
                 {
                     queue.Enqueue((new Vector2I(nx, ny), natIdx));
                 }
+            }
+        }
+
+        // Step 3: Instantiate Cities (Capitals & Minor cities)
+        int cityIndex = 0;
+        foreach (var nation in world.Nations)
+        {
+            // Capital
+            world.Cities.Add(new CityData
+            {
+                Id = $"C_{cityIndex++}",
+                NationId = nation.Id,
+                Name = nation.Name + " Prime",
+                TileX = nation.CapitalX,
+                TileY = nation.CapitalY,
+                IsCapital = true,
+                Size = 3
+            });
+
+            // If the nation is big enough, maybe spawn a minor city
+            if (nation.ProvinceCount > 50)
+            {
+                // Find a random tile owned by this nation that isn't the capital
+                for (int attempt = 0; attempt < 100; attempt++)
+                {
+                    int rx = rng.Next(width);
+                    int ry = rng.Next(height);
+                    if (world.OwnershipMap[rx, ry] == int.Parse(nation.Id.Split('_')[1]))
+                    {
+                        // Needs to be far from capital
+                        if (new Vector2(rx - nation.CapitalX, ry - nation.CapitalY).Length() > 8)
+                        {
+                            world.Cities.Add(new CityData
+                            {
+                                Id = $"C_{cityIndex++}",
+                                NationId = nation.Id,
+                                Name = CityNames[rng.Next(CityNames.Length)],
+                                TileX = rx,
+                                TileY = ry,
+                                IsCapital = false,
+                                Size = 1 + rng.Next(2) // 1 or 2
+                            });
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Step 4: River Generation
+        // We simulate rain falling on mountains and flowing downhill into the sea
+        for (int i = 0; i < 15; i++)
+        {
+            int rx = rng.Next(width);
+            int ry = rng.Next(height);
+            
+            // Only start rivers in mountains or hills
+            int t = world.TerrainMap[rx, ry];
+            if (t != (int)TerrainType.Mountain && t != (int)TerrainType.Hills)
+                continue;
+
+            var path = new List<Vector2>();
+            int cx = rx;
+            int cy = ry;
+            bool hitOcean = false;
+
+            for (int step = 0; step < 100; step++) // Max river length
+            {
+                // Add jitter to center point so rivers meander
+                float jitterX = (float)(rng.NextDouble() - 0.5) * 0.4f;
+                float jitterY = (float)(rng.NextDouble() - 0.5) * 0.4f;
+                path.Add(new Vector2(cx + 0.5f + jitterX, cy + 0.5f + jitterY));
+
+                int currentTerrain = world.TerrainMap[cx, cy];
+                if (!TerrainRules.IsLand(currentTerrain))
+                {
+                    hitOcean = true;
+                    break;
+                }
+
+                // Look for lowest neighbor
+                int bestX = cx;
+                int bestY = cy;
+                int lowestTerrain = currentTerrain;
+
+                // Check 8 neighbors
+                int[] ndx = { 0, 1, 1, 1, 0, -1, -1, -1 };
+                int[] ndy = { -1, -1, 0, 1, 1, 1, 0, -1 };
+                
+                // Shuffle neighbor checks so they pick randomly if flat
+                int startIndex = rng.Next(8);
+                
+                for (int d = 0; d < 8; d++)
+                {
+                    int nIdx = (startIndex + d) % 8;
+                    int nx = cx + ndx[nIdx];
+                    int ny = cy + ndy[nIdx];
+                    
+                    if (nx >= 0 && nx < width && ny >= 0 && ny < height)
+                    {
+                        int nt = world.TerrainMap[nx, ny];
+                        // Don't flow uphill
+                        if (nt <= lowestTerrain)
+                        {
+                            // Avoid going back to a tile already in the path
+                            bool alreadyVisited = false;
+                            foreach (var p in path)
+                            {
+                                if ((int)p.X == nx && (int)p.Y == ny) { alreadyVisited = true; break; }
+                            }
+                            
+                            if (!alreadyVisited)
+                            {
+                                lowestTerrain = nt;
+                                bestX = nx;
+                                bestY = ny;
+                            }
+                        }
+                    }
+                }
+
+                // If nowhere lower to go
+                if (bestX == cx && bestY == cy)
+                    break;
+
+                cx = bestX;
+                cy = bestY;
+            }
+
+            // Only keep rivers that reach water and have some length
+            if (hitOcean && path.Count > 4)
+            {
+                world.RiverPaths.Add(path.ToArray());
             }
         }
 
