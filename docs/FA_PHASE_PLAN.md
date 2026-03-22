@@ -34,7 +34,7 @@ All previous map, rendering, and architecture phases (1-14) successfully laid th
   1. Build the `TurnEngine` to handle End Turn logic (calculating monthly income and passive decay of Authority).
   2. Implement **Rival AI**: Other characters actively take hidden actions each turn to increase their own Authority, creating a race to 100 FAI.
 
-## ⚪ Phase FA-5 (The Crisis & News System)
+## 🟡 NEXT: Phase FA-5 (The Crisis & News System)
 - **Goal:** Random geopolitical tension.
 - **Implementation:**
   1. Build a News Feed panel that pops up at the start of a turn.

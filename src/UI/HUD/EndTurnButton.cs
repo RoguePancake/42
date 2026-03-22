@@ -66,16 +66,6 @@ public partial class EndTurnButton : Control
         // Broadcast
         EventBus.Instance?.Publish(new TurnAdvancedEvent(data.TurnNumber, data.Year, data.Month));
 
-        // Simple passive changes each turn (placeholder for PoliticalEngine FA-3)
-        foreach (var ch in data.Characters)
-        {
-            if (ch.IsPlayer) continue; // Player controls their own actions
-            // AI rivals slowly gain authority
-            ch.TerritoryAuthority = Mathf.Min(100f, ch.TerritoryAuthority + 0.3f);
-            ch.WorldAuthority = Mathf.Min(100f, ch.WorldAuthority + 0.2f);
-            ch.BehindTheScenesAuthority = Mathf.Min(100f, ch.BehindTheScenesAuthority + 0.4f);
-        }
-
         _button.Text = $"⏭ END TURN ({data.TurnNumber})";
     }
 }

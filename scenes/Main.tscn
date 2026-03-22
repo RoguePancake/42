@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://src/UI/HUD/DossierPanel.cs" id="6"]
 [ext_resource type="Script" path="res://src/UI/HUD/EndTurnButton.cs" id="7"]
 [ext_resource type="Script" path="res://src/UI/HUD/NotificationManager.cs" id="9"]
+[ext_resource type="Script" path="res://src/Engines/AIEngine.cs" id="10"]
 
 [node name="Main" type="Node2D"]
 
@@ -20,6 +21,9 @@ script = ExtResource("2")
 
 [node name="PoliticalEngine" type="Node" parent="."]
 script = ExtResource("8")
+
+[node name="AIEngine" type="Node" parent="."]
+script = ExtResource("10")
 
 [node name="Background" type="ColorRect" parent="."]
 anchors_preset = 15
