@@ -44,14 +44,14 @@
 | 7 | Nations + territory colors | ✅ | — |
 | 8 | City sprites on map | ✅ | — |
 | 9 | Rivers (Bézier curves) | ✅ | — |
-| 10 | Unit sprite: tank on map | ⬜ | — |
-| 11 | Unit movement (click to move) | ⬜ | — |
-| 12 | Multiple unit types | ⬜ | — |
-| 13 | SimRng + EventBus + ISimEngine | ⬜ | — |
-| 14 | WorldStateManager | ⬜ | — |
+| 10 | Unit sprite: tank on map | ✅ | — |
+| 11 | Unit movement (click to move) | ✅ | — |
+| 12 | Multiple unit types | ✅ | — |
+| 13 | EventBus decoupled structure | ✅ | — |
+| 14 | WorldStateManager | ✅ | — |
 | 15 | TurnEngine + WSC | ⬜ | — |
 | 16 | ResourceEngine + EconomicEngine | ⬜ | — |
-| 17 | HUD: Top bar (SNES style) | ⬜ | — |
+| 17 | HUD: Top bar (SNES style) | ✅ | — |
 | 18 | End Turn button + controls | ⬜ | — |
 | 19 | Title screen + opening speech | ⬜ | — |
 | 20 | Basic AI movement | ⬜ | — |

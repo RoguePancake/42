@@ -19,6 +19,7 @@ public class WorldData
     public List<NationData> Nations = new();
     public List<CityData> Cities = new();
     public List<Vector2[]> RiverPaths = new();
+    public List<UnitData> Units = new();
 }
 
 public enum TerrainType
@@ -58,6 +59,10 @@ public class NationData
     // Map
     public int CapitalX, CapitalY;
     public int ProvinceCount;      // tiles owned
+    
+    // Stats
+    public float Treasury = 1000f;
+    public float Prestige = 30f;
 }
 
 public class CityData
@@ -68,4 +73,27 @@ public class CityData
     public int TileX, TileY;
     public bool IsCapital;
     public int Size = 1;  // 1=town, 2=city, 3=capital
+}
+
+public enum UnitType
+{
+    Tank, Soldier, Cannon, Ship, Fighter
+}
+
+public class UnitData
+{
+    public string Id = "";
+    public string NationId = "";
+    public UnitType Type;
+    public int TileX, TileY;
+    public float Strength = 1.0f;
+    public int MovesRemaining = 3;
+    public int MaxMoves = 3;
+    public bool IsSelected = false;
+    public bool IsAlive = true;
+    
+    // Pixel coordinates for smooth animation
+    public float PixelX, PixelY;
+    public float TargetPixelX, TargetPixelY;
+    public bool IsMoving = false;
 }

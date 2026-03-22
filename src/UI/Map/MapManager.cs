@@ -1,6 +1,9 @@
 using Godot;
+using System.Linq;
 using Warship.World;
 using Warship.Data;
+using Warship.Core;
+using Warship.Events;
 
 namespace Warship.UI.Map;
 
@@ -19,6 +22,9 @@ public partial class MapManager : Node2D
     private WorldData? _world;
     private Texture2D[] _terrainTextures = new Texture2D[8];
     
+    // UI State
+    private string? _selectedUnitId;
+    
     // SNES-style base theme but cranked up
     private static readonly Color[] TerrainColors = new Color[]
     {
@@ -34,13 +40,106 @@ public partial class MapManager : Node2D
 
     public override void _Ready()
     {
-        GD.Print("[MapManager] Generating AAA world features...");
-        _world = WorldGenerator.CreateWorld(MapWidth, MapHeight, Seed);
+        GD.Print("[MapManager] Getting world from WorldStateManager...");
+        _world = WorldStateManager.Instance?.Data;
 
-        GenerateHDTextures();
+        if (_world != null)
+        {
+            GenerateHDTextures();
+            GD.Print("[MapManager] Textures baked!");
+        }
+
+        // Listen for movement so we can trigger a redraw when a unit lands
+        EventBus.Instance?.Subscribe<UnitMovedEvent>(OnUnitMoved);
+    }
+    
+    private void OnUnitMoved(UnitMovedEvent ev)
+    {
+        var unit = _world?.Units.FirstOrDefault(u => u.Id == ev.UnitId);
+        if (unit != null)
+        {
+            // Set the target pixel coordinate
+            unit.TargetPixelX = ev.ToX * TileSize + TileSize / 2f;
+            unit.TargetPixelY = ev.ToY * TileSize + TileSize / 2f;
+            unit.IsMoving = true;
+        }
+    }
+
+    public override void _Process(double delta)
+    {
+        if (_world == null)
+        {
+            _world = WorldStateManager.Instance?.Data;
+            if (_world != null && _world.TerrainMap != null)
+            {
+                GenerateHDTextures();
+                GD.Print("[MapManager] Textures baked (Deferred)!");
+                QueueRedraw();
+            }
+            return;
+        }
         
-        GD.Print($"[MapManager] World generated and textures baked!");
-        QueueRedraw();
+        bool needsRedraw = false;
+        
+        // Interpolate moving units
+        foreach (var u in _world.Units)
+        {
+            if (!u.IsMoving) continue;
+
+            float speed = 300f * (float)delta; // pixels per second
+            var currentPos = new Vector2(u.PixelX, u.PixelY);
+            var targetPos = new Vector2(u.TargetPixelX, u.TargetPixelY);
+            
+            if (currentPos.DistanceTo(targetPos) <= speed)
+            {
+                u.PixelX = targetPos.X;
+                u.PixelY = targetPos.Y;
+                u.IsMoving = false;
+            }
+            else
+            {
+                var dir = (targetPos - currentPos).Normalized();
+                u.PixelX += dir.X * speed;
+                u.PixelY += dir.Y * speed;
+            }
+            needsRedraw = true;
+        }
+        
+        if (needsRedraw)
+            QueueRedraw();
+    }
+    
+    public override void _UnhandledInput(InputEvent @event)
+    {
+        if (_world == null) return;
+        
+        if (@event is InputEventMouseButton mb && mb.Pressed)
+        {
+            var tile = PixelToTile(GetGlobalMousePosition());
+            
+            if (mb.ButtonIndex == MouseButton.Left)
+            {
+                // Select unit
+                var clickedUnit = _world.Units.FirstOrDefault(u => u.TileX == tile.X && u.TileY == tile.Y);
+                if (clickedUnit != null)
+                {
+                    _selectedUnitId = clickedUnit.Id;
+                    QueueRedraw();
+                    GetViewport().SetInputAsHandled();
+                }
+                else if (_selectedUnitId != null)
+                {
+                    _selectedUnitId = null; // deselect
+                    QueueRedraw();
+                }
+            }
+            else if (mb.ButtonIndex == MouseButton.Right && _selectedUnitId != null)
+            {
+                // Issue move command via EventBus
+                EventBus.Instance?.Publish(new UnitMoveRequested(_selectedUnitId, tile.X, tile.Y));
+                GetViewport().SetInputAsHandled();
+            }
+        }
     }
 
     /// <summary>
@@ -214,6 +313,46 @@ public partial class MapManager : Node2D
                 DrawRect(new Rect2(pos.X - 8, pos.Y - 8, 16, 16), Colors.SaddleBrown);
                 Vector2[] roof = { new Vector2(pos.X - 10, pos.Y - 8), new Vector2(pos.X + 10, pos.Y - 8), new Vector2(pos.X, pos.Y - 16) };
                 DrawPolygon(roof, new Color[] { natColor, natColor, natColor });
+            }
+        }
+
+        // 5. Draw Awesome Units
+        foreach (var unit in _world.Units)
+        {
+            var pos = new Vector2(unit.PixelX, unit.PixelY);
+            var natColor = _world.Nations[int.Parse(unit.NationId.Split('_')[1])].NationColor;
+
+            // Selection highlight
+            if (unit.Id == _selectedUnitId)
+            {
+                DrawArc(pos, 22, 0, Mathf.Pi * 2, 32, Colors.Yellow, 3);
+            }
+
+            // Draw unit shadow
+            DrawCircle(pos + new Vector2(0, 6), 14, new Color(0, 0, 0, 0.4f));
+
+            if (unit.Type == UnitType.Tank)
+            {
+                // Tank Body
+                DrawRect(new Rect2(pos.X - 14, pos.Y - 10, 28, 20), natColor);
+                // Turret
+                DrawCircle(pos, 8, Colors.DarkGray);
+                // Barrel
+                DrawLine(pos, pos + new Vector2(16, 0), Colors.DarkGray, 4);
+            }
+            else if (unit.Type == UnitType.Ship)
+            {
+                // Ship shape
+                var points = new Vector2[] {
+                    pos + new Vector2(-16, -10),
+                    pos + new Vector2(12, -10),
+                    pos + new Vector2(24, 0),
+                    pos + new Vector2(12, 10),
+                    pos + new Vector2(-16, 10)
+                };
+                DrawPolygon(points, new Color[] { natColor, natColor, natColor, natColor, natColor });
+                // Bridge
+                DrawRect(new Rect2(pos.X - 4, pos.Y - 4, 8, 8), Colors.DarkGray);
             }
         }
     }

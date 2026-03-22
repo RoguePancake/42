@@ -1,0 +1,91 @@
+using Godot;
+using Warship.Core;
+using Warship.Events;
+
+namespace Warship.UI.HUD;
+
+/// <summary>
+/// Top bar UI showing turn, date, and player stats.
+/// Constructed fully in code so we don't need a clunky .tscn file for it.
+/// </summary>
+public partial class TopBar : Control
+{
+    private Label _turnLabel;
+    private Label _statsLabel;
+    
+    public override void _Ready()
+    {
+        // Setup Control node
+        AnchorsPreset = (int)LayoutPreset.TopWide;
+        CustomMinimumSize = new Vector2(0, 48);
+
+        // Background
+        var bg = new ColorRect 
+        { 
+            Color = new Color(0.08f, 0.08f, 0.12f, 0.95f), 
+            AnchorsPreset = (int)LayoutPreset.FullRect 
+        };
+        AddChild(bg);
+
+        // Stylish bottom border
+        var border = new ColorRect 
+        { 
+            Color = new Color(0.2f, 0.4f, 0.8f, 1f), 
+            CustomMinimumSize = new Vector2(0, 4) 
+        };
+        border.SetAnchorsAndOffsetsPreset(LayoutPreset.BottomWide);
+        AddChild(border);
+
+        // Layout container
+        var hbox = new HBoxContainer 
+        { 
+            AnchorsPreset = (int)LayoutPreset.FullRect 
+        };
+        AddChild(hbox);
+
+        // Margin to pad text nicely
+        var leftMargin = new MarginContainer();
+        leftMargin.AddThemeConstantOverride("margin_left", 20);
+        
+        var rightMargin = new MarginContainer();
+        rightMargin.AddThemeConstantOverride("margin_right", 20);
+        rightMargin.SizeFlagsHorizontal = SizeFlags.Expand | SizeFlags.ShrinkEnd;
+
+        // Labels
+        _turnLabel = new Label 
+        { 
+            Text = " Turn 1 | Jan 1900 ", 
+            VerticalAlignment = VerticalAlignment.Center 
+        };
+        _turnLabel.AddThemeFontSizeOverride("font_size", 20);
+
+        _statsLabel = new Label 
+        { 
+            Text = " Treasury: ... ", 
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        _statsLabel.AddThemeFontSizeOverride("font_size", 20);
+
+        leftMargin.AddChild(_turnLabel);
+        rightMargin.AddChild(_statsLabel);
+
+        hbox.AddChild(leftMargin);
+        hbox.AddChild(rightMargin);
+
+        // Subscribe to events
+        EventBus.Instance?.Subscribe<TurnAdvancedEvent>(ev => {
+            _turnLabel.Text = $" Turn {ev.Turn} | M{ev.Month} Y{ev.Year} ";
+        });
+    }
+
+    public override void _Process(double delta)
+    {
+        // Simple data binding
+        var data = WorldStateManager.Instance?.Data;
+        if (data != null && data.Nations.Count > 0)
+        {
+            var pNat = data.Nations[0]; // Assuming nation 0 is player for now
+            _statsLabel.Text = $" Treasury: {pNat.Treasury:0}g      Prestige: {pNat.Prestige:0} ";
+        }
+    }
+}

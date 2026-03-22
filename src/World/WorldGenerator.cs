@@ -190,6 +190,11 @@ public static class WorldGenerator
                     }
                 }
             }
+            
+            // Spawn Units for this Nation (2 Tanks, 1 Ship)
+            SpawnUnit(world, nation.Id, UnitType.Tank, rng, nation.CapitalX, nation.CapitalY);
+            SpawnUnit(world, nation.Id, UnitType.Tank, rng, nation.CapitalX, nation.CapitalY);
+            SpawnUnit(world, nation.Id, UnitType.Ship, rng, nation.CapitalX, nation.CapitalY);
         }
 
         // Step 4: River Generation
@@ -280,5 +285,49 @@ public static class WorldGenerator
         }
 
         return world;
+    }
+
+    private static void SpawnUnit(WorldData world, string natId, UnitType type, Random rng, int originX, int originY)
+    {
+        for (int i = 0; i < 200; i++)
+        {
+            int dx = rng.Next(-10, 11);
+            int dy = rng.Next(-10, 11);
+            int rx = originX + dx;
+            int ry = originY + dy;
+
+            if (rx < 0 || rx >= world.MapWidth || ry < 0 || ry >= world.MapHeight)
+                continue;
+
+            int t = world.TerrainMap![rx, ry];
+            
+            // Tanks on land, Ships in water
+            if (type == UnitType.Tank && !TerrainRules.IsLand(t)) continue;
+            if (type == UnitType.Ship && TerrainRules.IsLand(t)) continue;
+
+            // Check if tile is empty of other units
+            bool conflict = false;
+            foreach (var u in world.Units)
+            {
+                if (u.TileX == rx && u.TileY == ry) { conflict = true; break; }
+            }
+            if (conflict) continue;
+
+            // Spawn!
+            world.Units.Add(new UnitData
+            {
+                Id = $"{natId}_{type}_{world.Units.Count}",
+                NationId = natId,
+                Type = type,
+                TileX = rx,
+                TileY = ry,
+                PixelX = rx * 64 + 32, // Note: TileSize = 64
+                PixelY = ry * 64 + 32,
+                TargetPixelX = rx * 64 + 32,
+                TargetPixelY = ry * 64 + 32,
+                Strength = 1.0f
+            });
+            return;
+        }
     }
 }
