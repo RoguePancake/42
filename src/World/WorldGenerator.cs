@@ -12,7 +12,7 @@ namespace Warship.World;
 public static class WorldGenerator
 {
     private static readonly string[] NationNames = { 
-        "Valeria", "Gondor", "Zendia", "Kraal", "Aethel", "Durotar" 
+        "United States", "China", "Russia", "European Union", "India", "United Kingdom" 
     };
 
     private static readonly Color[] NationColors = {
@@ -195,6 +195,48 @@ public static class WorldGenerator
             SpawnUnit(world, nation.Id, UnitType.Tank, rng, nation.CapitalX, nation.CapitalY);
             SpawnUnit(world, nation.Id, UnitType.Tank, rng, nation.CapitalX, nation.CapitalY);
             SpawnUnit(world, nation.Id, UnitType.Ship, rng, nation.CapitalX, nation.CapitalY);
+
+            // Spawn Characters (VIPs) for the new FA Design
+            world.Characters.Add(new CharacterData
+            {
+                Id = $"{nation.Id}_Char_1",
+                NationId = nation.Id,
+                Name = "Leader " + nation.Name,
+                Role = "Head of State",
+                TileX = nation.CapitalX,
+                TileY = nation.CapitalY,
+                PixelX = nation.CapitalX * 64 + 32,
+                PixelY = nation.CapitalY * 64 + 32,
+                TargetPixelX = nation.CapitalX * 64 + 32,
+                TargetPixelY = nation.CapitalY * 64 + 32,
+                TerritoryAuthority = 80f,
+                WorldAuthority = 60f,
+                BehindTheScenesAuthority = 70f
+            });
+
+            world.Characters.Add(new CharacterData
+            {
+                Id = $"{nation.Id}_Char_2",
+                NationId = nation.Id,
+                Name = "General",
+                Role = "Defense Minister",
+                TileX = nation.CapitalX + 1, // Offset slightly
+                TileY = nation.CapitalY,
+                PixelX = (nation.CapitalX + 1) * 64 + 32,
+                PixelY = nation.CapitalY * 64 + 32,
+                TargetPixelX = (nation.CapitalX + 1) * 64 + 32,
+                TargetPixelY = nation.CapitalY * 64 + 32,
+                TerritoryAuthority = 40f,
+                WorldAuthority = 20f,
+                BehindTheScenesAuthority = 60f
+            });
+            
+            // Assign Player to USA's Defense Minister randomly as a test of "climbing ladder"
+            if (nation.Name == "United States")
+            {
+                world.Characters[^1].IsPlayer = true;
+                world.PlayerNationId = nation.Id;
+            }
         }
 
         // Step 4: River Generation

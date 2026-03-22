@@ -61,7 +61,7 @@ public partial class TopBar : Control
 
         _statsLabel = new Label 
         { 
-            Text = " Treasury: ... ", 
+            Text = " TA: ... WA: ... BSA: ... [FAI: ...] ", 
             VerticalAlignment = VerticalAlignment.Center
         };
         _statsLabel.AddThemeFontSizeOverride("font_size", 20);
@@ -82,10 +82,13 @@ public partial class TopBar : Control
     {
         // Simple data binding
         var data = WorldStateManager.Instance?.Data;
-        if (data != null && data.Nations.Count > 0)
+        if (data != null && data.Characters.Count > 0)
         {
-            var pNat = data.Nations[0]; // Assuming nation 0 is player for now
-            _statsLabel.Text = $" Treasury: {pNat.Treasury:0}g      Prestige: {pNat.Prestige:0} ";
+            var pc = data.Characters.Find(c => c.IsPlayer);
+            if (pc != null)
+            {
+                _statsLabel.Text = $" {pc.Role} {pc.Name}  |  TA: {pc.TerritoryAuthority:0}%  WA: {pc.WorldAuthority:0}%  BSA: {pc.BehindTheScenesAuthority:0}%  [FAI: {pc.FullAuthorityIndex:0}%] ";
+            }
         }
     }
 }

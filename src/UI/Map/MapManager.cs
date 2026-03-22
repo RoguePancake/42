@@ -355,6 +355,36 @@ public partial class MapManager : Node2D
                 DrawRect(new Rect2(pos.X - 4, pos.Y - 4, 8, 8), Colors.DarkGray);
             }
         }
+        // 6. Draw VIP Characters
+        foreach (var c in _world.Characters)
+        {
+            var pos = new Vector2(c.PixelX, c.PixelY);
+            
+            // Player Halo
+            if (c.IsPlayer)
+            {
+                DrawArc(pos, 30, 0, Mathf.Pi * 2, 32, Colors.Cyan, 4);
+                DrawArc(pos, 38, 0, Mathf.Pi * 2, 32, Colors.Cyan * new Color(1,1,1,0.5f), 2);
+            }
+            
+            // Meeple Base
+            DrawCircle(pos + new Vector2(0, 10), 12, new Color(0, 0, 0, 0.5f)); // Shadow
+            DrawCircle(pos + new Vector2(0, -6), 6, Colors.Bisque); // Head
+            
+            // Body with nation color
+            var natColor = _world.Nations[int.Parse(c.NationId.Split('_')[1])].NationColor;
+            var body = new Vector2[] {
+                pos + new Vector2(-8, 0),
+                pos + new Vector2(8, 0),
+                pos + new Vector2(10, 14),
+                pos + new Vector2(-10, 14)
+            };
+            DrawPolygon(body, new Color[] { natColor, natColor, natColor.Darkened(0.2f), natColor.Darkened(0.2f) });
+            
+            // Little name tag text
+            var font = ThemeDB.FallbackFont;
+            DrawString(font, pos + new Vector2(-16, -20), c.Role, HorizontalAlignment.Center, 32, 12, Colors.White);
+        }
     }
 
     /// <summary>Get terrain type at a tile coordinate.</summary>
