@@ -4,6 +4,7 @@ using Warship.World;
 using Warship.Data;
 using Warship.Core;
 using Warship.Events;
+using Warship.UI.HUD;
 
 namespace Warship.UI.Map;
 
@@ -24,6 +25,7 @@ public partial class MapManager : Node2D
     
     // UI State
     private string? _selectedUnitId;
+    private DossierPanel? _dossierPanel;
     
     // SNES-style base theme but cranked up
     private static readonly Color[] TerrainColors = new Color[]
@@ -51,6 +53,9 @@ public partial class MapManager : Node2D
 
         // Listen for movement so we can trigger a redraw when a unit lands
         EventBus.Instance?.Subscribe<UnitMovedEvent>(OnUnitMoved);
+
+        // Grab dossier panel reference (it's in the UILayer)
+        _dossierPanel = GetNode<DossierPanel>("/root/Main/UILayer/DossierPanel");
     }
     
     private void OnUnitMoved(UnitMovedEvent ev)
@@ -119,7 +124,18 @@ public partial class MapManager : Node2D
             
             if (mb.ButtonIndex == MouseButton.Left)
             {
-                // Select unit
+                // Priority 1: Check for Character click (opens Dossier)
+                var clickedChar = _world.Characters.FirstOrDefault(c => c.TileX == tile.X && c.TileY == tile.Y);
+                if (clickedChar != null)
+                {
+                    _dossierPanel?.ShowCharacter(clickedChar);
+                    _selectedUnitId = null;
+                    QueueRedraw();
+                    GetViewport().SetInputAsHandled();
+                    return;
+                }
+
+                // Priority 2: Check for Unit click
                 var clickedUnit = _world.Units.FirstOrDefault(u => u.TileX == tile.X && u.TileY == tile.Y);
                 if (clickedUnit != null)
                 {
