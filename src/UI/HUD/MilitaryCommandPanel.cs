@@ -13,12 +13,12 @@ public partial class MilitaryCommandPanel : Control
 
     public override void _Ready()
     {
-        // Position bottom-left firmly
+        // Position bottom-left firmly, padding heavily to survive Dock overlays
         SetAnchorsPreset(LayoutPreset.BottomLeft, true);
-        OffsetTop = -220; // 200px tall
-        OffsetBottom = -20; // 20px padding from bottom
-        OffsetLeft = 20;
-        OffsetRight = 240; // 220px wide
+        OffsetTop = -280; // 200px tall
+        OffsetBottom = -80; // massive padding from bottom edge
+        OffsetLeft = 40; // padding from left edge
+        OffsetRight = 260; // 220px wide
 
         var bg = new Panel();
         var style = new StyleBoxFlat

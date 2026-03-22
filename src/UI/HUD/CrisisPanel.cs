@@ -28,8 +28,11 @@ public partial class CrisisPanel : Control
         dimBg.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(dimBg);
 
+        var center = new CenterContainer();
+        center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        AddChild(center);
+
         var window = new PanelContainer();
-        window.SetAnchorsPreset(LayoutPreset.Center, true);
         window.CustomMinimumSize = new Vector2(500, 350);
 
         var style = new StyleBoxFlat
@@ -46,7 +49,7 @@ public partial class CrisisPanel : Control
             ContentMarginTop = 24, ContentMarginBottom = 24
         };
         window.AddThemeStyleboxOverride("panel", style);
-        AddChild(window);
+        center.AddChild(window);
 
         var vbox = new VBoxContainer();
         vbox.AddThemeConstantOverride("separation", 20);

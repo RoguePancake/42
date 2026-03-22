@@ -21,8 +21,11 @@ public partial class VictoryPanel : Control
         _dimBg.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(_dimBg);
 
+        var center = new CenterContainer();
+        center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        AddChild(center);
+
         _window = new PanelContainer();
-        _window.SetAnchorsPreset(LayoutPreset.Center, true);
         _window.CustomMinimumSize = new Vector2(600, 400);
 
         var style = new StyleBoxFlat
@@ -39,7 +42,7 @@ public partial class VictoryPanel : Control
             ContentMarginTop = 40, ContentMarginBottom = 40
         };
         _window.AddThemeStyleboxOverride("panel", style);
-        AddChild(_window);
+        center.AddChild(_window);
 
         var vbox = new VBoxContainer();
         vbox.AddThemeConstantOverride("separation", 30);
