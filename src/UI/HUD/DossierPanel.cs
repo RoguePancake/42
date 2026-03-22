@@ -2,6 +2,7 @@ using Godot;
 using System.Linq;
 using Warship.Data;
 using Warship.Core;
+using Warship.Events;
 
 namespace Warship.UI.HUD;
 
@@ -112,6 +113,20 @@ public partial class DossierPanel : Control
         _actionBox = new VBoxContainer();
         _actionBox.AddThemeConstantOverride("separation", 6);
         _content.AddChild(_actionBox);
+
+        // Listen for authority changes to update bars live
+        EventBus.Instance?.Subscribe<AuthorityChangedEvent>(ev => {
+            if (_target != null && (ev.CharacterId == _target.Id || _target.IsPlayer))
+            {
+                // Simple refresh trick: re-call ShowCharacter
+                CallDeferred(nameof(RefreshDisplay));
+            }
+        });
+    }
+
+    private void RefreshDisplay()
+    {
+        if (_target != null) ShowCharacter(_target);
     }
 
     private VBoxContainer MakeBarSection(string label, out ProgressBar bar, Color color)
@@ -222,8 +237,29 @@ public partial class DossierPanel : Control
     private void OnActionPressed(string action)
     {
         if (_target == null) return;
-        GD.Print($"[DossierPanel] Action '{action}' on {_target.Name} ({_target.Role})");
-        // TODO: Route through EventBus → PoliticalEngine in FA-3
+        
+        var world = WorldStateManager.Instance?.Data;
+        if (world == null) return;
+        
+        var player = world.Characters.FirstOrDefault(c => c.IsPlayer);
+        if (player == null) return;
+
+        string commandType = action switch
+        {
+            "📋 Review Intel" => "review_intel",
+            "💰 Fund Militia (+TA)" => "fund_militia",
+            "🎙 Public Address (+WA)" => "public_address",
+            "🔍 Investigate" => "investigate",
+            "💵 Bribe" => "bribe",
+            "⚠️ Threaten" => "threaten",
+            "🗡 Eliminate" => "eliminate",
+            _ => "unknown"
+        };
+        
+        if (commandType != "unknown")
+        {
+            EventBus.Instance?.Publish(new PoliticalActionEvent(player.Id, _target.Id, commandType));
+        }
     }
 
     public new void Hide()
