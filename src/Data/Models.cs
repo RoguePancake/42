@@ -64,6 +64,11 @@ public class NationData
     // Stats
     public float Treasury = 1000f;
     public float Prestige = 30f;
+
+    // Military Command
+    public MilitaryOrder GlobalMilitaryOrder = MilitaryOrder.BorderWatch;
+    public int CommandTargetX = -1;
+    public int CommandTargetY = -1;
 }
 
 public class CityData
@@ -81,6 +86,15 @@ public enum UnitType
     Tank, Soldier, Cannon, Ship, Fighter
 }
 
+public enum MilitaryOrder
+{
+    Standby,
+    BorderWatch,
+    Patrol,
+    Stage,
+    Attack
+}
+
 public class UnitData
 {
     public string Id = "";
@@ -88,15 +102,14 @@ public class UnitData
     public UnitType Type;
     public int TileX, TileY;
     public float Strength = 1.0f;
-    public int MovesRemaining = 3;
-    public int MaxMoves = 3;
-    public bool IsSelected = false;
     public bool IsAlive = true;
+
+    // AI State
+    public MilitaryOrder CurrentOrder = MilitaryOrder.Standby;
     
-    // Pixel coordinates for smooth animation
+    // Pixel coordinates for smooth swarm animation
     public float PixelX, PixelY;
     public float TargetPixelX, TargetPixelY;
-    public bool IsMoving = false;
 }
 
 public class CharacterData

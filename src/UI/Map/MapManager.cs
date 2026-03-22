@@ -66,7 +66,6 @@ public partial class MapManager : Node2D
             // Set the target pixel coordinate
             unit.TargetPixelX = ev.ToX * TileSize + TileSize / 2f;
             unit.TargetPixelY = ev.ToY * TileSize + TileSize / 2f;
-            unit.IsMoving = true;
         }
     }
 
@@ -89,25 +88,25 @@ public partial class MapManager : Node2D
         // Interpolate moving units
         foreach (var u in _world.Units)
         {
-            if (!u.IsMoving) continue;
-
             float speed = 300f * (float)delta; // pixels per second
             var currentPos = new Vector2(u.PixelX, u.PixelY);
             var targetPos = new Vector2(u.TargetPixelX, u.TargetPixelY);
             
-            if (currentPos.DistanceTo(targetPos) <= speed)
+            if (currentPos.DistanceTo(targetPos) > 1f)
             {
-                u.PixelX = targetPos.X;
-                u.PixelY = targetPos.Y;
-                u.IsMoving = false;
+                if (currentPos.DistanceTo(targetPos) <= speed)
+                {
+                    u.PixelX = targetPos.X;
+                    u.PixelY = targetPos.Y;
+                }
+                else
+                {
+                    var dir = (targetPos - currentPos).Normalized();
+                    u.PixelX += dir.X * speed;
+                    u.PixelY += dir.Y * speed;
+                }
+                needsRedraw = true;
             }
-            else
-            {
-                var dir = (targetPos - currentPos).Normalized();
-                u.PixelX += dir.X * speed;
-                u.PixelY += dir.Y * speed;
-            }
-            needsRedraw = true;
         }
         
         if (needsRedraw)
@@ -149,11 +148,24 @@ public partial class MapManager : Node2D
                     QueueRedraw();
                 }
             }
-            else if (mb.ButtonIndex == MouseButton.Right && _selectedUnitId != null)
+            else if (mb.ButtonIndex == MouseButton.Right)
             {
-                // Issue move command via EventBus
-                EventBus.Instance?.Publish(new UnitMoveRequested(_selectedUnitId, tile.X, tile.Y));
-                GetViewport().SetInputAsHandled();
+                if (_selectedUnitId != null)
+                {
+                    // Issue move command via EventBus
+                    EventBus.Instance?.Publish(new UnitMoveRequested(_selectedUnitId, tile.X, tile.Y));
+                    GetViewport().SetInputAsHandled();
+                }
+                else
+                {
+                    // Right click on map with nothing selected sets global command target
+                    int pIdx = int.Parse(_world.PlayerNationId.Split('_')[1]);
+                    var playerNation = _world.Nations[pIdx];
+                    playerNation.CommandTargetX = tile.X;
+                    playerNation.CommandTargetY = tile.Y;
+                    QueueRedraw();
+                    GetViewport().SetInputAsHandled();
+                }
             }
         }
     }
@@ -338,17 +350,25 @@ public partial class MapManager : Node2D
             var pos = new Vector2(unit.PixelX, unit.PixelY);
             var natColor = _world.Nations[int.Parse(unit.NationId.Split('_')[1])].NationColor;
 
-            // Selection highlight
-            if (unit.Id == _selectedUnitId)
+            if (unit.Type == UnitType.Soldier)
             {
-                DrawArc(pos, 22, 0, Mathf.Pi * 2, 32, Colors.Yellow, 3);
+                // Tiny swarming dot
+                DrawCircle(pos, 2.5f, natColor);
+                // Optional slight glow if player's unit
+                if (unit.NationId == _world.PlayerNationId)
+                {
+                    DrawCircle(pos, 1.5f, Colors.White);
+                }
             }
-
-            // Draw unit shadow
-            DrawCircle(pos + new Vector2(0, 6), 14, new Color(0, 0, 0, 0.4f));
-
-            if (unit.Type == UnitType.Tank)
+            else if (unit.Type == UnitType.Tank)
             {
+                // Selection highlight
+                if (unit.Id == _selectedUnitId)
+                    DrawArc(pos, 22, 0, Mathf.Pi * 2, 32, Colors.Yellow, 3);
+                
+                // Draw unit shadow
+                DrawCircle(pos + new Vector2(0, 6), 14, new Color(0, 0, 0, 0.4f));
+
                 // Tank Body
                 DrawRect(new Rect2(pos.X - 14, pos.Y - 10, 28, 20), natColor);
                 // Turret
@@ -358,6 +378,12 @@ public partial class MapManager : Node2D
             }
             else if (unit.Type == UnitType.Ship)
             {
+                // Selection highlight
+                if (unit.Id == _selectedUnitId)
+                    DrawArc(pos, 22, 0, Mathf.Pi * 2, 32, Colors.Yellow, 3);
+                    
+                DrawCircle(pos + new Vector2(0, 6), 14, new Color(0, 0, 0, 0.4f));
+
                 // Ship shape
                 var points = new Vector2[] {
                     pos + new Vector2(-16, -10),
@@ -368,10 +394,30 @@ public partial class MapManager : Node2D
                 };
                 DrawPolygon(points, new Color[] { natColor, natColor, natColor, natColor, natColor });
                 // Bridge
-                DrawRect(new Rect2(pos.X - 4, pos.Y - 4, 8, 8), Colors.DarkGray);
+                DrawRect(new Rect2(pos.X - 12, pos.Y - 6, 16, 12), Colors.Gray);
             }
         }
-        // 6. Draw VIP Characters
+
+        // 6. Draw Player Command Markers
+        int pIdx = int.Parse(_world.PlayerNationId.Split('_')[1]);
+        var playerNation = _world.Nations[pIdx];
+        if (playerNation.CommandTargetX >= 0)
+        {
+            Vector2 markerPos = new Vector2(playerNation.CommandTargetX * 64 + 32, playerNation.CommandTargetY * 64 + 32);
+            if (playerNation.GlobalMilitaryOrder == MilitaryOrder.Attack)
+            {
+                // Red crosshair
+                DrawArc(markerPos, 16, 0, Mathf.Pi * 2, 32, Colors.Red, 2);
+                DrawLine(markerPos - new Vector2(24, 0), markerPos + new Vector2(24, 0), Colors.Red, 2);
+                DrawLine(markerPos - new Vector2(0, 24), markerPos + new Vector2(0, 24), Colors.Red, 2);
+            }
+            else if (playerNation.GlobalMilitaryOrder == MilitaryOrder.Stage)
+            {
+                // Blue circle
+                DrawArc(markerPos, 24, 0, Mathf.Pi * 2, 32, new Color(0.2f, 0.6f, 1f), 3);
+            }
+        }
+        // 7. Draw VIP Characters
         foreach (var c in _world.Characters)
         {
             var pos = new Vector2(c.PixelX, c.PixelY);

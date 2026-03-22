@@ -191,10 +191,11 @@ public static class WorldGenerator
                 }
             }
             
-            // Spawn Units for this Nation (2 Tanks, 1 Ship)
-            SpawnUnit(world, nation.Id, UnitType.Tank, rng, nation.CapitalX, nation.CapitalY);
-            SpawnUnit(world, nation.Id, UnitType.Tank, rng, nation.CapitalX, nation.CapitalY);
-            SpawnUnit(world, nation.Id, UnitType.Ship, rng, nation.CapitalX, nation.CapitalY);
+            // Spawn 500 Troops for this Nation
+            for (int t = 0; t < 500; t++)
+            {
+                SpawnRandomTroop(world, nation, rng);
+            }
 
             // Spawn Characters (VIPs) for the new FA Design
             world.Characters.Add(new CharacterData
@@ -329,45 +330,36 @@ public static class WorldGenerator
         return world;
     }
 
-    private static void SpawnUnit(WorldData world, string natId, UnitType type, Random rng, int originX, int originY)
+    private static void SpawnRandomTroop(WorldData world, NationData nation, Random rng)
     {
-        for (int i = 0; i < 200; i++)
+        int natIdx = int.Parse(nation.Id.Split('_')[1]);
+        for (int attempt = 0; attempt < 100; attempt++)
         {
-            int dx = rng.Next(-10, 11);
-            int dy = rng.Next(-10, 11);
-            int rx = originX + dx;
-            int ry = originY + dy;
+            int rx = rng.Next(world.MapWidth);
+            int ry = rng.Next(world.MapHeight);
 
-            if (rx < 0 || rx >= world.MapWidth || ry < 0 || ry >= world.MapHeight)
-                continue;
-
-            int t = world.TerrainMap![rx, ry];
+            // Must be owned by this nation
+            if (world.OwnershipMap[rx, ry] != natIdx) continue;
             
-            // Tanks on land, Ships in water
-            if (type == UnitType.Tank && !TerrainRules.IsLand(t)) continue;
-            if (type == UnitType.Ship && TerrainRules.IsLand(t)) continue;
+            // Must be land
+            if (!TerrainRules.IsLand(world.TerrainMap![rx, ry])) continue;
 
-            // Check if tile is empty of other units
-            bool conflict = false;
-            foreach (var u in world.Units)
-            {
-                if (u.TileX == rx && u.TileY == ry) { conflict = true; break; }
-            }
-            if (conflict) continue;
+            // Micro-position within the 64x64 tile
+            float ox = (float)(rng.NextDouble() * 40 - 20); // -20 to +20
+            float oy = (float)(rng.NextDouble() * 40 - 20);
 
-            // Spawn!
             world.Units.Add(new UnitData
             {
-                Id = $"{natId}_{type}_{world.Units.Count}",
-                NationId = natId,
-                Type = type,
+                Id = $"{nation.Id}_T_{world.Units.Count}",
+                NationId = nation.Id,
+                Type = UnitType.Soldier,
                 TileX = rx,
                 TileY = ry,
-                PixelX = rx * 64 + 32, // Note: TileSize = 64
-                PixelY = ry * 64 + 32,
-                TargetPixelX = rx * 64 + 32,
-                TargetPixelY = ry * 64 + 32,
-                Strength = 1.0f
+                PixelX = rx * 64 + 32 + ox,
+                PixelY = ry * 64 + 32 + oy,
+                TargetPixelX = rx * 64 + 32 + ox,
+                TargetPixelY = ry * 64 + 32 + oy,
+                CurrentOrder = MilitaryOrder.BorderWatch // Default order
             });
             return;
         }
