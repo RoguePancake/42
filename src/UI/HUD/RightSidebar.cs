@@ -1,20 +1,25 @@
 using Godot;
+using Warship.Core;
+using Warship.Events;
 
 namespace Warship.UI.HUD;
 
 /// <summary>
-/// A strict, clean Right Sidebar matching the hand-drawn schematic.
-/// Contains the Spy Network and drops down to more controls.
+/// Right Column — 250px wide intel/diplomacy panel.
+/// Shows diplomatic relations with each nation and spy intel status.
 /// </summary>
 public partial class RightSidebar : Control
 {
+    private VBoxContainer _relationsBox = null!;
+
     public override void _Ready()
     {
         SetAnchorsAndOffsetsPreset(LayoutPreset.RightWide);
-        CustomMinimumSize = new Vector2(250, 0); // 250px wide
-        OffsetTop = 80; // Below News & TopBar
-        OffsetBottom = 0; // Absolute bottom
+        OffsetTop = 64;     // Below both top bars (32 + 32)
+        OffsetLeft = -250;  // 250px wide
+        OffsetBottom = 0;
 
+        // Background
         var bg = new Panel();
         var style = new StyleBoxFlat
         {
@@ -26,35 +31,198 @@ public partial class RightSidebar : Control
         bg.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(bg);
 
-        var vbox = new VBoxContainer();
-        vbox.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        vbox.AddThemeConstantOverride("separation", 0);
-        AddChild(vbox);
+        // Scrollable content
+        var scroll = new ScrollContainer();
+        scroll.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
+        AddChild(scroll);
 
-        var header = new Label { Text = "MORE CONTROL TABS", HorizontalAlignment = HorizontalAlignment.Center };
-        header.AddThemeFontSizeOverride("font_size", 14);
+        var vbox = new VBoxContainer();
+        vbox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        vbox.AddThemeConstantOverride("separation", 0);
+        scroll.AddChild(vbox);
+
+        // Header
+        var header = new Label
+        {
+            Text = "INTEL & DIPLOMACY",
+            HorizontalAlignment = HorizontalAlignment.Center,
+            CustomMinimumSize = new Vector2(0, 36)
+        };
+        header.AddThemeFontSizeOverride("font_size", 13);
         header.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.6f));
-        header.CustomMinimumSize = new Vector2(0, 40);
         header.VerticalAlignment = VerticalAlignment.Center;
         vbox.AddChild(header);
-        
-        var arrow = new Label { Text = "v\n|\nv", HorizontalAlignment = HorizontalAlignment.Center };
-        arrow.AddThemeFontSizeOverride("font_size", 12);
-        arrow.AddThemeColorOverride("font_color", new Color(0.4f, 0.4f, 0.5f));
-        vbox.AddChild(arrow);
-        
-        vbox.AddChild(new HSeparator());
 
-        var btnSpy = new Button { Text = "SPY NETWORK", CustomMinimumSize = new Vector2(0, 50) };
-        var styleBtn = new StyleBoxFlat { BgColor = new Color(0.12f, 0.13f, 0.16f, 1f), BorderColor = new Color(0.15f, 0.17f, 0.2f, 1f), BorderWidthBottom = 1 };
-        var hoverBtn = (StyleBoxFlat)styleBtn.Duplicate();
-        hoverBtn.BgColor = new Color(0.18f, 0.2f, 0.25f, 1f);
-        
-        btnSpy.AddThemeStyleboxOverride("normal", styleBtn);
-        btnSpy.AddThemeStyleboxOverride("hover", hoverBtn);
-        btnSpy.AddThemeStyleboxOverride("pressed", hoverBtn);
-        btnSpy.AddThemeFontSizeOverride("font_size", 16);
-        btnSpy.AddThemeColorOverride("font_color", Colors.White);
-        vbox.AddChild(btnSpy);
+        // Diplomacy section
+        AddSectionHeader(vbox, "RELATIONS", new Color(0.3f, 0.6f, 1f));
+
+        _relationsBox = new VBoxContainer();
+        _relationsBox.AddThemeConstantOverride("separation", 0);
+        vbox.AddChild(_relationsBox);
+
+        // Intel section
+        AddSectionHeader(vbox, "SPY NETWORK", new Color(0.8f, 0.6f, 1f));
+        AddIntelRow(vbox, "Active Agents", "0");
+        AddIntelRow(vbox, "Intel Quality", "LOW");
+        AddIntelRow(vbox, "Counter-Intel", "NORMAL");
+
+        // Populate relations from world data
+        CallDeferred(nameof(PopulateRelations));
+
+        EventBus.Instance?.Subscribe<TurnAdvancedEvent>(_ => CallDeferred(nameof(PopulateRelations)));
+    }
+
+    private void PopulateRelations()
+    {
+        // Clear existing
+        foreach (var child in _relationsBox.GetChildren())
+            child.QueueFree();
+
+        var data = WorldStateManager.Instance?.Data;
+        if (data == null) return;
+
+        foreach (var nation in data.Nations)
+        {
+            if (nation.IsPlayer) continue;
+
+            var status = nation.Archetype switch
+            {
+                Data.NationArchetype.Hegemon => "HOSTILE",
+                Data.NationArchetype.Commercial => "NEUTRAL",
+                Data.NationArchetype.Revolutionary => "WARY",
+                Data.NationArchetype.Traditionalist => "COOL",
+                Data.NationArchetype.Survival => "FRIENDLY",
+                _ => "UNKNOWN"
+            };
+
+            var color = status switch
+            {
+                "HOSTILE" => new Color(1f, 0.3f, 0.3f),
+                "WARY" => new Color(1f, 0.6f, 0.2f),
+                "COOL" => new Color(0.8f, 0.8f, 0.3f),
+                "NEUTRAL" => new Color(0.6f, 0.6f, 0.7f),
+                "FRIENDLY" => new Color(0.3f, 0.9f, 0.4f),
+                _ => new Color(0.5f, 0.5f, 0.5f)
+            };
+
+            AddRelationRow(nation.Name, status, color, nation.NationColor);
+        }
+    }
+
+    private void AddSectionHeader(VBoxContainer parent, string text, Color accentColor)
+    {
+        var container = new PanelContainer();
+        var headerStyle = new StyleBoxFlat
+        {
+            BgColor = new Color(0.08f, 0.09f, 0.11f, 1f),
+            BorderColor = accentColor,
+            BorderWidthLeft = 4,
+            ContentMarginLeft = 12,
+            ContentMarginTop = 6,
+            ContentMarginBottom = 6
+        };
+        container.AddThemeStyleboxOverride("panel", headerStyle);
+
+        var label = new Label
+        {
+            Text = text,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        label.AddThemeFontSizeOverride("font_size", 12);
+        label.AddThemeColorOverride("font_color", accentColor);
+        container.AddChild(label);
+        parent.AddChild(container);
+    }
+
+    private void AddRelationRow(string nationName, string status, Color statusColor, Color nationColor)
+    {
+        var row = new PanelContainer();
+        var rowStyle = new StyleBoxFlat
+        {
+            BgColor = new Color(0.12f, 0.13f, 0.16f, 1f),
+            BorderColor = new Color(0.15f, 0.17f, 0.2f, 1f),
+            BorderWidthBottom = 1,
+            ContentMarginLeft = 12,
+            ContentMarginRight = 12,
+            ContentMarginTop = 6,
+            ContentMarginBottom = 6
+        };
+        row.AddThemeStyleboxOverride("panel", rowStyle);
+
+        var hbox = new HBoxContainer();
+        hbox.AddThemeConstantOverride("separation", 8);
+
+        // Nation color indicator
+        var colorDot = new ColorRect
+        {
+            Color = nationColor,
+            CustomMinimumSize = new Vector2(8, 8)
+        };
+        hbox.AddChild(colorDot);
+
+        // Nation name
+        var nameLabel = new Label
+        {
+            Text = nationName,
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        nameLabel.AddThemeFontSizeOverride("font_size", 13);
+        nameLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.75f, 0.8f));
+        hbox.AddChild(nameLabel);
+
+        // Status
+        var statusLabel = new Label
+        {
+            Text = status,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        statusLabel.AddThemeFontSizeOverride("font_size", 11);
+        statusLabel.AddThemeColorOverride("font_color", statusColor);
+        hbox.AddChild(statusLabel);
+
+        row.AddChild(hbox);
+        _relationsBox.AddChild(row);
+    }
+
+    private void AddIntelRow(VBoxContainer parent, string label, string value)
+    {
+        var row = new PanelContainer();
+        var rowStyle = new StyleBoxFlat
+        {
+            BgColor = new Color(0.12f, 0.13f, 0.16f, 1f),
+            BorderColor = new Color(0.15f, 0.17f, 0.2f, 1f),
+            BorderWidthBottom = 1,
+            ContentMarginLeft = 12,
+            ContentMarginRight = 12,
+            ContentMarginTop = 6,
+            ContentMarginBottom = 6
+        };
+        row.AddThemeStyleboxOverride("panel", rowStyle);
+
+        var hbox = new HBoxContainer();
+
+        var nameLabel = new Label
+        {
+            Text = label,
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        nameLabel.AddThemeFontSizeOverride("font_size", 13);
+        nameLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.65f));
+        hbox.AddChild(nameLabel);
+
+        var valueLabel = new Label
+        {
+            Text = value,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        valueLabel.AddThemeFontSizeOverride("font_size", 13);
+        valueLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.6f, 1f));
+        hbox.AddChild(valueLabel);
+
+        row.AddChild(hbox);
+        parent.AddChild(row);
     }
 }

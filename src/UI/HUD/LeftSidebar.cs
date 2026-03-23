@@ -3,24 +3,23 @@ using Godot;
 namespace Warship.UI.HUD;
 
 /// <summary>
-/// A strict, clean Left Sidebar matching the hand-drawn schematic.
-/// Contains the core structural branches of the player's nation.
+/// Left Column — 250px wide action menu with categorized command buttons.
+/// Categories: Diplomatic, Military, Economic, Intelligence.
 /// </summary>
 public partial class LeftSidebar : Control
 {
     public override void _Ready()
     {
-        // Anchor to the Left edge of the screen, underneath the top bars, above the bottom bar
         SetAnchorsAndOffsetsPreset(LayoutPreset.LeftWide);
-        CustomMinimumSize = new Vector2(250, 0); // 250px wide
-        OffsetTop = 80; // Below News & TopBar
-        OffsetBottom = 0; // Absolute bottom
+        OffsetTop = 64;   // Below both top bars (32 + 32)
+        OffsetRight = 250; // 250px wide
+        OffsetBottom = 0;
 
         // Background
         var bg = new Panel();
         var style = new StyleBoxFlat
         {
-            BgColor = new Color(0.1f, 0.11f, 0.13f, 1f), // Solid clean dark gray
+            BgColor = new Color(0.1f, 0.11f, 0.13f, 1f),
             BorderColor = new Color(0.2f, 0.22f, 0.25f, 1f),
             BorderWidthRight = 2
         };
@@ -28,66 +27,106 @@ public partial class LeftSidebar : Control
         bg.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(bg);
 
+        // Scrollable content
+        var scroll = new ScrollContainer();
+        scroll.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
+        AddChild(scroll);
+
         var vbox = new VBoxContainer();
-        vbox.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        vbox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         vbox.AddThemeConstantOverride("separation", 0);
-        AddChild(vbox);
+        scroll.AddChild(vbox);
 
         // Header
-        var header = new Label { Text = "CONTROL TABS AREA", HorizontalAlignment = HorizontalAlignment.Center };
-        header.AddThemeFontSizeOverride("font_size", 14);
+        var header = new Label
+        {
+            Text = "COMMANDS",
+            HorizontalAlignment = HorizontalAlignment.Center,
+            CustomMinimumSize = new Vector2(0, 36)
+        };
+        header.AddThemeFontSizeOverride("font_size", 13);
         header.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.6f));
-        header.CustomMinimumSize = new Vector2(0, 30);
         header.VerticalAlignment = VerticalAlignment.Center;
         vbox.AddChild(header);
-        vbox.AddChild(new HSeparator());
 
-        // Buttons
-        AddTabButton(vbox, "BRANCH'S", true);
-        AddTabButton(vbox, "GOVERNMENT", true);
-        vbox.AddChild(new HSeparator());
-        AddTabButton(vbox, "ARMY", false);
-        AddTabButton(vbox, "AIR FORCE", false);
-        AddTabButton(vbox, "NAVY", false);
+        // Diplomatic
+        AddCategoryHeader(vbox, "DIPLOMATIC", new Color(0.3f, 0.6f, 1f));
+        AddActionButton(vbox, "Propose Alliance");
+        AddActionButton(vbox, "Trade Agreement");
+        AddActionButton(vbox, "Send Envoy");
+        AddActionButton(vbox, "Declare War");
+
+        // Military
+        AddCategoryHeader(vbox, "MILITARY", new Color(1f, 0.4f, 0.3f));
+        AddActionButton(vbox, "Border Watch");
+        AddActionButton(vbox, "Patrol");
+        AddActionButton(vbox, "Stage Army");
+        AddActionButton(vbox, "Attack");
+
+        // Economic
+        AddCategoryHeader(vbox, "ECONOMIC", new Color(0.3f, 0.9f, 0.4f));
+        AddActionButton(vbox, "Adjust Budget");
+        AddActionButton(vbox, "Set Tariffs");
+        AddActionButton(vbox, "Open Trade Route");
+
+        // Intelligence
+        AddCategoryHeader(vbox, "INTELLIGENCE", new Color(0.8f, 0.6f, 1f));
+        AddActionButton(vbox, "Deploy Spy");
+        AddActionButton(vbox, "Counter-Intel");
+        AddActionButton(vbox, "Sabotage");
     }
 
-    private void AddTabButton(VBoxContainer parent, string text, bool isTitle)
+    private void AddCategoryHeader(VBoxContainer parent, string text, Color accentColor)
+    {
+        var container = new PanelContainer();
+        var headerStyle = new StyleBoxFlat
+        {
+            BgColor = new Color(0.08f, 0.09f, 0.11f, 1f),
+            BorderColor = accentColor,
+            BorderWidthLeft = 4,
+            ContentMarginLeft = 12,
+            ContentMarginTop = 6,
+            ContentMarginBottom = 6
+        };
+        container.AddThemeStyleboxOverride("panel", headerStyle);
+
+        var label = new Label
+        {
+            Text = text,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        label.AddThemeFontSizeOverride("font_size", 12);
+        label.AddThemeColorOverride("font_color", accentColor);
+        container.AddChild(label);
+        parent.AddChild(container);
+    }
+
+    private void AddActionButton(VBoxContainer parent, string text)
     {
         var btn = new Button
         {
             Text = text,
-            CustomMinimumSize = new Vector2(0, 50),
+            CustomMinimumSize = new Vector2(0, 40),
             Alignment = HorizontalAlignment.Left
         };
-        
-        var margin = new MarginContainer();
-        margin.AddThemeConstantOverride("margin_left", 16);
-        btn.AddChild(margin);
 
-        var style = new StyleBoxFlat
+        var normal = new StyleBoxFlat
         {
             BgColor = new Color(0.12f, 0.13f, 0.16f, 1f),
             BorderColor = new Color(0.15f, 0.17f, 0.2f, 1f),
-            BorderWidthBottom = 1
+            BorderWidthBottom = 1,
+            ContentMarginLeft = 20
         };
-        
-        var hover = (StyleBoxFlat)style.Duplicate();
+
+        var hover = (StyleBoxFlat)normal.Duplicate();
         hover.BgColor = new Color(0.2f, 0.22f, 0.28f, 1f);
 
-        btn.AddThemeStyleboxOverride("normal", style);
+        btn.AddThemeStyleboxOverride("normal", normal);
         btn.AddThemeStyleboxOverride("hover", hover);
         btn.AddThemeStyleboxOverride("pressed", hover);
-        
-        if (isTitle)
-        {
-            btn.AddThemeFontSizeOverride("font_size", 18);
-            btn.AddThemeColorOverride("font_color", Colors.White);
-        }
-        else
-        {
-            btn.AddThemeFontSizeOverride("font_size", 16);
-            btn.AddThemeColorOverride("font_color", new Color(0.7f, 0.7f, 0.75f));
-        }
+        btn.AddThemeFontSizeOverride("font_size", 14);
+        btn.AddThemeColorOverride("font_color", new Color(0.75f, 0.75f, 0.8f));
 
         parent.AddChild(btn);
     }
