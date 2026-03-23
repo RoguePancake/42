@@ -10,8 +10,10 @@ namespace Warship.UI.Map;
 
 /// <summary>
 /// "AAA Graphics Update" Map Renderer
-/// Uses programmatically generated high-definition textures (64x64) for terrain,
-/// draws smooth rivers, isometric 3D-looking cities, and neon borders.
+/// Supports two modes:
+///   1. Procedural: Generated HD textures (64x64) for terrain (original)
+///   2. Real Map: OSM tile-based real Earth map as background
+/// Both modes use the same overlay drawing for borders, cities, units, etc.
 /// </summary>
 public partial class MapManager : Node2D
 {
@@ -22,11 +24,15 @@ public partial class MapManager : Node2D
 
     private WorldData? _world;
     private Texture2D[] _terrainTextures = new Texture2D[8];
-    
+
+    // Real map texture (null = use procedural terrain)
+    private Texture2D? _realMapTexture;
+    private MapTileConfig? _tileConfig;
+
     // UI State
     private string? _selectedUnitId;
     private DossierPanel? _dossierPanel;
-    
+
     // SNES-style base theme but cranked up
     private static readonly Color[] TerrainColors = new Color[]
     {
@@ -47,8 +53,15 @@ public partial class MapManager : Node2D
 
         if (_world != null)
         {
-            GenerateHDTextures();
-            GD.Print("[MapManager] Textures baked!");
+            if (_world.UseRealMap)
+            {
+                LoadRealMapTexture();
+            }
+            else
+            {
+                GenerateHDTextures();
+                GD.Print("[MapManager] Textures baked!");
+            }
         }
 
         // Listen for movement so we can trigger a redraw when a unit lands
@@ -56,6 +69,41 @@ public partial class MapManager : Node2D
 
         // Grab dossier panel reference (it's in the UILayer)
         _dossierPanel = GetNode<DossierPanel>("/root/Main/UILayer/DossierPanel");
+    }
+
+    /// <summary>
+    /// Load real-world map texture from bundled asset or cached tiles.
+    /// </summary>
+    private void LoadRealMapTexture()
+    {
+        _tileConfig = MapTileConfig.OpenStreetMap();
+
+        // Try pre-bundled asset first (production path)
+        _realMapTexture = TileStitcher.LoadBundled(_tileConfig.BundledMapPath);
+
+        if (_realMapTexture != null)
+        {
+            GD.Print("[MapManager] Using bundled real map texture");
+            return;
+        }
+
+        // Try stitching from cached tiles
+        string cachePath = OS.GetUserDataDir() + "/" + _tileConfig.CacheDir;
+        int gamePixelW = _world!.MapWidth * TileSize;
+        int gamePixelH = _world.MapHeight * TileSize;
+
+        _realMapTexture = TileStitcher.StitchAndScale(_tileConfig, cachePath, gamePixelW, gamePixelH);
+
+        if (_realMapTexture != null)
+        {
+            GD.Print("[MapManager] Stitched real map from cached tiles");
+        }
+        else
+        {
+            GD.Print("[MapManager] No real map tiles found. Run TileDownloader first.");
+            GD.Print("[MapManager] Falling back to procedural terrain.");
+            GenerateHDTextures();
+        }
     }
     
     private void OnUnitMoved(UnitMovedEvent ev)
@@ -74,10 +122,17 @@ public partial class MapManager : Node2D
         if (_world == null)
         {
             _world = WorldStateManager.Instance?.Data;
-            if (_world != null && _world.TerrainMap != null)
+            if (_world != null)
             {
-                GenerateHDTextures();
-                GD.Print("[MapManager] Textures baked (Deferred)!");
+                if (_world.UseRealMap)
+                {
+                    LoadRealMapTexture();
+                }
+                else if (_world.TerrainMap != null)
+                {
+                    GenerateHDTextures();
+                    GD.Print("[MapManager] Textures baked (Deferred)!");
+                }
                 QueueRedraw();
             }
             return;
@@ -251,32 +306,44 @@ public partial class MapManager : Node2D
     {
         if (_world == null || _world.TerrainMap == null || _world.OwnershipMap == null) return;
 
-        // 1. Draw HD Terrain 
-        for (int x = 0; x < MapWidth; x++)
+        // 1. Draw Terrain (Real map or procedural)
+        if (_realMapTexture != null && _world.UseRealMap)
         {
-            for (int y = 0; y < MapHeight; y++)
+            // Single texture background — real OSM map
+            DrawTexture(_realMapTexture, Vector2.Zero);
+        }
+        else if (_world.TerrainMap != null)
+        {
+            // Procedural HD terrain tiles
+            for (int x = 0; x < MapWidth; x++)
             {
-                int t = _world.TerrainMap[x, y];
-                var pos = new Vector2(x * TileSize, y * TileSize);
-                DrawTexture(_terrainTextures[t], pos);
+                for (int y = 0; y < MapHeight; y++)
+                {
+                    int t = _world.TerrainMap[x, y];
+                    var pos = new Vector2(x * TileSize, y * TileSize);
+                    DrawTexture(_terrainTextures[t], pos);
+                }
             }
         }
 
-        // 2. Draw Rivers (Thick, meandering bezier-like lines)
-        var riverColor = TerrainColors[(int)TerrainType.Water].Lightened(0.2f);
-        foreach (var river in _world.RiverPaths)
+        // 2. Draw Rivers (only in procedural mode — real map already has rivers)
+        if (!_world.UseRealMap)
         {
-            if (river.Length < 2) continue;
-            var points = new Vector2[river.Length];
-            for (int i = 0; i < river.Length; i++)
-                points[i] = new Vector2(river[i].X * TileSize, river[i].Y * TileSize);
-            
-            // Draw wide river shadow
-            DrawPolyline(points, new Color(0,0,0,0.3f), 8, true);
-            // Draw flowing river
-            DrawPolyline(points, riverColor, 6, true);
-            // River center highlight
-            DrawPolyline(points, Colors.White, 2, true);
+            var riverColor = TerrainColors[(int)TerrainType.Water].Lightened(0.2f);
+            foreach (var river in _world.RiverPaths)
+            {
+                if (river.Length < 2) continue;
+                var points = new Vector2[river.Length];
+                for (int i = 0; i < river.Length; i++)
+                    points[i] = new Vector2(river[i].X * TileSize, river[i].Y * TileSize);
+
+                // Draw wide river shadow
+                DrawPolyline(points, new Color(0,0,0,0.3f), 8, true);
+                // Draw flowing river
+                DrawPolyline(points, riverColor, 6, true);
+                // River center highlight
+                DrawPolyline(points, Colors.White, 2, true);
+            }
         }
 
         // 3. Draw Splendid Borders & Overlays
@@ -446,6 +513,17 @@ public partial class MapManager : Node2D
             // Little name tag text
             var font = ThemeDB.FallbackFont;
             DrawString(font, pos + new Vector2(-16, -20), c.Role, HorizontalAlignment.Center, 32, 12, Colors.White);
+        }
+
+        // 8. Draw map attribution (required by OSM license in real map mode)
+        if (_world.UseRealMap && _tileConfig != null)
+        {
+            var attrFont = ThemeDB.FallbackFont;
+            float mapPixelW = _world.MapWidth * TileSize;
+            float mapPixelH = _world.MapHeight * TileSize;
+            var attrPos = new Vector2(mapPixelW - 280, mapPixelH - 8);
+            DrawString(attrFont, attrPos, _tileConfig.Attribution, HorizontalAlignment.Right, 280, 10,
+                new Color(1, 1, 1, 0.7f));
         }
     }
 

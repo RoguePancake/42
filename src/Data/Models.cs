@@ -15,7 +15,10 @@ public class WorldData
     public int MapHeight;
     public int[,]? TerrainMap;    // tile index per cell
     public int[,]? OwnershipMap;  // nation index per cell, -1 = unclaimed
-    
+
+    // Real-world map mode
+    public bool UseRealMap;
+
     public List<NationData> Nations = new();
     public List<CityData> Cities = new();
     public List<Vector2[]> RiverPaths = new();

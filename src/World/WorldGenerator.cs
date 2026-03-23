@@ -330,6 +330,232 @@ public static class WorldGenerator
         return world;
     }
 
+    /// <summary>
+    /// Create a world using real Earth geography.
+    /// Nations are placed at their real-world capital coordinates.
+    /// Territory is expanded via BFS from real positions.
+    /// Uses a simplified terrain map (water vs land) for passability.
+    /// </summary>
+    public static WorldData CreateRealWorld(int width, int height, int seed)
+    {
+        var config = MapTileConfig.OpenStreetMap();
+        var rng = new Random(seed);
+
+        var world = new WorldData
+        {
+            Seed = seed,
+            MapWidth = width,
+            MapHeight = height,
+            UseRealMap = true,
+            OwnershipMap = new int[width, height]
+        };
+
+        // Initialize ownership
+        for (int x = 0; x < width; x++)
+            for (int y = 0; y < height; y++)
+                world.OwnershipMap[x, y] = -1;
+
+        // Generate a simplified terrain map for game mechanics (passability).
+        // In real map mode, we approximate land vs water based on geographic heuristics.
+        // A proper implementation would sample the real map tile pixels for blue detection.
+        world.TerrainMap = GenerateSimplifiedRealTerrain(width, height, seed, config);
+
+        // Place nations at real-world capitals
+        var capitalPositions = RealWorldData.GetCapitalGridPositions(config, width, height);
+
+        for (int i = 0; i < RealWorldData.Nations.Length; i++)
+        {
+            var geoNation = RealWorldData.Nations[i];
+            var (_, capX, capY) = capitalPositions[i];
+
+            // Ensure capital is on passable terrain
+            if (!TerrainRules.IsPassable(world.TerrainMap[capX, capY]))
+            {
+                // Search nearby for passable tile
+                (capX, capY) = FindNearestPassable(world, capX, capY);
+            }
+
+            world.Nations.Add(new NationData
+            {
+                Id = $"N_{i}",
+                Name = geoNation.Name,
+                Archetype = (NationArchetype)((int)geoNation.Archetype),
+                NationColor = geoNation.NationColor,
+                CapitalX = capX,
+                CapitalY = capY,
+                ProvinceCount = 1
+            });
+
+            world.OwnershipMap[capX, capY] = i;
+        }
+
+        // BFS territory expansion from real capital positions (same as procedural)
+        var queue = new Queue<(Vector2I tile, int nationIndex)>();
+        foreach (var nation in world.Nations)
+        {
+            int index = int.Parse(nation.Id.Split('_')[1]);
+            queue.Enqueue((new Vector2I(nation.CapitalX, nation.CapitalY), index));
+        }
+
+        var dx = new[] { 0, 1, 0, -1 };
+        var dy = new[] { -1, 0, 1, 0 };
+
+        while (queue.Count > 0)
+        {
+            var (tile, natIdx) = queue.Dequeue();
+            for (int d = 0; d < 4; d++)
+            {
+                int nx = tile.X + dx[d];
+                int ny = tile.Y + dy[d];
+                if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+                if (!TerrainRules.IsPassable(world.TerrainMap[nx, ny])) continue;
+                if (world.OwnershipMap[nx, ny] != -1) continue;
+                world.OwnershipMap[nx, ny] = natIdx;
+                world.Nations[natIdx].ProvinceCount++;
+                if (rng.NextDouble() > 0.1)
+                    queue.Enqueue((new Vector2I(nx, ny), natIdx));
+            }
+        }
+
+        // Place real cities
+        int cityIndex = 0;
+        for (int i = 0; i < RealWorldData.Nations.Length; i++)
+        {
+            var nation = world.Nations[i];
+            var cities = RealWorldData.GetCityGridPositions(i, config, width, height);
+
+            foreach (var (name, gx, gy, size) in cities)
+            {
+                world.Cities.Add(new CityData
+                {
+                    Id = $"C_{cityIndex++}",
+                    NationId = nation.Id,
+                    Name = name,
+                    TileX = gx,
+                    TileY = gy,
+                    IsCapital = size == 3,
+                    Size = size
+                });
+            }
+
+            // Spawn troops
+            for (int t = 0; t < 500; t++)
+                SpawnRandomTroop(world, nation, rng);
+
+            // Spawn characters
+            world.Characters.Add(new CharacterData
+            {
+                Id = $"{nation.Id}_Char_1",
+                NationId = nation.Id,
+                Name = "Leader " + nation.Name,
+                Role = "Head of State",
+                TileX = nation.CapitalX,
+                TileY = nation.CapitalY,
+                PixelX = nation.CapitalX * 64 + 32,
+                PixelY = nation.CapitalY * 64 + 32,
+                TargetPixelX = nation.CapitalX * 64 + 32,
+                TargetPixelY = nation.CapitalY * 64 + 32,
+                TerritoryAuthority = 80f,
+                WorldAuthority = 60f,
+                BehindTheScenesAuthority = 70f
+            });
+
+            world.Characters.Add(new CharacterData
+            {
+                Id = $"{nation.Id}_Char_2",
+                NationId = nation.Id,
+                Name = "General",
+                Role = "Defense Minister",
+                TileX = nation.CapitalX + 1,
+                TileY = nation.CapitalY,
+                PixelX = (nation.CapitalX + 1) * 64 + 32,
+                PixelY = nation.CapitalY * 64 + 32,
+                TargetPixelX = (nation.CapitalX + 1) * 64 + 32,
+                TargetPixelY = nation.CapitalY * 64 + 32,
+                TerritoryAuthority = 40f,
+                WorldAuthority = 20f,
+                BehindTheScenesAuthority = 60f
+            });
+
+            // Player is UK's Defense Minister
+            if (RealWorldData.Nations[i].Archetype == RealWorldData.NationArchetypeGeo.FreeState)
+            {
+                world.Characters[^1].IsPlayer = true;
+                world.PlayerNationId = nation.Id;
+            }
+        }
+
+        return world;
+    }
+
+    /// <summary>
+    /// Generate a simplified terrain map for real-map mode.
+    /// Uses noise-based ocean approximation that roughly matches Earth's landmasses.
+    /// For accurate results, this should be replaced with actual coastline data.
+    /// </summary>
+    private static int[,] GenerateSimplifiedRealTerrain(int width, int height, int seed, MapTileConfig config)
+    {
+        // Use the procedural terrain generator as a base, but it won't match real geography.
+        // This provides passability data for game mechanics while the visual map comes from OSM tiles.
+        var terrain = TerrainGenerator.Generate(width, height, seed);
+
+        // Mark known ocean areas as water based on geographic coordinates.
+        // This is a rough approximation — proper implementation would sample tile pixels.
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                var (lat, lon) = GeoMapper.GameGridToLatLon(x, y,
+                    config.LatMin, config.LonMin, config.LatMax, config.LonMax,
+                    width, height);
+
+                // Rough ocean heuristic: very high/low latitudes, central Pacific, etc.
+                bool likelyOcean = false;
+
+                // Far south (Antarctic) or far north (Arctic)
+                if (lat < -55 || lat > 70) likelyOcean = true;
+
+                // Central Pacific (rough box)
+                if (lon > -170 && lon < -100 && lat > -40 && lat < 40 && lon < -120) likelyOcean = true;
+
+                // South Pacific
+                if (lon > 150 && lat < -20 && lat > -50) likelyOcean = true;
+
+                if (likelyOcean && TerrainRules.IsLand(terrain[x, y]))
+                {
+                    terrain[x, y] = (int)TerrainType.Water;
+                }
+            }
+        }
+
+        return terrain;
+    }
+
+    /// <summary>
+    /// Find nearest passable tile to the given coordinates via spiral search.
+    /// </summary>
+    private static (int x, int y) FindNearestPassable(WorldData world, int cx, int cy)
+    {
+        for (int radius = 1; radius < 20; radius++)
+        {
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                for (int dy = -radius; dy <= radius; dy++)
+                {
+                    if (Math.Abs(dx) != radius && Math.Abs(dy) != radius) continue;
+                    int nx = cx + dx;
+                    int ny = cy + dy;
+                    if (nx >= 0 && nx < world.MapWidth && ny >= 0 && ny < world.MapHeight
+                        && TerrainRules.IsPassable(world.TerrainMap![nx, ny]))
+                    {
+                        return (nx, ny);
+                    }
+                }
+            }
+        }
+        return (cx, cy); // Fallback
+    }
+
     private static void SpawnRandomTroop(WorldData world, NationData nation, Random rng)
     {
         int natIdx = int.Parse(nation.Id.Split('_')[1]);
