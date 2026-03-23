@@ -16,6 +16,8 @@
 [ext_resource type="Script" path="res://src/UI/HUD/CrisisPanel.cs" id="14"]
 [ext_resource type="Script" path="res://src/Engines/VictoryEngine.cs" id="15"]
 [ext_resource type="Script" path="res://src/UI/HUD/VictoryPanel.cs" id="16"]
+[ext_resource type="Script" path="res://src/UI/HUD/NewsTicker.cs" id="17"]
+[ext_resource type="Script" path="res://src/Engines/EconomyEngine.cs" id="18"]
 
 [node name="Main" type="Node2D"]
 
@@ -39,6 +41,9 @@ script = ExtResource("13")
 
 [node name="VictoryEngine" type="Node" parent="."]
 script = ExtResource("15")
+
+[node name="EconomyEngine" type="Node" parent="."]
+script = ExtResource("18")
 
 [node name="Background" type="ColorRect" parent="."]
 anchors_preset = 15
@@ -114,3 +119,15 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 0
 script = ExtResource("16")
+
+[node name="NewsTicker" type="Control" parent="UILayer"]
+layout_mode = 3
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -32.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+script = ExtResource("17")

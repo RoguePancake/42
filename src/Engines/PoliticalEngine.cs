@@ -61,6 +61,10 @@ public partial class PoliticalEngine : Node
 
     private void ProcessFundMilitia(CharacterData actor)
     {
+        var nation = WorldStateManager.Instance?.Data?.Nations[int.Parse(actor.NationId.Split('_')[1])];
+        if (nation != null && nation.Treasury < 100f) { Notify("❌ Insufficient Funds! Requires $100M.", "danger"); return; }
+        if (nation != null) nation.Treasury -= 100f;
+
         float gain = 5f + (float)(_rng.NextDouble() * 5);
         float old = actor.TerritoryAuthority;
         actor.TerritoryAuthority = MathF.Min(100f, actor.TerritoryAuthority + gain);
@@ -115,6 +119,10 @@ public partial class PoliticalEngine : Node
 
     private void ProcessBribe(CharacterData actor, CharacterData target)
     {
+        var nation = WorldStateManager.Instance?.Data?.Nations[int.Parse(actor.NationId.Split('_')[1])];
+        if (nation != null && nation.Treasury < 50f) { Notify("❌ Insufficient Funds! Requires $50M.", "danger"); return; }
+        if (nation != null) nation.Treasury -= 50f;
+
         float chance = (actor.BehindTheScenesAuthority * 0.6f + actor.TerritoryAuthority * 0.4f) / 100f;
         bool success = _rng.NextDouble() < chance;
 
@@ -138,6 +146,10 @@ public partial class PoliticalEngine : Node
 
     private void ProcessThreaten(CharacterData actor, CharacterData target)
     {
+        var nation = WorldStateManager.Instance?.Data?.Nations[int.Parse(actor.NationId.Split('_')[1])];
+        if (nation != null && nation.Treasury < 10f) { Notify("❌ Insufficient Funds! Requires $10M.", "danger"); return; }
+        if (nation != null) nation.Treasury -= 10f;
+
         // Requires high TA to be credible
         float chance = actor.TerritoryAuthority / 100f * 0.7f;
         bool success = _rng.NextDouble() < chance;
@@ -161,6 +173,10 @@ public partial class PoliticalEngine : Node
 
     private void ProcessEliminate(CharacterData actor, CharacterData target)
     {
+        var nation = WorldStateManager.Instance?.Data?.Nations[int.Parse(actor.NationId.Split('_')[1])];
+        if (nation != null && nation.Treasury < 300f) { Notify("❌ Insufficient Funds! Requires $300M.", "danger"); return; }
+        if (nation != null) nation.Treasury -= 300f;
+
         // Highest risk, highest reward. Needs strong BSA.
         float chance = (actor.BehindTheScenesAuthority - 30f) / 100f; // Need BSA > 30 to even attempt
         if (chance < 0.05f) chance = 0.05f; // Always 5% minimum

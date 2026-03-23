@@ -1,70 +1,50 @@
 # FULL AUTHORITY (FA) 
-## Phase Implementation Plan (New Master Roadmap)
+## Phase Implementation Plan (Expanded 30-Phase Master Roadmap)
 
-Since shifting the vision from a classic 4X war sim (the original 30-phase plan) to a **Political Thriller**, the implementation roadmap has been completely rewritten.
-
-All previous map, rendering, and architecture phases (1-14) successfully laid the technical groundwork (EventBus, WorldStateManager, UI, procedural tiles). Moving forward, we follow the **FA Phases**:
+We are aggressively driving development to complete all 30 phases.
 
 ---
 
-## 🟢 COMPLETE: Phase FA-1 (The Paradigm Shift)
-- **Data:** Added `CharacterData` to `Models.cs` containing TA (Territory), WA (World), BSA (Behind the Scenes), and FAI (Full Authority Index).
-- **Spawning:** The engine drops physical VIP Characters onto the world map replacing generic nations.
-- **HUD:** The UI reflects Player Character metrics and live FAI progression.
+### **ACT I - THE FOUNDATION (Phases 1-9) [COMPLETE]**
+✅ **Phase FA-1:** Physical VIP Characters & Authority scoring (TA, WA, BSA, FAI).
+✅ **Phase FA-2:** The Interactive Dossier & Intel UI.
+✅ **Phase FA-3:** The Power Play Engine (Bribes, Investigations, Threats).
+✅ **Phase FA-4:** Turn Engine & Rival AI (Passive scoring & time advancement).
+✅ **Phase FA-5:** The Crisis & Event Popups (Random Geopolitical events).
+✅ **Phase FA-6:** Swarm Military Control Engine (3,000 real-time moving agents).
+✅ **Phase FA-7:** Swarm Combat, Capture, & Assassination impact rules.
+✅ **Phase FA-8:** The Ascension (Win Condition & Victory Panel).
+✅ **Phase FA-9:** The "Full Authority" Main Menu Start Screen & HUD Anchoring.
 
 ---
 
-## 🟡 NEXT: Phase FA-2 (The Dossier & Intelligence UI)
-- **Goal:** Allow the player to interact with their rivals.
-- **Implementation:** 
-  1. Clicking a Character piece on the map opens the **Dossier Panel**.
-  2. The panel displays their Role, Allegiance, and estimated Authority scores (hidden behind an intelligence "fog of war").
-  3. Includes an empty **Action Menu** (e.g., "Investigate", "Bribe", "Threaten") for future use.
+### **ACT II - ECONOMY & SUBVERSION (Phases 10-15)**
+✅ **Phase FA-10:** Economy Engine. Nations generate Treasury income based on Cities & Provinces. Actions deplete funds.
+✅ **Phase FA-11:** News Ticker. Bottom-scrolling global news marquee keeping the world feeling alive.
+🟢 **NEXT Phase FA-12:** Espionage Grid (Fog of War for rival stats/intentions requiring Intel Points to penetrate).
+⚪ **Phase FA-13:** Rebellions & Insurgency (Nations with negative Treasury or <10% TA spawn hostile Rebel swarms).
+⚪ **Phase FA-14:** National Debt & Bailouts (Borrowing against WA to secure emergency funds).
+⚪ **Phase FA-15:** Black Market Trading (Bribing factions for instant arms deals).
 
-## 🟢 COMPLETE: Phase FA-3 (The Power Play Engine)
-- **Goal:** Make the Authority meters shift based on decisions.
-- **Implementation:**
-  1. Build the `PoliticalEngine` to process actions via the `EventBus`.
-  2. Implement functional actions: e.g., "Fund Domestic Militia" (Costs Treasury, increases TA, lowers WA). 
-  3. Add Risk factors: Sometimes actions backfire and drop BSA instead.
+---
 
-## 🟢 COMPLETE: Phase FA-4 (The Turn Engine & Rival AI)
-- **Goal:** Advance time and make the world alive.
-- **Implementation:**
-  1. Build the `TurnEngine` to handle End Turn logic (calculating monthly income and passive decay of Authority).
-  2. Implement **Rival AI**: Other characters actively take hidden actions each turn to increase their own Authority, creating a race to 100 FAI.
+### **ACT III - GLOBAL ALLIANCES & FALLOUT (Phases 16-25)**
+⚪ **Phase FA-16:** United Nations Assembly UI (Proposing embargos and resolutions).
+⚪ **Phase FA-17:** Alliance Webs (Defensive pacts between specific Nations).
+⚪ **Phase FA-18:** Border Checkpoints & Attrition (Moving through enemy territory damages swarms naturally).
+⚪ **Phase FA-19:** City Siege Mechanics (Cities have actual planetary hitpoints before flipping).
+⚪ **Phase FA-20:** Media Warfare (Running propaganda campaigns to tank a rival's WA globally).
+⚪ **Phase FA-21:** Military Research Facilities (Upgrading swarms to Tanks / Jets / Fleets).
+⚪ **Phase FA-22:** Nuclear Silo Construction (The ultimate doomsday weapon).
+⚪ **Phase FA-23:** DEFCON System (Global panic meter scaling with massive military movements).
+⚪ **Phase FA-24:** WMD Strikes (Nuking a city permanently changes it to radioactive waste, huge WA penalty).
+⚪ **Phase FA-25:** Leader Succession (When a leader is eliminated, a new randomly generated protege takes extreme vengeance).
 
-## 🟢 COMPLETE: Phase FA-5 (The Crisis & News System)
-- **Goal:** Random geopolitical tension.
-- **Implementation:**
-  1. Build a News Feed panel that pops up at the start of a turn.
-  2. Generate crises (e.g., "Border Skirmish with China", "Data Leak").
-  3. Force the player to make a choice that directly impacts TA, WA, or BSA.
+---
 
-## 🟢 COMPLETE: Phase FA-6 (Swarm Military Control)
-- **Goal:** Command massive global forces in real-time.
-- **Implementation:** 
-  1. Spawns 3,000 troops globally (500 per nation) rendered natively without performance loss.
-  2. Built `MilitaryEngine` to control troops as a continuous swarm.
-  3. Added the **Army Command Panel** to assign global orders (Stage, Attack, Border Watch, Patrol).
-  4. Players drop markers on the map to funnel entirely 500-troop armies across the world.
-
-## 🟡 NEXT: Phase FA-7 (Combat & Military Conquest)
-- **Goal:** Make swarms capable of fighting and taking territory, heavily influenced by leader assassinations.
-- **Implementation:**
-  1. Swarms from different nations colliding will destroy each other (Combat simulation).
-  2. If a nation's troops capture an enemy city, ownership changes.
-  3. **High-Value Targets:** Assassinating a rival nation's Leader (VIP) plummets that nation's Authority and troop strength, making them significantly easier to conquer. *Leaders are physical targets.*
-
-## 🟢 COMPLETE: Phase FA-8 (The Ascension to Full Authority)
-- **Goal:** The Win condition.
-- **Implementation:**
-  1. `VictoryEngine` monitors the Player's FAI. Reaching an FAI of 90 triggers the victory condition.
-  2. `VictoryPanel` overlays the screen, forcing a pause and declaring the geopolitical domination.
-  3. Option to "Continue Simulation" as the unchallenged dictator attempting to maximize World Authority globally.
-
-## 🟢 COMPLETE: Phase FA-9 (The Start Screen)
-- **Goal:** A professional entry point instead of dropping right into the map.
-- **Implementation:**
-  1. Boot intro straight to `MainMenu.tscn`.
-  2. "New Campaign", "Continue", and "Exit" buttons.
+### **ACT IV - FULL AUTHORITY (Phases 26-30)**
+⚪ **Phase FA-26:** Espionage Agency Bases (Placing literal Spies on the map).
+⚪ **Phase FA-27:** True Leader Permadeath (If all succession options run out, the nation entirely collapses into Free States).
+⚪ **Phase FA-28:** Procedural Global Objectives (e.g., "The Oil Crisis" or "The Pandemic" affecting all nations for 12 turns).
+⚪ **Phase FA-29:** Saving & Loading states.
+⚪ **Phase FA-30:** The Final Polish. Sound effects, visceral impacts, massive particle explosions, and deployment of FULL AUTHORITY.

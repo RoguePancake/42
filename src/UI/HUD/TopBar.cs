@@ -87,7 +87,9 @@ public partial class TopBar : Control
             var pc = data.Characters.Find(c => c.IsPlayer);
             if (pc != null)
             {
-                _statsLabel.Text = $" {pc.Role} {pc.Name}  |  TA: {pc.TerritoryAuthority:0}%  WA: {pc.WorldAuthority:0}%  BSA: {pc.BehindTheScenesAuthority:0}%  [FAI: {pc.FullAuthorityIndex:0}%] ";
+                int natIdx = int.Parse(pc.NationId.Split('_')[1]);
+                var nat = data.Nations[natIdx];
+                _statsLabel.Text = $" Treasury: ${nat.Treasury:0}M  |  {pc.Role} {pc.Name}  |  TA: {pc.TerritoryAuthority:0}%  WA: {pc.WorldAuthority:0}%  BSA: {pc.BehindTheScenesAuthority:0}%  [FAI: {pc.FullAuthorityIndex:0}%] ";
             }
         }
     }
