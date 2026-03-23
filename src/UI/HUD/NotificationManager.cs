@@ -18,11 +18,14 @@ public partial class NotificationManager : Control
 
     public override void _Ready()
     {
-        // Position on the right side of the screen, below the top bar
-        AnchorsPreset = (int)LayoutPreset.TopRight;
-        OffsetRight = -20;
-        OffsetTop = 70;
-        CustomMinimumSize = new Vector2(300, 500);
+        // Anchoring to Top-Left explicitly prevents it from hiding under the Dossier panel
+        SetAnchorsAndOffsetsPreset(LayoutPreset.TopLeft);
+        
+        // Push it inward to avoid MacOS/UI cropping
+        OffsetTop = 80; // Below TopBar
+        OffsetBottom = 600; // ample height
+        OffsetLeft = 20; // safe margin from left edge
+        OffsetRight = 320; // 300px width
         
         // Mouse filter to let clicks pass through
         MouseFilter = MouseFilterEnum.Ignore;
@@ -30,7 +33,8 @@ public partial class NotificationManager : Control
         _container = new VBoxContainer();
         _container.AddThemeConstantOverride("separation", 10);
         _container.MouseFilter = MouseFilterEnum.Ignore;
-        _container.SetAnchorsAndOffsetsPreset(LayoutPreset.TopRight);
+        // The container fills the rigid bounds we just defined
+        _container.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(_container);
 
         EventBus.Instance?.Subscribe<NotificationEvent>(OnNotification);
