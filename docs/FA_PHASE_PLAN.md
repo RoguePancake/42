@@ -21,8 +21,8 @@ We are aggressively driving development to complete all 30 phases.
 ### **ACT II - ECONOMY & SUBVERSION (Phases 10-15)**
 ✅ **Phase FA-10:** Economy Engine. Nations generate Treasury income based on Cities & Provinces. Actions deplete funds.
 ✅ **Phase FA-11:** News Ticker. Bottom-scrolling global news marquee keeping the world feeling alive.
-🟢 **NEXT Phase FA-12:** Espionage Grid (Fog of War for rival stats/intentions requiring Intel Points to penetrate).
-⚪ **Phase FA-13:** Rebellions & Insurgency (Nations with negative Treasury or <10% TA spawn hostile Rebel swarms).
+✅ **Phase FA-12:** Espionage Grid (Fog of War for rival stats/intentions requiring Intel Points to penetrate).
+🟢 **NEXT Phase FA-13:** Rebellions & Insurgency (Nations with negative Treasury or <10% TA spawn hostile Rebel swarms).
 ⚪ **Phase FA-14:** National Debt & Bailouts (Borrowing against WA to secure emergency funds).
 ⚪ **Phase FA-15:** Black Market Trading (Bribing factions for instant arms deals).
 

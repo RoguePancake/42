@@ -93,6 +93,11 @@ public partial class PoliticalEngine : Node
         float old = actor.BehindTheScenesAuthority;
         actor.BehindTheScenesAuthority = MathF.Min(100f, actor.BehindTheScenesAuthority + gain);
 
+        // Fog of War: broad intel boost on all rivals
+        var world = WorldStateManager.Instance?.Data;
+        if (world != null)
+            IntelligenceEngine.GrantReviewIntelBonus(world, actor.NationId);
+
         Notify($"📋 Intel review complete: BSA +{gain:0.0}%", "info");
         EmitChange(actor.Id, "BSA", old, actor.BehindTheScenesAuthority, "Intel review");
     }
@@ -109,7 +114,13 @@ public partial class PoliticalEngine : Node
         {
             float bsaGain = 3f;
             actor.BehindTheScenesAuthority = MathF.Min(100f, actor.BehindTheScenesAuthority + bsaGain);
-            Notify($"🔍 Investigation on {target.Name} successful! BSA +{bsaGain:0.0}%", "success");
+
+            // Fog of War: grant targeted intel points
+            var world = WorldStateManager.Instance?.Data;
+            if (world != null)
+                IntelligenceEngine.GrantInvestigateBonus(world, actor.NationId, target.NationId);
+
+            Notify($"🔍 Investigation on {target.Name} successful! BSA +{bsaGain:0.0}%, intel gained.", "success");
         }
         else
         {

@@ -22,3 +22,7 @@ public record NotificationEvent(string Message, string Type) : IGameEvent; // Ty
 // Crisis System
 public record CrisisTriggeredEvent(string CrisisId, string Title, string Description, string[] Choices) : IGameEvent;
 public record CrisisResolvedEvent(string CrisisId, int ChoiceIndex) : IGameEvent;
+
+// Espionage / Intel System
+public record IntelChangedEvent(string ObserverNationId, string TargetNationId,
+    float OldPoints, float NewPoints, string Reason) : IGameEvent;

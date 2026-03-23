@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://main_scene"]
+[gd_scene load_steps=9 format=3 uid="uid://main_scene"]
 
 [ext_resource type="Script" path="res://src/Core/EventBus.cs" id="1"]
 [ext_resource type="Script" path="res://src/Core/WorldStateManager.cs" id="2"]
@@ -21,6 +21,7 @@
 [ext_resource type="Script" path="res://src/UI/HUD/LeftSidebar.cs" id="19"]
 [ext_resource type="Script" path="res://src/UI/HUD/RightSidebar.cs" id="20"]
 [ext_resource type="Script" path="res://src/UI/HUD/BottomPanel.cs" id="21"]
+[ext_resource type="Script" path="res://src/Engines/IntelligenceEngine.cs" id="22"]
 
 [node name="Main" type="Node2D"]
 
@@ -47,6 +48,9 @@ script = ExtResource("15")
 
 [node name="EconomyEngine" type="Node" parent="."]
 script = ExtResource("18")
+
+[node name="IntelligenceEngine" type="Node" parent="."]
+script = ExtResource("22")
 
 [node name="Background" type="ColorRect" parent="."]
 anchors_preset = 15

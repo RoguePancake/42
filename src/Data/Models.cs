@@ -21,6 +21,7 @@ public class WorldData
     public List<Vector2[]> RiverPaths = new();
     public List<UnitData> Units = new();
     public List<CharacterData> Characters = new();
+    public List<IntelRecord> IntelRecords = new();
 }
 
 public enum TerrainType
@@ -133,4 +134,23 @@ public class CharacterData
     
     // Composite Full Authority Index
     public float FullAuthorityIndex => (TerritoryAuthority + WorldAuthority + BehindTheScenesAuthority) / 3f;
+}
+
+// ─── Espionage / Fog of War ────────────────────────────
+
+public enum IntelLevel
+{
+    Unknown = 0,    // "???" — no intel
+    Rumor = 1,      // ~25% precision
+    Observed = 2,   // ~10% precision
+    Confirmed = 3,  // ~5% precision
+    Complete = 4    // Exact values
+}
+
+public class IntelRecord
+{
+    public string ObserverNationId = "";
+    public string TargetNationId = "";
+    public float IntelPoints = 0f;       // 0-100, determines IntelLevel
+    public int LastUpdatedTurn = 0;
 }

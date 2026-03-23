@@ -2,6 +2,7 @@ using Godot;
 using System;
 using System.Linq;
 using Warship.Core;
+using Warship.Data;
 using Warship.Events;
 
 namespace Warship.Engines;
@@ -56,20 +57,37 @@ public partial class AIEngine : Node
         }
     }
 
-    private string DetermineBestAction(Warship.Data.CharacterData rival, Warship.Data.CharacterData target)
+    private string DetermineBestAction(CharacterData rival, CharacterData target)
     {
         // 1. If TA is critically low, they panic and fund militia
         if (rival.TerritoryAuthority < 30f)
             return "fund_militia";
 
+        // Fog of War: AI uses perceived (fogged) values of the target
+        var world = WorldStateManager.Instance?.Data;
+        float perceivedTargetFai = target.FullAuthorityIndex;
+        IntelLevel intelOnTarget = IntelLevel.Complete;
+
+        if (world != null)
+        {
+            intelOnTarget = IntelligenceEngine.GetIntelLevel(world, rival.NationId, target.NationId);
+            int seed = target.NationId.GetHashCode() ^ (world.TurnNumber * 31 + rival.NationId.GetHashCode());
+            float foggedFai = IntelligenceEngine.GetFoggedValue(target.FullAuthorityIndex, intelOnTarget, seed);
+            perceivedTargetFai = foggedFai >= 0 ? foggedFai : 50f; // Unknown = assume average
+        }
+
         // 2. If BSA is extremely high, they get cocky and might try to eliminate
-        if (rival.BehindTheScenesAuthority > 60f && target.FullAuthorityIndex > rival.FullAuthorityIndex)
+        if (rival.BehindTheScenesAuthority > 60f && perceivedTargetFai > rival.FullAuthorityIndex)
         {
             if (_rng.NextDouble() < 0.1f) // 10% chance to go for the kill
                 return "eliminate";
         }
 
-        // 3. Main actions
+        // 3. If intel on target is low, prioritize gathering intel
+        if (intelOnTarget <= IntelLevel.Rumor && _rng.NextDouble() < 0.4f)
+            return "investigate";
+
+        // 4. Main actions
         double r = _rng.NextDouble();
         if (r < 0.25)
             return "public_address"; // Boost own WA

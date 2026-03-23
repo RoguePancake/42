@@ -11,10 +11,10 @@
 
 ## Current Status
 
-**Phase:** 2 (complete)
-**Branch:** main
+**Phase:** FA-12 (complete)
+**Branch:** claude/continue-phases-Hhcpz
 **Tag:** N/A
-**Last Session:** 2026-03-21
+**Last Session:** 2026-03-23
 
 ---
 
@@ -34,6 +34,23 @@
 - Git initialized, committed as `f710dab`
 **Issues:** None
 **Next:** Phase 3 — Terrain tileset (32×32 pixel art)
+
+### Session — 2026-03-23
+**Goal:** Phase FA-12 — Espionage Grid (Fog of War)
+**Done:**
+- Added `IntelLevel` enum and `IntelRecord` class to Models.cs
+- Added `IntelRecords` list to `WorldData`
+- Added `IntelChangedEvent` to GameEvents.cs
+- Created `IntelligenceEngine.cs` — passive BSA-based intel accumulation, decay, fog helpers
+- Wired IntelligenceEngine into Main.tscn scene tree
+- Modified `PoliticalEngine.cs`: "investigate" grants +15 intel pts on target, "review_intel" grants +5 to all rivals
+- Modified `DossierPanel.cs`: rival stats now fogged (???/~25%/~30%/exact) based on intel level, color-coded intel indicator, desaturated progress bars at low intel
+- Modified `AIEngine.cs`: AI uses fogged values for decision-making, prioritizes investigation when intel is low
+- Modified `TopBar.cs`: shows intel coverage count (e.g., "Intel: 2/5")
+- Updated FA_PHASE_PLAN.md and DEV_LOG.md
+**Key Design:** BSA 40 = breakeven. Below 40 = intel decays. Above 40 = accumulates. "Investigate" is the active espionage tool (+15 pts). Five fog tiers: Unknown/Rumor/Observed/Confirmed/Complete.
+**Issues:** No .NET SDK available to verify build
+**Next:** Phase FA-13 — Rebellions & Insurgency
 
 ---
 
