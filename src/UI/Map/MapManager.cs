@@ -27,17 +27,17 @@ public partial class MapManager : Node2D
     private string? _selectedUnitId;
     private DossierPanel? _dossierPanel;
     
-    // SNES-style base theme but cranked up
+    // Geopolitical Thriller "Holographic War Room" Theme
     private static readonly Color[] TerrainColors = new Color[]
     {
-        new Color(0.08f, 0.16f, 0.32f),  // 0: Deep Water
-        new Color(0.12f, 0.32f, 0.58f),  // 1: Water
-        new Color(0.85f, 0.76f, 0.50f),  // 2: Sand
-        new Color(0.32f, 0.62f, 0.30f),  // 3: Grass
-        new Color(0.18f, 0.40f, 0.20f),  // 4: Forest
-        new Color(0.48f, 0.56f, 0.38f),  // 5: Hills
-        new Color(0.55f, 0.48f, 0.42f),  // 6: Mountain
-        new Color(0.92f, 0.94f, 0.96f),  // 7: Snow
+        new Color(0.02f, 0.03f, 0.05f),  // 0: Deep Water (Abyssal Black/Blue)
+        new Color(0.05f, 0.08f, 0.12f),  // 1: Water (Dark Slate)
+        new Color(0.12f, 0.15f, 0.20f),  // 2: Sand (Low Elevation Land)
+        new Color(0.15f, 0.18f, 0.24f),  // 3: Grass (Standard Elevation)
+        new Color(0.18f, 0.21f, 0.28f),  // 4: Forest (Mid Elevation)
+        new Color(0.22f, 0.25f, 0.33f),  // 5: Hills (High Elevation)
+        new Color(0.26f, 0.30f, 0.38f),  // 6: Mountain (Peaks)
+        new Color(0.32f, 0.36f, 0.44f),  // 7: Snow (Highest Peaks)
     };
 
     public override void _Ready()
@@ -196,47 +196,19 @@ public partial class MapManager : Node2D
             {
                 for (int py = 0; py < TileSize; py++)
                 {
-                    // Blend base noise
-                    float n = noise.GetNoise2D(px * 15f + (t * 100), py * 15f); // Scale noise
-                    float cell = detailsNoise.GetNoise2D(px * 10f, py * 10f);
-                    
                     Color pixelColor = baseColor;
-                    
-                    if (t == (int)TerrainType.DeepWater || t == (int)TerrainType.Water)
+
+                    // Cyberpunk Grid System: Draw subtle scanlines and grid over everything
+                    if (px == 0 || py == 0)
                     {
-                        // Water gets wavy lateral noise
-                        pixelColor = n > 0.2f ? highlight : (cell < -0.2f ? shadow : baseColor);
+                        // Tile grid
+                        pixelColor.A = 0.5f;
+                        pixelColor = pixelColor.Lightened(0.1f);
                     }
-                    else if (t == (int)TerrainType.Sand)
+                    if (px % 4 == 0)
                     {
-                        // Sand gets tiny speckles
-                        pixelColor = cell > 0.6f ? shadow : (cell < -0.6f ? highlight : baseColor);
-                    }
-                    else if (t == (int)TerrainType.Grass)
-                    {
-                        // Grass gets sweeping tufts
-                        pixelColor = n > 0.4f ? highlight : baseColor;
-                        if (cell > 0.7f) pixelColor = new Color(0.9f, 0.85f, 0.2f); // Tiny flowers
-                    }
-                    else if (t == (int)TerrainType.Forest)
-                    {
-                        // Forest gets cellular canopy patterns
-                        pixelColor = cell > 0.1f ? highlight : shadow;
-                    }
-                    else if (t == (int)TerrainType.Hills)
-                    {
-                        // Rolling gradients
-                        pixelColor = n > 0f ? highlight : shadow;
-                    }
-                    else if (t == (int)TerrainType.Mountain)
-                    {
-                        // Jagged crags
-                        pixelColor = cell > 0.2f ? shadow : baseColor;
-                        if (py < 12 && cell > -0.2f) pixelColor = Colors.White; // Snow caps natively in the texture!
-                    }
-                    else if (t == (int)TerrainType.Snow)
-                    {
-                        pixelColor = cell > 0.5f ? highlight : baseColor;
+                        // Sub-grid
+                        pixelColor = pixelColor.Lightened(0.02f);
                     }
 
                     img.SetPixel(px, py, pixelColor);
@@ -308,93 +280,61 @@ public partial class MapManager : Node2D
             }
         }
 
-        // 4. Draw AAA Cities
+        // 4. Draw Cyberpunk Node Cities
         foreach (var city in _world.Cities)
         {
             var pos = new Vector2(city.TileX * TileSize + (TileSize / 2f), city.TileY * TileSize + (TileSize / 2f));
             var natColor = _world.Nations[int.Parse(city.NationId.Split('_')[1])].NationColor;
             
-            // Draw a multi-layered isometric castle icon using polygons
+            // Draw a high-tech glowing network node
             if (city.IsCapital)
             {
-                // Shadow
-                DrawCircle(pos + new Vector2(0, 8), 16, new Color(0, 0, 0, 0.5f));
-                
-                // Keep base
-                DrawRect(new Rect2(pos.X - 12, pos.Y - 12, 24, 24), Colors.DarkGray);
-                DrawRect(new Rect2(pos.X - 12, pos.Y - 12, 12, 24), Colors.Gray); // left light
-                
-                // Roof
-                Vector2[] roof = { new Vector2(pos.X - 16, pos.Y - 12), new Vector2(pos.X + 16, pos.Y - 12), new Vector2(pos.X, pos.Y - 24) };
-                DrawPolygon(roof, new Color[] { natColor, natColor, natColor });
-                
-                // Nation Flag Pole
-                DrawLine(new Vector2(pos.X, pos.Y - 24), new Vector2(pos.X, pos.Y - 38), Colors.DarkGoldenrod, 2);
-                DrawRect(new Rect2(pos.X, pos.Y - 38, 10, 6), natColor);
-                
-                // Glow point
-                DrawCircle(pos, 3, Colors.LightYellow);
+                // Capital: Hexagonal core
+                Vector2[] hex = new Vector2[6];
+                for(int i = 0; i < 6; i++) {
+                    float angle = i * Mathf.Pi / 3f;
+                    hex[i] = pos + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 16f;
+                }
+                DrawPolygon(hex, new Color[] { natColor, natColor, natColor, natColor, natColor, natColor });
+                DrawArc(pos, 22f, 0, Mathf.Pi*2, 6, Colors.White, 3f);
+                DrawCircle(pos, 6f, Colors.White);
             }
-            else // Minor town
+            else // Minor node
             {
-                DrawCircle(pos + new Vector2(0, 4), 10, new Color(0, 0, 0, 0.4f));
-                DrawRect(new Rect2(pos.X - 8, pos.Y - 8, 16, 16), Colors.SaddleBrown);
-                Vector2[] roof = { new Vector2(pos.X - 10, pos.Y - 8), new Vector2(pos.X + 10, pos.Y - 8), new Vector2(pos.X, pos.Y - 16) };
-                DrawPolygon(roof, new Color[] { natColor, natColor, natColor });
+                DrawCircle(pos, 8f, natColor.Darkened(0.2f));
+                DrawArc(pos, 12f, 0, Mathf.Pi*2, 8, natColor, 2f);
+                DrawCircle(pos, 3f, Colors.White);
             }
         }
 
-        // 5. Draw Awesome Units
+        // 5. Draw Cyber Units
         foreach (var unit in _world.Units)
         {
+            if (!unit.IsAlive) continue;
+
             var pos = new Vector2(unit.PixelX, unit.PixelY);
             var natColor = _world.Nations[int.Parse(unit.NationId.Split('_')[1])].NationColor;
 
             if (unit.Type == UnitType.Soldier)
             {
-                // Tiny swarming dot
-                DrawCircle(pos, 2.5f, natColor);
-                // Optional slight glow if player's unit
-                if (unit.NationId == _world.PlayerNationId)
-                {
-                    DrawCircle(pos, 1.5f, Colors.White);
-                }
+                // Glowing blip
+                DrawCircle(pos, 3f, natColor);
+                DrawCircle(pos, 1.5f, Colors.White);
             }
-            else if (unit.Type == UnitType.Tank)
+            else
             {
-                // Selection highlight
+                // Highlight Selection
                 if (unit.Id == _selectedUnitId)
-                    DrawArc(pos, 22, 0, Mathf.Pi * 2, 32, Colors.Yellow, 3);
+                    DrawArc(pos, 22, 0, Mathf.Pi * 2, 8, Colors.Yellow, 2);
                 
-                // Draw unit shadow
-                DrawCircle(pos + new Vector2(0, 6), 14, new Color(0, 0, 0, 0.4f));
-
-                // Tank Body
-                DrawRect(new Rect2(pos.X - 14, pos.Y - 10, 28, 20), natColor);
-                // Turret
-                DrawCircle(pos, 8, Colors.DarkGray);
-                // Barrel
-                DrawLine(pos, pos + new Vector2(16, 0), Colors.DarkGray, 4);
-            }
-            else if (unit.Type == UnitType.Ship)
-            {
-                // Selection highlight
-                if (unit.Id == _selectedUnitId)
-                    DrawArc(pos, 22, 0, Mathf.Pi * 2, 32, Colors.Yellow, 3);
-                    
-                DrawCircle(pos + new Vector2(0, 6), 14, new Color(0, 0, 0, 0.4f));
-
-                // Ship shape
-                var points = new Vector2[] {
-                    pos + new Vector2(-16, -10),
-                    pos + new Vector2(12, -10),
-                    pos + new Vector2(24, 0),
-                    pos + new Vector2(12, 10),
-                    pos + new Vector2(-16, 10)
+                // Tactical Chevron
+                Vector2[] chevron = {
+                    pos + new Vector2(0, -12),
+                    pos + new Vector2(8, 8),
+                    pos + new Vector2(0, 4),
+                    pos + new Vector2(-8, 8)
                 };
-                DrawPolygon(points, new Color[] { natColor, natColor, natColor, natColor, natColor });
-                // Bridge
-                DrawRect(new Rect2(pos.X - 12, pos.Y - 6, 16, 12), Colors.Gray);
+                DrawPolygon(chevron, new Color[] { natColor, natColor, natColor, natColor });
             }
         }
 
@@ -406,42 +346,50 @@ public partial class MapManager : Node2D
             Vector2 markerPos = new Vector2(playerNation.CommandTargetX * 64 + 32, playerNation.CommandTargetY * 64 + 32);
             if (playerNation.GlobalMilitaryOrder == MilitaryOrder.Attack)
             {
-                // Red crosshair
-                DrawArc(markerPos, 16, 0, Mathf.Pi * 2, 32, Colors.Red, 2);
-                DrawLine(markerPos - new Vector2(24, 0), markerPos + new Vector2(24, 0), Colors.Red, 2);
-                DrawLine(markerPos - new Vector2(0, 24), markerPos + new Vector2(0, 24), Colors.Red, 2);
+                // Tactical Target Lock
+                DrawArc(markerPos, 16, 0, Mathf.Pi * 2, 16, Colors.Red, 2);
+                DrawLine(markerPos - new Vector2(24, 0), markerPos - new Vector2(10, 0), Colors.Red, 2);
+                DrawLine(markerPos + new Vector2(10, 0), markerPos + new Vector2(24, 0), Colors.Red, 2);
+                DrawLine(markerPos - new Vector2(0, 24), markerPos - new Vector2(0, 10), Colors.Red, 2);
+                DrawLine(markerPos + new Vector2(0, 10), markerPos + new Vector2(0, 24), Colors.Red, 2);
             }
             else if (playerNation.GlobalMilitaryOrder == MilitaryOrder.Stage)
             {
-                // Blue circle
-                DrawArc(markerPos, 24, 0, Mathf.Pi * 2, 32, new Color(0.2f, 0.6f, 1f), 3);
+                // Tactical Rally Point
+                DrawArc(markerPos, 24, 0, Mathf.Pi * 2, 32, Colors.DodgerBlue, 2);
+                DrawArc(markerPos, 32, 0, Mathf.Pi * 2, 4, Colors.DodgerBlue, 1);
             }
         }
-        // 7. Draw VIP Characters
+        
+        // 7. Draw VIP Characters (High Value Targets)
         foreach (var c in _world.Characters)
         {
+            if (c.Role == "Eliminated") continue; // Don't draw assassinated targets
             var pos = new Vector2(c.PixelX, c.PixelY);
             
             // Player Halo
             if (c.IsPlayer)
             {
-                DrawArc(pos, 30, 0, Mathf.Pi * 2, 32, Colors.Cyan, 4);
-                DrawArc(pos, 38, 0, Mathf.Pi * 2, 32, Colors.Cyan * new Color(1,1,1,0.5f), 2);
+                DrawArc(pos, 28, 0, Mathf.Pi * 2, 8, Colors.Cyan, 3);
             }
             
-            // Meeple Base
-            DrawCircle(pos + new Vector2(0, 10), 12, new Color(0, 0, 0, 0.5f)); // Shadow
-            DrawCircle(pos + new Vector2(0, -6), 6, Colors.Bisque); // Head
-            
-            // Body with nation color
+            // HVT Diamond
             var natColor = _world.Nations[int.Parse(c.NationId.Split('_')[1])].NationColor;
-            var body = new Vector2[] {
-                pos + new Vector2(-8, 0),
-                pos + new Vector2(8, 0),
-                pos + new Vector2(10, 14),
-                pos + new Vector2(-10, 14)
+            Vector2[] diamond = {
+                pos + new Vector2(0, -18),
+                pos + new Vector2(14, 0),
+                pos + new Vector2(0, 18),
+                pos + new Vector2(-14, 0)
             };
-            DrawPolygon(body, new Color[] { natColor, natColor, natColor.Darkened(0.2f), natColor.Darkened(0.2f) });
+            
+            // Outer diamond
+            DrawPolyline(new Vector2[]{diamond[0], diamond[1], diamond[2], diamond[3], diamond[0]}, natColor, 3f);
+            
+            // Inner fill
+            DrawPolygon(diamond, new Color[] { new Color(0,0,0,0.8f), new Color(0,0,0,0.8f), new Color(0,0,0,0.8f), new Color(0,0,0,0.8f) });
+            
+            // Center Core
+            DrawCircle(pos, 4f, Colors.White);
             
             // Little name tag text
             var font = ThemeDB.FallbackFont;
