@@ -21,11 +21,11 @@ public partial class NotificationManager : Control
         // Anchoring to Top-Left explicitly prevents it from hiding under the Dossier panel
         SetAnchorsAndOffsetsPreset(LayoutPreset.TopLeft);
         
-        // Push it inward to avoid MacOS/UI cropping
-        OffsetTop = 80; // Below TopBar
+        // Push it inward to avoid MacOS/UI cropping and clear the new LeftSidebar
+        OffsetTop = 90; // Just below TopBar in the map viewport
         OffsetBottom = 600; // ample height
-        OffsetLeft = 20; // safe margin from left edge
-        OffsetRight = 320; // 300px width
+        OffsetLeft = 270; // 250 for sidebar + 20 safe margin
+        OffsetRight = 570; // 300px width
         
         // Mouse filter to let clicks pass through
         MouseFilter = MouseFilterEnum.Ignore;

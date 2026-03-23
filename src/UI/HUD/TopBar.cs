@@ -16,8 +16,9 @@ public partial class TopBar : Control
     public override void _Ready()
     {
         // Setup Control node
-        AnchorsPreset = (int)LayoutPreset.TopWide;
-        CustomMinimumSize = new Vector2(0, 48);
+        SetAnchorsAndOffsetsPreset(LayoutPreset.TopWide);
+        OffsetTop = 32; // Under News Ticker
+        OffsetBottom = 80; // 48px tall
 
         // Background
         var bg = new ColorRect 

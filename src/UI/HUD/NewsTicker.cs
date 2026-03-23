@@ -16,8 +16,8 @@ public partial class NewsTicker : Control
 
     public override void _Ready()
     {
-        // Anchor to the very bottom of the screen
-        SetAnchorsAndOffsetsPreset(LayoutPreset.BottomWide);
+        // Anchor to the very top of the screen matching the sketch
+        SetAnchorsAndOffsetsPreset(LayoutPreset.TopWide);
         CustomMinimumSize = new Vector2(0, 32);
 
         // Dark tech background
@@ -28,13 +28,13 @@ public partial class NewsTicker : Control
         };
         AddChild(bg);
 
-        // Top border
+        // Bottom border
         var border = new ColorRect
         {
             Color = new Color(0.2f, 0.2f, 0.3f, 1f),
             CustomMinimumSize = new Vector2(0, 2)
         };
-        border.SetAnchorsAndOffsetsPreset(LayoutPreset.TopWide);
+        border.SetAnchorsAndOffsetsPreset(LayoutPreset.BottomWide);
         AddChild(border);
 
         // Clipping wrapper so text doesn't display outside the ticker box

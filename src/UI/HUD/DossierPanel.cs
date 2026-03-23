@@ -33,7 +33,7 @@ public partial class DossierPanel : Control
     {
         // Start off-screen to the right
         Size = new Vector2(PanelWidth, 600);
-        Position = new Vector2(GetViewportRect().Size.X, 60); // Below top bar
+        Position = new Vector2(GetViewportRect().Size.X, 80); // Below News & TopBar
 
         // Dark background panel
         _bg = new Panel();
@@ -274,6 +274,6 @@ public partial class DossierPanel : Control
         float target = _isVisible ? GetViewportRect().Size.X - PanelWidth : GetViewportRect().Size.X;
         float current = Position.X;
         float newX = Mathf.Lerp(current, target, 8f * (float)delta);
-        Position = new Vector2(newX, 60);
+        Position = new Vector2(newX, 80);
     }
 }
