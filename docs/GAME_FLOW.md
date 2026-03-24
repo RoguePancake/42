@@ -96,19 +96,19 @@ After final line: pause 2 seconds, then fade to white, then fade to map.
 
 ## 4. MAP REVEAL
 
-Camera starts zoomed out showing the full world.
-All 6 nations visible with colored territories.
+Camera starts zoomed out showing the full world — real Earth geography.
+All 6 nations visible with colored territory overlays on the vibrant OSM map.
 Pause 1 second.
 
-Camera smoothly zooms toward player's territory (gold/yellow).
-Zoom takes 2-3 seconds.
-Settles on player's capital city.
+Camera smoothly zooms toward player's territory (UK — orange/gold overlay over Britain).
+Zoom takes 2-3 seconds, real coastlines and cities becoming visible.
+Settles on London.
 
 Brief overlay text:
 ```
-SELVARA — FREE STATE
-Population: 2,100,000
-Provinces: 4
+UNITED KINGDOM — FREE STATE
+Capital: London
+Major Cities: Manchester, Birmingham, Edinburgh, Glasgow...
 Military: Minimal
 Nuclear Arsenal: 1 warhead
 ```
@@ -120,38 +120,40 @@ Text fades after 3 seconds. Player has control.
 ## 5. FIRST TURN — WHAT THE PLAYER SEES
 
 ### The Map
-- Their 4 provinces are clearly visible (gold territory tint)
-- 5 surrounding blocs in red, blue, purple, green, orange
-- Cities visible at capitals with flags
-- Rivers winding through terrain
-- Green trade route lines between some nations
-- Fog covering distant territory they haven't explored
+- UK territory clearly visible (orange/gold overlay on real Britain geography)
+- 5 surrounding powers with colored territory overlays:
+  - United States (steel blue), China (red), Russia (amber), EU (blue), India (green)
+- Vibrant OSM base map — green land, blue oceans, roads, rivers, cities all from tile data
+- City labels at real coordinates (★ London, Manchester, Edinburgh...)
+- Green trade route lines following real shipping lanes
+- Government overlay can be toggled with G key
+- F1 = Vibrant map / F2 = Topographic / G = Government overlay on/off
 
 ### The HUD (Top Bar)
 ```
-☢ WARSHIP │ SELVARA │ 💰 800g │ [STAB ████░░] 74% │ T1 Y100 │ ☢×1 │ ▶ END TURN
+Turn 1 | M1 Y0 | Treasury: $800M | Defense Minister Gen. Crawford | TA: 30% WA: 20% BSA: 40% [FAI: 30%]
 ```
 
 ### Their Units
-- 2 tanks near capital
-- 3 soldiers spread across provinces
-- 1 artillery at capital
+- Tank groups at London and Portsmouth
+- Ships patrolling around the coast
 
 ### The News Feed (Bottom)
 ```
 📰 TURN 1
   EVENT  The world holds its breath. Your nuclear test was detected.
-  DIPLO  IRONPACT requests emergency diplomatic contact.
-  DIPLO  MERIDIAN League expresses "deep concern."
-  DIPLO  VOLKREN Front congratulates your "scientific achievement."
-  DIPLO  ASHWARD Pact calls for immediate disarmament.
-  INTEL  FREEHOLD Accord: unusual troop movements near your border.
+  DIPLO  United States requests emergency diplomatic contact.
+  DIPLO  China expresses "deep concern."
+  DIPLO  Russia congratulates your "scientific achievement."
+  DIPLO  European Union calls for immediate disarmament.
+  INTEL  India: unusual troop movements near Kashmir border.
 ```
 
 ### Available Actions
-- Click units to select → right-click to move
+- Click units to select → right-click to set command target
 - Click rival territory → nation info panel opens
-- Press B → budget panel opens
+- Use ARMY COMMAND panel to set military orders
+- F1/F2/G to switch map modes
 - Click END TURN → advance to turn 2
 
 ---
@@ -254,14 +256,21 @@ to see what's happening on the other side of the world.
 
 ## VISUAL STYLE REFERENCE
 
-Everything should look like it belongs on a Super Nintendo:
+> **Post-Map Overhaul:** The visual style has shifted from SNES pixel art to
+> a high-fidelity real-world geopolitical map aesthetic.
 
-- **Map tiles:** Bright, colorful, 32×32 pixels with detail (grass has flowers, forests have tree shapes, water has wave hints)
-- **Sprites:** Chunky, recognizable at small sizes (tanks with treads, soldiers with helmets, cities with buildings)
-- **UI windows:** Dark blue (#18184a) with beveled borders — bright white/blue top-left edge, dark bottom-right edge
-- **Text:** White monospace pixel font on dark backgrounds
-- **Stat bars:** Colored fills (green/red/gold) on dark backgrounds with 1px dark border
-- **Colors:** Bold and saturated, not muted. This is a 16-bit game, not a modern dark-mode app.
+- **Base Map:** Real-world OpenStreetMap tiles — vibrant green land, blue oceans, visible roads/railways/rivers
+- **Territory Overlays:** Semi-transparent nation colors over the real map tiles (toggle with G)
+- **Nation Borders:** Glowing colored lines tracing real-world border polygons
+- **Cities:** Text labels at real coordinates (capitals have ★ star, gold color)
+- **Units:** Colored markers at lon/lat positions over the real map
+- **Trade Routes:** Green lines following real shipping lanes (Transatlantic, Suez, Pacific, etc.)
+- **Map Modes:**
+  - F1 = Standard (vibrant OSM)
+  - F2 = Topographic (elevation contours, terrain shading)
+  - G = Toggle government overlay (borders + territory colors)
+- **HUD:** Dark theme panels overlaid on map. Moving toward gold (#D4A84B) accent colors.
+- **Target aesthetic:** Plague Inc. / DEFCON / Supreme Ruler — a geopolitical thriller, not retro pixel art
 
 ---
 

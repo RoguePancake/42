@@ -1,361 +1,225 @@
-# WARSHIP — Data Models
-## C# Class Definitions for Claude Code
+# WARSHIP / FULL AUTHORITY — Data Models
+## C# Class Definitions (Post-Map Overhaul)
 
-Copy these into `src/Data/Models.cs` and adapt as you build each phase.
+> **Updated 2026-03-23:** All entity models now include real-world coordinates (lon/lat)
+> alongside legacy tile coordinates for backward compatibility.
 
 ---
 
-## Core Models (Phase 7+)
+## Core Models (Current State in `src/Data/Models.cs`)
 
 ```csharp
 using System.Collections.Generic;
+using Godot;
 
-namespace Warship.Data
+namespace Warship.Data;
+
+public class WorldData
 {
-    // ═══════════════════════════════════
-    // WORLD — Top level container
-    // ═══════════════════════════════════
+    public int Seed;
+    public int TurnNumber = 1;
+    public int Year => TurnNumber / 12;
+    public int Month => (TurnNumber % 12) + 1;
+    public string? PlayerNationId;
+
+    // Legacy grid (backward compat for engines that reference tile coords)
+    public int MapWidth;        // 360 (degrees longitude, conceptual)
+    public int MapHeight;       // 180 (degrees latitude, conceptual)
+    public int[,]? TerrainMap;  // terrain type per cell (from TerrainGenerator)
+    public int[,]? OwnershipMap;// nation index per cell, -1 = unclaimed
     
-    public class WorldData
-    {
-        public int Seed;
-        public int TurnNumber = 1;
-        public int Year => TurnNumber / 12;
-        public int Month => (TurnNumber % 12) + 1;
-        public string PlayerNationId;
+    public List<NationData> Nations = new();
+    public List<CityData> Cities = new();
+    public List<Vector2[]> RiverPaths = new(); // Empty — real rivers from tiles now
+    public List<UnitData> Units = new();
+    public List<CharacterData> Characters = new();
+}
 
-        public int MapWidth;
-        public int MapHeight;
-        public int[,] TerrainMap;    // tile index per cell
-        public int[,] OwnershipMap;  // nation index per cell, -1 = unclaimed
-        
-        public List<NationData> Nations = new();
-        public List<UnitData> Units = new();
-        public List<CityData> Cities = new();
-        public List<Vector2[]> RiverPaths = new();
-        public List<TradeRoute> TradeRoutes = new();
-        public List<NewsItem> CurrentNews = new();
-        public List<NewsItem> NewsHistory = new();
-    }
+public enum NationArchetype
+{
+    Hegemon,        // Military dominant (US)
+    Commercial,     // Trade focused (China)
+    Revolutionary,  // Aggressive, unpredictable (Russia)
+    Traditionalist, // Conservative, defensive (EU)
+    Survival,       // Desperate coalition (India)
+    FreeState       // Player's nation (UK)
+}
 
-    // ═══════════════════════════════════
-    // TERRAIN
-    // ═══════════════════════════════════
-
-    public enum TerrainType
-    {
-        DeepWater = 0,
-        Water = 1,
-        Sand = 2,
-        Grass = 3,
-        Forest = 4,
-        Hills = 5,
-        Mountain = 6,
-        Snow = 7
-    }
+public class NationData
+{
+    public string Id = "";
+    public string Name = "";
+    public NationArchetype Archetype;
+    public Color NationColor;
+    public bool IsPlayer = false;
     
-    public static class TerrainRules
-    {
-        // Can units walk on this terrain?
-        public static bool IsPassable(int terrain) => terrain >= 2 && terrain != 6;
-        
-        // Is this land (not water)?
-        public static bool IsLand(int terrain) => terrain >= 2;
-        
-        // Combat defender bonus
-        public static float DefenseBonus(int terrain) => terrain switch
-        {
-            4 => 0.10f,  // Forest: +10%
-            5 => 0.05f,  // Hills: +5%
-            6 => 0.20f,  // Mountain: +20% (if units could be here)
-            _ => 0f
-        };
-        
-        // Movement cost multiplier
-        public static float MoveCost(int terrain) => terrain switch
-        {
-            4 => 1.5f,   // Forest: slow
-            5 => 1.3f,   // Hills: moderate
-            2 => 1.2f,   // Sand: slightly slow
-            7 => 1.5f,   // Snow: slow
-            _ => 1.0f
-        };
-    }
+    // Map (legacy tile coords — backward compat)
+    public int CapitalX, CapitalY;
+    public int ProvinceCount;
 
-    // ═══════════════════════════════════
-    // NATION
-    // ═══════════════════════════════════
+    // Real-world coordinates (PRIMARY positioning system)
+    public float CapitalLon;                       // Longitude of capital
+    public float CapitalLat;                       // Latitude of capital  
+    public float[][] BorderPolygon = Array.Empty<float[]>(); // [lon, lat] border points
+    
+    // Stats
+    public float Treasury = 1000f;
+    public float Prestige = 30f;
 
-    public enum NationArchetype
-    {
-        Hegemon,        // Military dominant, seeks control
-        Commercial,     // Trade focused, prefers sanctions over war
-        Revolutionary,  // Aggressive ideologues, unpredictable
-        Traditionalist, // Conservative, defensive, culturally cohesive
-        Survival,       // Desperate coalition, nothing to lose
-        FreeState       // Player's nation
-    }
+    // Military Command
+    public MilitaryOrder GlobalMilitaryOrder = MilitaryOrder.BorderWatch;
+    public int CommandTargetX = -1;
+    public int CommandTargetY = -1;
+    public float CommandTargetLon = float.NaN;     // Real-world command target
+    public float CommandTargetLat = float.NaN;
+}
 
-    public class NationData
-    {
-        public string Id;
-        public string Name;
-        public NationArchetype Archetype;
-        public string Color;          // hex color "#c03030"
-        public bool IsPlayer = false;
-        
-        // Map
-        public int CapitalX, CapitalY;
-        public int ProvinceCount;      // tiles owned
-        
-        // Core stats (0.0 - 1.0 unless noted)
-        public float Stability = 0.70f;
-        public float Legitimacy = 0.60f;
-        public float MilitaryStrength = 0.30f;
-        public float WarExhaustion = 0f;     // 0-100
-        public float Infamy = 0f;             // 0-100
-        public float Prestige = 30f;          // 0-100
-        
-        // Economy
-        public float Treasury = 1000f;
-        public float GDP = 500f;
-        public int MilitaryBudget = 35;       // % (must sum to 100)
-        public int InfraBudget = 25;
-        public int ResearchBudget = 25;
-        public int SocialBudget = 15;
-        
-        // Population
-        public long Population = 2000000;
-        
-        // War
-        public List<string> AtWarWith = new();
-        
-        // Intel
-        public List<SpyNetwork> SpyNetworks = new();
-        
-        // Factions (power 0-100)
-        public float MilitaryFaction = 50f;
-        public float MerchantFaction = 50f;
-        public float NationalistFaction = 30f;
-        public float ProgressiveFaction = 40f;
-        public float ReligiousFaction = 35f;
-        
-        // Nuclear
-        public int Warheads = 0;
-        
-        // Relations with other nations: Dictionary<nationId, value>
-        public Dictionary<string, float> Relations = new();
-        
-        // Helpers
-        public bool IsAtWarWith(string nationId) => AtWarWith.Contains(nationId);
-        public float GetRelation(string nationId) => 
-            Relations.TryGetValue(nationId, out float v) ? v : 0f;
-    }
+public class CityData
+{
+    public string Id = "";
+    public string NationId = "";
+    public string Name = "City";
+    public int TileX, TileY;       // Legacy
+    public bool IsCapital;
+    public int Size = 1;           // 1=town, 2=city, 3=capital
+    
+    // Real-world coordinates
+    public float Longitude;
+    public float Latitude;
+}
 
-    // ═══════════════════════════════════
-    // NATION DELTA — the ONLY way to change nation data
-    // ═══════════════════════════════════
+public class UnitData
+{
+    public string Id = "";
+    public string NationId = "";
+    public UnitType Type;
+    public int TileX, TileY;       // Legacy
+    public float Strength = 1.0f;
+    public bool IsAlive = true;
 
-    public class NationDelta
-    {
-        public string NationId;
-        public float? TreasuryDelta;
-        public float? StabilityDelta;
-        public float? LegitimacyDelta;
-        public float? MilitaryDelta;
-        public float? WarExhaustionDelta;
-        public float? InfamyDelta;
-        public float? PrestigeDelta;
-        public float? GDPDelta;
-    }
+    public MilitaryOrder CurrentOrder = MilitaryOrder.Standby;
+    
+    // Pixel coordinates (legacy smooth animation)
+    public float PixelX, PixelY;
+    public float TargetPixelX, TargetPixelY;
+    
+    // Real-world coordinates
+    public float Longitude;
+    public float Latitude;
+    public float TargetLongitude;
+    public float TargetLatitude;
+}
 
-    // ═══════════════════════════════════
-    // UNITS
-    // ═══════════════════════════════════
-
-    public enum UnitType
-    {
-        Tank,
-        Soldier,
-        Cannon,
-        Ship,
-        Fighter
-    }
-
-    public class UnitData
-    {
-        public string Id;
-        public string NationId;
-        public UnitType Type;
-        public int TileX, TileY;
-        public float Strength = 1.0f;    // 0.0 to 1.0
-        public int MovesRemaining = 3;
-        public int MaxMoves = 3;
-        public bool IsSelected = false;
-        public bool IsAlive = true;
-        
-        // Pixel position for smooth animation
-        public float PixelX, PixelY;
-        public float TargetPixelX, TargetPixelY;
-        public bool IsMoving = false;
-        
-        public void ResetMoves() => MovesRemaining = MaxMoves;
-    }
-
-    // ═══════════════════════════════════
-    // CITIES
-    // ═══════════════════════════════════
-
-    public class CityData
-    {
-        public string Id;
-        public string NationId;
-        public string Name;
-        public int TileX, TileY;
-        public bool IsCapital;
-        public int Size = 1;  // 1=town, 2=city, 3=capital
-    }
-
-    // ═══════════════════════════════════
-    // TRADE ROUTES
-    // ═══════════════════════════════════
-
-    public enum RouteStatus { Active, Threatened, Blocked }
-
-    public class TradeRoute
-    {
-        public string NationAId;
-        public string NationBId;
-        public float Value;           // gold per turn
-        public RouteStatus Status = RouteStatus.Active;
-        
-        // Visual path: array of pixel-space waypoints
-        public float[] WaypointX;
-        public float[] WaypointY;
-    }
-
-    // ═══════════════════════════════════
-    // INTEL
-    // ═══════════════════════════════════
-
-    public class SpyNetwork
-    {
-        public string TargetNationId;
-        public int Depth = 0;          // 0-5
-        public int TurnsActive = 0;
-        public int TurnsToNextDepth = 5;
-    }
-
-    // ═══════════════════════════════════
-    // NEWS
-    // ═══════════════════════════════════
-
-    public enum NewsCategory { War, Trade, Diplomacy, Intel, Event, System }
-
-    public class NewsItem
-    {
-        public string Headline;
-        public NewsCategory Category;
-        public int Turn;
-        public int Priority;  // 0-100, 80+ = breaking
-    }
+public class CharacterData
+{
+    public string Id = "";
+    public string NationId = "";
+    public string Name = "";
+    public string Role = "Official";
+    public bool IsPlayer = false;
+    
+    public int TileX, TileY;       // Legacy
+    public float PixelX, PixelY;
+    public float TargetPixelX, TargetPixelY;
+    public bool IsMoving = false;
+    
+    // Real-world coordinates
+    public float Longitude;
+    public float Latitude;
+    
+    // Authority Meters (0.0 to 100.0)
+    public float TerritoryAuthority = 30f;
+    public float WorldAuthority = 20f;
+    public float BehindTheScenesAuthority = 40f;
+    
+    public float FullAuthorityIndex => 
+        (TerritoryAuthority + WorldAuthority + BehindTheScenesAuthority) / 3f;
 }
 ```
 
 ---
 
-## Event Types (Phase 13+)
+## Real-World Geography (`src/Data/GeoData.cs`)
 
 ```csharp
-namespace Warship.Events
+public static class GeoData
 {
-    // Marker interface
-    public interface IGameEvent { }
-
-    // System
-    public record TurnAdvancedEvent(int Turn, int Year, int Month) : IGameEvent;
-    public record WorldReadyEvent(int Seed, string PlayerNationId) : IGameEvent;
+    // 6 nations at real coordinates:
+    // - United States (Hegemon) — Capital: Washington D.C.
+    // - China (Commercial) — Capital: Beijing
+    // - Russia (Revolutionary) — Capital: Moscow
+    // - European Union (Traditionalist) — Capital: Brussels
+    // - India (Survival) — Capital: New Delhi
+    // - United Kingdom (FreeState/Player) — Capital: London
     
-    // Units
-    public record UnitMovedEvent(string UnitId, int FromX, int FromY, int ToX, int ToY) : IGameEvent;
-    public record UnitDestroyedEvent(string UnitId, string KilledByNationId) : IGameEvent;
+    // Each nation has:
+    // - Simplified border polygon (~20-40 points)
+    // - 8-17 real cities with coordinates
+    // - 4-5 military base locations
     
-    // Combat
-    public record BattleResolvedEvent(
-        string AttackerUnitId, string DefenderUnitId,
-        int TileX, int TileY,
-        bool AttackerWon,
-        float AttackerDamage, float DefenderDamage
-    ) : IGameEvent;
-    
-    // War
-    public record WarDeclaredEvent(string AggressorId, string DefenderId) : IGameEvent;
-    public record PeaceSignedEvent(string NationAId, string NationBId) : IGameEvent;
-    
-    // Economy
-    public record ResourcesCollectedEvent(string NationId, float Income) : IGameEvent;
-    public record NationStatsChangedEvent(string NationId) : IGameEvent;
-    
-    // Diplomacy
-    public record RelationsChangedEvent(string NationAId, string NationBId, float NewValue) : IGameEvent;
-    
-    // Intel
-    public record SpyNetworkAdvancedEvent(string OwnerId, string TargetId, int NewDepth) : IGameEvent;
-    
-    // News
-    public record NewsPublishedEvent(string Headline, string Category, int Priority) : IGameEvent;
+    // 12 global trade routes following real shipping lanes
 }
 ```
 
 ---
 
-## Engine Interface (Phase 13)
+## Event Types (Current in `src/Events/GameEvents.cs`)
 
 ```csharp
-namespace Warship.Core
-{
-    public interface ISimEngine
-    {
-        string EngineName { get; }
-        int Priority { get; }
-        void Initialize(WorldStateManager state, EventBus bus);
-        void OnTurnPhase(TurnContext ctx, TurnPhase phase);
-        void Shutdown();
-    }
+namespace Warship.Events;
 
-    public enum TurnPhase
-    {
-        TurnOpen = 0,
-        Resource = 1,
-        Economy = 2,
-        Trade = 3,
-        Unrest = 4,
-        Politics = 5,
-        Diplomacy = 6,
-        AIDecision = 7,
-        PlayerAction = 8,
-        Military = 9,
-        Intel = 10,
-        Events = 11,
-        News = 12,
-        TurnClose = 13
-    }
+public interface IGameEvent { }
 
-    public class TurnContext
-    {
-        public int TurnNumber;
-        public int Year;
-        public int Month;
-    }
-}
+// Core
+public record UnitMoveRequested(string UnitId, int TargetX, int TargetY) : IGameEvent;
+public record UnitMovedEvent(string UnitId, int FromX, int FromY, int ToX, int ToY) : IGameEvent;
+public record TurnAdvancedEvent(int Turn, int Year, int Month) : IGameEvent;
+
+// Political
+public record PoliticalActionEvent(string ActorId, string TargetId, string ActionType) : IGameEvent;
+public record AuthorityChangedEvent(string CharacterId, string Meter, float OldValue, float NewValue, string Reason) : IGameEvent;
+public record NotificationEvent(string Message, string Type) : IGameEvent;
+
+// Crisis
+public record CrisisTriggeredEvent(string CrisisId, string Title, string Description, string[] Choices) : IGameEvent;
+public record CrisisResolvedEvent(string CrisisId, int ChoiceIndex) : IGameEvent;
+
+// Map System (NEW)
+public record NationSelectedEvent(string NationId) : IGameEvent;
+public record MapStyleChangedEvent(string Style) : IGameEvent;
+public record UnitMoveToCoordRequested(string UnitId, float Longitude, float Latitude) : IGameEvent;
+```
+
+---
+
+## Coordinate Systems
+
+The game now uses **two coordinate systems** simultaneously:
+
+| System | Used By | Range | Purpose |
+|--------|---------|-------|---------|
+| **Tile (x, y)** | Legacy engines, TerrainMap, OwnershipMap | 0-80, 0-50 | Backward compat |
+| **Lon/Lat** | TileMapRenderer, WarshipMapBridge, GeoData | -180° to 180°, -90° to 90° | Real-world positioning |
+
+### Conversion
+```csharp
+// Lon/Lat → Tile (approximate)
+int tileX = (int)((lon + 180f) / 360f * 80f);
+int tileY = (int)((90f - lat) / 180f * 50f);
+
+// Lon/Lat → World pixels (in TileMapRenderer)
+Vector2 worldPos = renderer.LonLatToWorld(lon, lat, zoomLevel);
+
+// World pixels → Lon/Lat
+(float lon, float lat) = renderer.WorldToLonLat(worldPos, zoomLevel);
 ```
 
 ---
 
 ## Notes
 
-- Start with all models in one file (`Models.cs`). Split later when it gets big.
-- All fields are public for simplicity. Add properties later if needed.
-- NationDelta uses nullable floats — only non-null fields get applied.
-- UnitData has both tile position AND pixel position for smooth animation.
-- Keep it simple. Add fields as you need them, not before.
+- All entity models support both tile AND lon/lat coordinates
+- New code should use lon/lat as the primary system
+- Legacy tile coords are auto-calculated during world generation for backward compat
+- The tile-based TerrainMap and OwnershipMap are still generated but are approximate
+- Real territory detection uses `PointInPolygon` on the BorderPolygon arrays

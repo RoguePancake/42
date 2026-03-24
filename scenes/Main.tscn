@@ -3,8 +3,8 @@
 [ext_resource type="Script" path="res://src/Core/EventBus.cs" id="1"]
 [ext_resource type="Script" path="res://src/Core/WorldStateManager.cs" id="2"]
 [ext_resource type="Script" path="res://src/Engines/PoliticalEngine.cs" id="8"]
-[ext_resource type="Script" path="res://src/UI/Map/MapManager.cs" id="3"]
-[ext_resource type="Script" path="res://src/UI/Map/MapCamera.cs" id="4"]
+[ext_resource type="Script" path="res://src/UI/Map/TileMapRenderer.cs" id="3"]
+[ext_resource type="Script" path="res://src/UI/Map/WarshipMapBridge.cs" id="4"]
 [ext_resource type="Script" path="res://src/UI/HUD/TopBar.cs" id="5"]
 [ext_resource type="Script" path="res://src/UI/HUD/DossierPanel.cs" id="6"]
 [ext_resource type="Script" path="res://src/UI/HUD/EndTurnButton.cs" id="7"]
@@ -60,10 +60,10 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.039, 0.039, 0.102, 1)
 
-[node name="MapManager" type="Node2D" parent="."]
+[node name="TileMapRenderer" type="Node2D" parent="."]
 script = ExtResource("3")
 
-[node name="MainCamera" type="Camera2D" parent="."]
+[node name="WarshipMapBridge" type="Node" parent="."]
 script = ExtResource("4")
 
 [node name="UILayer" type="CanvasLayer" parent="."]

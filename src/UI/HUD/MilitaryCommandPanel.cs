@@ -84,7 +84,7 @@ public partial class MilitaryCommandPanel : Control
                 _statusLabel.AddThemeColorOverride("font_color", highlight);
 
                 // Need to redraw map if we have target markers
-                GetNode<Map.MapManager>("/root/Main/MapManager")?.QueueRedraw();
+                // Map overlay refresh is handled automatically by WarshipMapBridge
             }
         };
         parent.AddChild(btn);

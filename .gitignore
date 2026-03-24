@@ -11,6 +11,10 @@ obj/
 # Node.js
 node_modules/
 
+# Map tiles (downloaded via download_tiles.py, ~20 GB)
+assets/map/tiles/
+assets/map/tiles_topo/
+
 # OS
 .DS_Store
 Thumbs.db

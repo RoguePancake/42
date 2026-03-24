@@ -57,9 +57,14 @@ public class NationData
     public Color NationColor;
     public bool IsPlayer = false;
     
-    // Map
+    // Map (legacy tile coords)
     public int CapitalX, CapitalY;
     public int ProvinceCount;      // tiles owned
+    
+    // Real-world coordinates
+    public float CapitalLon;       // Longitude of capital
+    public float CapitalLat;       // Latitude of capital
+    public float[][] BorderPolygon = System.Array.Empty<float[]>(); // Array of [lon, lat] points
     
     // Stats
     public float Treasury = 1000f;
@@ -69,6 +74,8 @@ public class NationData
     public MilitaryOrder GlobalMilitaryOrder = MilitaryOrder.BorderWatch;
     public int CommandTargetX = -1;
     public int CommandTargetY = -1;
+    public float CommandTargetLon = float.NaN;
+    public float CommandTargetLat = float.NaN;
 }
 
 public class CityData
@@ -79,6 +86,10 @@ public class CityData
     public int TileX, TileY;
     public bool IsCapital;
     public int Size = 1;  // 1=town, 2=city, 3=capital
+    
+    // Real-world coordinates
+    public float Longitude;
+    public float Latitude;
 }
 
 public enum UnitType
@@ -110,6 +121,12 @@ public class UnitData
     // Pixel coordinates for smooth swarm animation
     public float PixelX, PixelY;
     public float TargetPixelX, TargetPixelY;
+    
+    // Real-world coordinates
+    public float Longitude;
+    public float Latitude;
+    public float TargetLongitude;
+    public float TargetLatitude;
 }
 
 public class CharacterData
@@ -125,6 +142,10 @@ public class CharacterData
     public float PixelX, PixelY;
     public float TargetPixelX, TargetPixelY;
     public bool IsMoving = false;
+    
+    // Real-world coordinates
+    public float Longitude;
+    public float Latitude;
     
     // Authority Meters (0.0 to 100.0)
     public float TerritoryAuthority = 30f;

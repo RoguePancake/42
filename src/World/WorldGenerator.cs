@@ -6,362 +6,321 @@ using Warship.Data;
 namespace Warship.World;
 
 /// <summary>
-/// Oversees creating the entire world: terrain (via TerrainGenerator)
-/// and then populating nations, distributing land via BFS territory expansion.
+/// WorldGenerator — Creates the game world using real Earth geography.
+/// 
+/// Instead of procedural terrain, nations are placed at real coordinates
+/// using GeoData definitions. The map tiles from OpenStreetMap provide
+/// the visual terrain — this generator only handles game entities.
 /// </summary>
 public static class WorldGenerator
 {
-    private static readonly string[] NationNames = { 
-        "United States", "China", "Russia", "European Union", "India", "United Kingdom" 
-    };
-
-    private static readonly Color[] NationColors = {
-        new Color(0.8f, 0.2f, 0.2f), // Red
-        new Color(0.2f, 0.4f, 0.8f), // Blue
-        new Color(0.8f, 0.8f, 0.2f), // Yellow
-        new Color(0.6f, 0.2f, 0.8f), // Purple
-        new Color(0.2f, 0.8f, 0.4f), // Green
-        new Color(0.8f, 0.5f, 0.1f)  // Orange
-    };
-    
-    // Add possible minor city names
-    private static readonly string[] CityNames = {
-        "Oakhaven", "Riverbend", "Ironforge", "Sunpeak", 
-        "Frostford", "Eldoria", "Grimwall", "Valewood", 
-        "Amberfall", "Windhelm"
-    };
-
-    public static WorldData CreateWorld(int width, int height, int seed)
+    public static WorldData CreateWorld(int seed, string playerNationName = "United Kingdom", string playerRole = "Defense Minister", string playerName = "J. Crawford", int focusIndex = 0)
     {
         var world = new WorldData
         {
             Seed = seed,
-            MapWidth = width,
-            MapHeight = height,
-            TerrainMap = TerrainGenerator.Generate(width, height, seed),
-            OwnershipMap = new int[width, height]
+            // Map dimensions are no longer fixed tiles — the real world is infinite
+            // These are kept for backward compat with any code that references them
+            MapWidth = 360,    // Conceptual: degrees of longitude
+            MapHeight = 180,   // Conceptual: degrees of latitude
         };
 
-        // Initialize ownership to -1 (unclaimed)
-        for (int x = 0; x < width; x++)
-            for (int y = 0; y < height; y++)
-                world.OwnershipMap[x, y] = -1;
-
-        // Step 1: Find valid land tiles for capitals
         var rng = new Random(seed);
-        var validLand = new List<Vector2I>();
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                if (TerrainRules.IsPassable(world.TerrainMap[x, y]))
-                {
-                    validLand.Add(new Vector2I(x, y));
-                }
-            }
-        }
-
-        // Keep shuffling and picking capitals so they are far apart
-        var capitals = new List<Vector2I>();
-        for (int i = 0; i < 6 && validLand.Count > 0; i++)
-        {
-            Vector2I bestPick = validLand[0];
-            float maxDist = -1f;
-
-            // Pick a set of random tiles, choose the one furthest from existing capitals
-            for (int k = 0; k < 20; k++)
-            {
-                var cand = validLand[rng.Next(validLand.Count)];
-                float distToClosest = float.MaxValue;
-                foreach (var cap in capitals)
-                {
-                    float d = new Vector2(cand.X - cap.X, cand.Y - cap.Y).Length();
-                    if (d < distToClosest) distToClosest = d;
-                }
-                
-                if (distToClosest > maxDist)
-                {
-                    maxDist = distToClosest;
-                    bestPick = cand;
-                }
-            }
-            
-            capitals.Add(bestPick);
-            validLand.Remove(bestPick);
-
-            // Create nation
-            world.Nations.Add(new NationData
-            {
-                Id = $"N_{i}",
-                Name = NationNames[i],
-                Archetype = (NationArchetype)(i % 6),
-                NationColor = NationColors[i],
-                CapitalX = bestPick.X,
-                CapitalY = bestPick.Y,
-                ProvinceCount = 1
-            });
-
-            world.OwnershipMap[bestPick.X, bestPick.Y] = i; // Claim capital
-        }
-
-        // Step 2: Flood fill border expansion (Voronoi-ish BFS)
-        var queue = new Queue<(Vector2I tile, int nationIndex)>();
-        foreach (var nation in world.Nations)
-        {
-            int index = int.Parse(nation.Id.Split('_')[1]);
-            queue.Enqueue((new Vector2I(nation.CapitalX, nation.CapitalY), index));
-        }
-
-        var dx = new[] { 0, 1, 0, -1 };
-        var dy = new[] { -1, 0, 1, 0 };
-
-        while (queue.Count > 0)
-        {
-            var (tile, natIdx) = queue.Dequeue();
-
-            // Try spreading to 4 neighbors
-            for (int d = 0; d < 4; d++)
-            {
-                int nx = tile.X + dx[d];
-                int ny = tile.Y + dy[d];
-
-                // Bounds check
-                if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
-
-                // Stop at water or impassable mountains
-                if (!TerrainRules.IsPassable(world.TerrainMap[nx, ny])) continue;
-
-                // Stop if already claimed
-                if (world.OwnershipMap[nx, ny] != -1) continue;
-
-                // Claim it
-                world.OwnershipMap[nx, ny] = natIdx;
-                world.Nations[natIdx].ProvinceCount++;
-
-                // Queue next (with 10% chance to skip this tile from growing further, for organic jagged borders)
-                if (rng.NextDouble() > 0.1)
-                {
-                    queue.Enqueue((new Vector2I(nx, ny), natIdx));
-                }
-            }
-        }
-
-        // Step 3: Instantiate Cities (Capitals & Minor cities)
+        int nationIndex = 0;
         int cityIndex = 0;
-        foreach (var nation in world.Nations)
+
+        // ═══ Create nations from real-world data ═══
+        foreach (var geo in GeoData.Nations)
         {
-            // Capital
+            var nation = new NationData
+            {
+                Id = $"N_{nationIndex}",
+                Name = geo.Name,
+                Archetype = geo.Archetype,
+                NationColor = geo.NationColor,
+                
+                // Real-world coordinates
+                CapitalLon = geo.CapitalLon,
+                CapitalLat = geo.CapitalLat,
+                BorderPolygon = geo.Border,
+                
+                // Legacy tile coords (approximate mapping for backward compat)
+                CapitalX = (int)((geo.CapitalLon + 180f) / 360f * 80f),
+                CapitalY = (int)((90f - geo.CapitalLat) / 180f * 50f),
+                
+                // Starting stats vary by archetype
+                Treasury = GetStartingTreasury(geo.Archetype),
+                Prestige = GetStartingPrestige(geo.Archetype),
+                ProvinceCount = geo.Border.Length, // Approximate
+            };
+
+            world.Nations.Add(nation);
+
+            // ═══ Capital city ═══
             world.Cities.Add(new CityData
             {
                 Id = $"C_{cityIndex++}",
                 NationId = nation.Id,
-                Name = nation.Name + " Prime",
+                Name = geo.CapitalName,
+                Longitude = geo.CapitalLon,
+                Latitude = geo.CapitalLat,
                 TileX = nation.CapitalX,
                 TileY = nation.CapitalY,
                 IsCapital = true,
                 Size = 3
             });
 
-            // If the nation is big enough, maybe spawn a minor city
-            if (nation.ProvinceCount > 50)
+            // ═══ Other cities ═══
+            foreach (var (name, lon, lat, size) in geo.Cities)
             {
-                // Find a random tile owned by this nation that isn't the capital
-                for (int attempt = 0; attempt < 100; attempt++)
+                world.Cities.Add(new CityData
                 {
-                    int rx = rng.Next(width);
-                    int ry = rng.Next(height);
-                    if (world.OwnershipMap[rx, ry] == int.Parse(nation.Id.Split('_')[1]))
-                    {
-                        // Needs to be far from capital
-                        if (new Vector2(rx - nation.CapitalX, ry - nation.CapitalY).Length() > 8)
-                        {
-                            world.Cities.Add(new CityData
-                            {
-                                Id = $"C_{cityIndex++}",
-                                NationId = nation.Id,
-                                Name = CityNames[rng.Next(CityNames.Length)],
-                                TileX = rx,
-                                TileY = ry,
-                                IsCapital = false,
-                                Size = 1 + rng.Next(2) // 1 or 2
-                            });
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            // Spawn 500 Troops for this Nation
-            for (int t = 0; t < 500; t++)
-            {
-                SpawnRandomTroop(world, nation, rng);
+                    Id = $"C_{cityIndex++}",
+                    NationId = nation.Id,
+                    Name = name,
+                    Longitude = lon,
+                    Latitude = lat,
+                    TileX = (int)((lon + 180f) / 360f * 80f),
+                    TileY = (int)((90f - lat) / 180f * 50f),
+                    IsCapital = false,
+                    Size = size
+                });
             }
 
-            // Spawn Characters (VIPs) for the new FA Design
-            world.Characters.Add(new CharacterData
+            // ═══ Spawn Military Units at bases ═══
+            foreach (var (lon, lat) in geo.MilitaryBases)
             {
-                Id = $"{nation.Id}_Char_1",
-                NationId = nation.Id,
-                Name = "Leader " + nation.Name,
-                Role = "Head of State",
-                TileX = nation.CapitalX,
-                TileY = nation.CapitalY,
-                PixelX = nation.CapitalX * 64 + 32,
-                PixelY = nation.CapitalY * 64 + 32,
-                TargetPixelX = nation.CapitalX * 64 + 32,
-                TargetPixelY = nation.CapitalY * 64 + 32,
-                TerritoryAuthority = 80f,
-                WorldAuthority = 60f,
-                BehindTheScenesAuthority = 70f
-            });
-
-            world.Characters.Add(new CharacterData
-            {
-                Id = $"{nation.Id}_Char_2",
-                NationId = nation.Id,
-                Name = "General",
-                Role = "Defense Minister",
-                TileX = nation.CapitalX + 1, // Offset slightly
-                TileY = nation.CapitalY,
-                PixelX = (nation.CapitalX + 1) * 64 + 32,
-                PixelY = nation.CapitalY * 64 + 32,
-                TargetPixelX = (nation.CapitalX + 1) * 64 + 32,
-                TargetPixelY = nation.CapitalY * 64 + 32,
-                TerritoryAuthority = 40f,
-                WorldAuthority = 20f,
-                BehindTheScenesAuthority = 60f
-            });
-            
-            // Assign Player to USA's Defense Minister randomly as a test of "climbing ladder"
-            if (nation.Name == "United States")
-            {
-                world.Characters[^1].IsPlayer = true;
-                world.PlayerNationId = nation.Id;
-            }
-        }
-
-        // Step 4: River Generation
-        // We simulate rain falling on mountains and flowing downhill into the sea
-        for (int i = 0; i < 15; i++)
-        {
-            int rx = rng.Next(width);
-            int ry = rng.Next(height);
-            
-            // Only start rivers in mountains or hills
-            int t = world.TerrainMap[rx, ry];
-            if (t != (int)TerrainType.Mountain && t != (int)TerrainType.Hills)
-                continue;
-
-            var path = new List<Vector2>();
-            int cx = rx;
-            int cy = ry;
-            bool hitOcean = false;
-
-            for (int step = 0; step < 100; step++) // Max river length
-            {
-                // Add jitter to center point so rivers meander
-                float jitterX = (float)(rng.NextDouble() - 0.5) * 0.4f;
-                float jitterY = (float)(rng.NextDouble() - 0.5) * 0.4f;
-                path.Add(new Vector2(cx + 0.5f + jitterX, cy + 0.5f + jitterY));
-
-                int currentTerrain = world.TerrainMap[cx, cy];
-                if (!TerrainRules.IsLand(currentTerrain))
+                // Tank group at each base
+                for (int t = 0; t < 3; t++)
                 {
-                    hitOcean = true;
-                    break;
-                }
-
-                // Look for lowest neighbor
-                int bestX = cx;
-                int bestY = cy;
-                int lowestTerrain = currentTerrain;
-
-                // Check 8 neighbors
-                int[] ndx = { 0, 1, 1, 1, 0, -1, -1, -1 };
-                int[] ndy = { -1, -1, 0, 1, 1, 1, 0, -1 };
-                
-                // Shuffle neighbor checks so they pick randomly if flat
-                int startIndex = rng.Next(8);
-                
-                for (int d = 0; d < 8; d++)
-                {
-                    int nIdx = (startIndex + d) % 8;
-                    int nx = cx + ndx[nIdx];
-                    int ny = cy + ndy[nIdx];
+                    float offsetLon = (float)(rng.NextDouble() - 0.5) * 0.5f;
+                    float offsetLat = (float)(rng.NextDouble() - 0.5) * 0.5f;
                     
-                    if (nx >= 0 && nx < width && ny >= 0 && ny < height)
+                    world.Units.Add(new UnitData
                     {
-                        int nt = world.TerrainMap[nx, ny];
-                        // Don't flow uphill
-                        if (nt <= lowestTerrain)
-                        {
-                            // Avoid going back to a tile already in the path
-                            bool alreadyVisited = false;
-                            foreach (var p in path)
-                            {
-                                if ((int)p.X == nx && (int)p.Y == ny) { alreadyVisited = true; break; }
-                            }
-                            
-                            if (!alreadyVisited)
-                            {
-                                lowestTerrain = nt;
-                                bestX = nx;
-                                bestY = ny;
-                            }
-                        }
-                    }
+                        Id = $"{nation.Id}_Tank_{world.Units.Count}",
+                        NationId = nation.Id,
+                        Type = UnitType.Tank,
+                        Longitude = lon + offsetLon,
+                        Latitude = lat + offsetLat,
+                        TargetLongitude = lon + offsetLon,
+                        TargetLatitude = lat + offsetLat,
+                        TileX = (int)((lon + 180f) / 360f * 80f),
+                        TileY = (int)((90f - lat) / 180f * 50f),
+                        PixelX = (int)((lon + 180f) / 360f * 80f) * 64 + 32,
+                        PixelY = (int)((90f - lat) / 180f * 50f) * 64 + 32,
+                        TargetPixelX = (int)((lon + 180f) / 360f * 80f) * 64 + 32,
+                        TargetPixelY = (int)((90f - lat) / 180f * 50f) * 64 + 32,
+                        CurrentOrder = MilitaryOrder.BorderWatch
+                    });
                 }
 
-                // If nowhere lower to go
-                if (bestX == cx && bestY == cy)
-                    break;
-
-                cx = bestX;
-                cy = bestY;
+                // Ship at coastal bases
+                if (IsCoastalBase(lon, lat))
+                {
+                    world.Units.Add(new UnitData
+                    {
+                        Id = $"{nation.Id}_Ship_{world.Units.Count}",
+                        NationId = nation.Id,
+                        Type = UnitType.Ship,
+                        Longitude = lon + (float)(rng.NextDouble() - 0.5) * 1.0f,
+                        Latitude = lat + (float)(rng.NextDouble() - 0.5) * 1.0f,
+                        TargetLongitude = lon,
+                        TargetLatitude = lat,
+                        TileX = (int)((lon + 180f) / 360f * 80f),
+                        TileY = (int)((90f - lat) / 180f * 50f),
+                        CurrentOrder = MilitaryOrder.Patrol
+                    });
+                }
             }
 
-            // Only keep rivers that reach water and have some length
-            if (hitOcean && path.Count > 4)
+            // ═══ Spawn Characters (VIPs) ═══
+            string[] roles = { 
+                "Head of State", 
+                "Defense Minister", 
+                "Foreign Minister", 
+                "Director of Intelligence", 
+                "Chief of Staff", 
+                "Finance Minister", 
+                "Interior Minister", 
+                "Opposition Leader" 
+            };
+            
+            bool isPlayerNation = geo.Name == playerNationName;
+            if (isPlayerNation) world.PlayerNationId = nation.Id;
+
+            for (int i = 0; i < roles.Length; i++)
             {
-                world.RiverPaths.Add(path.ToArray());
+                string r = roles[i];
+                bool isPlayer = isPlayerNation && r == playerRole;
+                
+                string cName = isPlayer ? playerName : (r == "Head of State" ? GetLeaderName(geo.Name, rng) : (r == "Defense Minister" ? GetGeneralName(geo.Name, rng) : GetRandomName(rng)));
+                
+                float ta = 30f;
+                float wa = 20f;
+                float bsa = 40f;
+                
+                if (r == "Head of State") { ta = 80; wa = 60; bsa = 70; }
+                else if (r == "Defense Minister") { ta = 40; wa = 20; bsa = 60; }
+                else if (r == "Foreign Minister") { ta = 15; wa = 80; bsa = 30; }
+                else if (r == "Director of Intelligence") { ta = 30; wa = 40; bsa = 95; }
+                else if (r == "Opposition Leader") { ta = 50; wa = 10; bsa = 30; }
+                
+                if (isPlayer)
+                {
+                    // Focus logic: "Balanced", "Territory Control (+TA)", "Global Influence (+WA)", "Shadow Broker (+BSA)"
+                    if (focusIndex == 1) ta += 20;
+                    if (focusIndex == 2) wa += 20;
+                    if (focusIndex == 3) bsa += 20;
+                    ta = Math.Clamp(ta, 0, 100);
+                    wa = Math.Clamp(wa, 0, 100);
+                    bsa = Math.Clamp(bsa, 0, 100);
+                }
+
+                world.Characters.Add(new CharacterData
+                {
+                    Id = $"{nation.Id}_Char_{i + 1}",
+                    NationId = nation.Id,
+                    Name = cName,
+                    Role = r,
+                    IsPlayer = isPlayer,
+                    TileX = nation.CapitalX + (i % 2),
+                    TileY = nation.CapitalY + (i / 2),
+                    Longitude = geo.CapitalLon + (i * 0.05f),
+                    Latitude = geo.CapitalLat + (i * 0.05f),
+                    PixelX = (nation.CapitalX + (i%2)) * 64 + 32,
+                    PixelY = (nation.CapitalY + (i/2)) * 64 + 32,
+                    TargetPixelX = (nation.CapitalX + (i%2)) * 64 + 32,
+                    TargetPixelY = (nation.CapitalY + (i/2)) * 64 + 32,
+                    TerritoryAuthority = ta,
+                    WorldAuthority = wa,
+                    BehindTheScenesAuthority = bsa
+                });
+            }
+
+            nationIndex++;
+        }
+
+        // ═══ Initialize ownership map for backward compat ═══
+        // This is a simplified mapping — real borders are defined by BorderPolygon
+        world.OwnershipMap = new int[80, 50];
+        for (int x = 0; x < 80; x++)
+            for (int y = 0; y < 50; y++)
+                world.OwnershipMap[x, y] = -1;
+
+        // Roughly fill ownership based on capital proximity
+        for (int x = 0; x < 80; x++)
+        {
+            for (int y = 0; y < 50; y++)
+            {
+                float lon = x / 80f * 360f - 180f;
+                float lat = 90f - y / 50f * 180f;
+                
+                int closest = -1;
+                float closestDist = float.MaxValue;
+                
+                for (int n = 0; n < world.Nations.Count; n++)
+                {
+                    var nat = world.Nations[n];
+                    float dx = lon - nat.CapitalLon;
+                    float dy = lat - nat.CapitalLat;
+                    float dist = dx * dx + dy * dy;
+                    
+                    if (dist < closestDist && dist < 2500f) // Limit territory radius
+                    {
+                        closestDist = dist;
+                        closest = n;
+                    }
+                }
+                
+                world.OwnershipMap[x, y] = closest;
             }
         }
+
+        // Generate terrain map for backward compat (simplified)
+        world.TerrainMap = TerrainGenerator.Generate(80, 50, seed);
+
+        // Empty river paths (real rivers come from map tiles now)
+        world.RiverPaths = new List<Vector2[]>();
 
         return world;
     }
 
-    private static void SpawnRandomTroop(WorldData world, NationData nation, Random rng)
+    // ── Helper Methods ──────────────────────────────
+
+    private static float GetStartingTreasury(NationArchetype archetype) => archetype switch
     {
-        int natIdx = int.Parse(nation.Id.Split('_')[1]);
-        for (int attempt = 0; attempt < 100; attempt++)
-        {
-            int rx = rng.Next(world.MapWidth);
-            int ry = rng.Next(world.MapHeight);
+        NationArchetype.Hegemon => 5000f,
+        NationArchetype.Commercial => 4500f,
+        NationArchetype.Revolutionary => 2000f,
+        NationArchetype.Traditionalist => 3500f,
+        NationArchetype.Survival => 1500f,
+        NationArchetype.FreeState => 800f,
+        _ => 1000f
+    };
 
-            // Must be owned by this nation
-            if (world.OwnershipMap[rx, ry] != natIdx) continue;
-            
-            // Must be land
-            if (!TerrainRules.IsLand(world.TerrainMap![rx, ry])) continue;
+    private static float GetStartingPrestige(NationArchetype archetype) => archetype switch
+    {
+        NationArchetype.Hegemon => 90f,
+        NationArchetype.Commercial => 70f,
+        NationArchetype.Revolutionary => 40f,
+        NationArchetype.Traditionalist => 60f,
+        NationArchetype.Survival => 25f,
+        NationArchetype.FreeState => 30f,
+        _ => 30f
+    };
 
-            // Micro-position within the 64x64 tile
-            float ox = (float)(rng.NextDouble() * 40 - 20); // -20 to +20
-            float oy = (float)(rng.NextDouble() * 40 - 20);
-
-            world.Units.Add(new UnitData
-            {
-                Id = $"{nation.Id}_T_{world.Units.Count}",
-                NationId = nation.Id,
-                Type = UnitType.Soldier,
-                TileX = rx,
-                TileY = ry,
-                PixelX = rx * 64 + 32 + ox,
-                PixelY = ry * 64 + 32 + oy,
-                TargetPixelX = rx * 64 + 32 + ox,
-                TargetPixelY = ry * 64 + 32 + oy,
-                CurrentOrder = MilitaryOrder.BorderWatch // Default order
-            });
-            return;
-        }
+    private static bool IsCoastalBase(float lon, float lat)
+    {
+        // Rough check — bases near ocean edges
+        // Pearl Harbor, Portsmouth, Plymouth, San Diego, Shanghai, Mumbai, etc.
+        return Math.Abs(lat) < 50 && (
+            Math.Abs(lon) > 100 || // Pacific edges
+            lon < -70 ||           // US East coast
+            (lon > -10 && lon < 5 && lat > 49) || // UK
+            (lon > 70 && lon < 90 && lat < 25) ||  // India coast
+            (lon > 110 && lon < 125 && lat < 35)   // China coast
+        );
     }
+
+    private static readonly string[] USLeaders = { "Harrison", "Mitchell", "Crawford", "Bennett", "Sullivan" };
+    private static readonly string[] ChinaLeaders = { "Wei", "Zhang", "Liu", "Chen", "Yang" };
+    private static readonly string[] RussiaLeaders = { "Volkov", "Petrov", "Kozlov", "Sokolov", "Morozov" };
+    private static readonly string[] EULeaders = { "Müller", "Dubois", "Rossi", "García", "Van Berg" };
+    private static readonly string[] IndiaLeaders = { "Sharma", "Patel", "Reddy", "Singh", "Kumar" };
+    private static readonly string[] UKLeaders = { "Whitmore", "Ashford", "Pemberton", "Blackwell", "Stirling" };
+
+    private static string GetLeaderName(string nationName, Random rng) => nationName switch
+    {
+        "United States" => "President " + USLeaders[rng.Next(USLeaders.Length)],
+        "China" => "Chairman " + ChinaLeaders[rng.Next(ChinaLeaders.Length)],
+        "Russia" => "President " + RussiaLeaders[rng.Next(RussiaLeaders.Length)],
+        "European Union" => "Chancellor " + EULeaders[rng.Next(EULeaders.Length)],
+        "India" => "Prime Minister " + IndiaLeaders[rng.Next(IndiaLeaders.Length)],
+        "United Kingdom" => "PM " + UKLeaders[rng.Next(UKLeaders.Length)],
+        _ => "Leader " + nationName
+    };
+
+    private static readonly string[] USGenerals = { "Bradley", "Marshall", "Hayes", "Thornton", "Reeves" };
+    private static readonly string[] ChinaGenerals = { "Zhao", "Sun", "Wu", "Li", "Zhou" };
+    private static readonly string[] RussiaGenerals = { "Ivanov", "Kuznetsov", "Orlov", "Karpov", "Vasiliev" };
+    private static readonly string[] EUGenerals = { "Fischer", "Laurent", "Bianchi", "Moreno", "De Vries" };
+    private static readonly string[] IndiaGenerals = { "Rao", "Nair", "Gupta", "Das", "Iyer" };
+    private static readonly string[] UKGenerals = { "Crawford", "Harding", "Montgomery", "Wavell", "Slim" };
+
+    private static string GetGeneralName(string nationName, Random rng) => nationName switch
+    {
+        "United States" => "Gen. " + USGenerals[rng.Next(USGenerals.Length)],
+        "China" => "Gen. " + ChinaGenerals[rng.Next(ChinaGenerals.Length)],
+        "Russia" => "Gen. " + RussiaGenerals[rng.Next(RussiaGenerals.Length)],
+        "European Union" => "Gen. " + EUGenerals[rng.Next(EUGenerals.Length)],
+        "India" => "Gen. " + IndiaGenerals[rng.Next(IndiaGenerals.Length)],
+        "United Kingdom" => "Gen. " + UKGenerals[rng.Next(UKGenerals.Length)],
+        _ => "General"
+    };
+
+    private static readonly string[] GenericFirsts = { "James", "Robert", "John", "Michael", "David", "William", "Richard", "Joseph", "Thomas", "Charles", "Wei", "Li", "Zhang", "Liu", "Chen", "Yang", "Zhao", "Huang" };
+    private static readonly string[] GenericLasts = { "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Ivanov", "Smirnov", "Kuznetsov", "Popov", "Vasiliev", "Petrov", "Sokolov" };
+
+    private static string GetRandomName(Random rng) => $"{GenericFirsts[rng.Next(GenericFirsts.Length)]} {GenericLasts[rng.Next(GenericLasts.Length)]}";
 }
