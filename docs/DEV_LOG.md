@@ -12,9 +12,9 @@
 
 ## Current Status
 
-**Active Phase:** M-6 (Tile Download) + M-7 (HUD Restyling) queued
+**Active Milestone:** 1 — First Playable Build (see `docs/ROADMAP.md`)
 **Branch:** main
-**Last Session:** 2026-03-23
+**Last Session:** 2026-03-24
 
 ---
 
@@ -62,54 +62,15 @@
 
 ---
 
-## Phase Tracker
+## Roadmap
 
-### Old 30-Phase Plan (Phases 1-14 from original, now superseded)
-| # | Phase | Status | Notes |
-|---|-------|--------|-------|
-| 1 | Project skeleton | ✅ | |
-| 2 | Empty main scene | ✅ | |
-| 3 | Terrain generation | ✅ | Now superseded by OSM tiles |
-| 4 | MapManager + rendered terrain | ✅ | **REPLACED** by TileMapRenderer |
-| 5 | Camera zoom + pan | ✅ | **REPLACED** by TileMapRenderer camera |
-| 6 | Ocean boundaries + noise | ✅ | Now superseded by real coastlines |
-| 7 | Nations + territory colors | ✅ | Now uses real-world borders via GeoData |
-| 8 | City sprites on map | ✅ | Now uses real city coords (lon/lat) |
-| 9 | Rivers (Bézier curves) | ✅ | Now rendered in OSM tile data |
-| 10 | Unit sprite: tank on map | ✅ | Now positioned by lon/lat |
-| 11 | Unit movement | ✅ | |
-| 12 | Multiple unit types | ✅ | |
-| 13 | EventBus | ✅ | |
-| 14 | WorldStateManager | ✅ | |
+All milestone tracking and future work lives in **`docs/ROADMAP.md`** — single source of truth.
 
-### FA Phase Plan (Active)
-| # | Phase | Status | Notes |
-|---|-------|--------|-------|
-| FA-1 | VIP Characters + Authority | ✅ | |
-| FA-2 | Dossier UI | ✅ | |
-| FA-3 | Power Play Engine | ✅ | |
-| FA-4 | Turn Engine + AI | ✅ | |
-| FA-5 | Crisis Events | ✅ | |
-| FA-6 | Swarm Military | ✅ | |
-| FA-7 | Swarm Combat | ✅ | |
-| FA-8 | Victory Panel | ✅ | |
-| FA-9 | Main Menu + HUD | ✅ | |
-| FA-10 | Economy Engine | ✅ | |
-| FA-11 | News Ticker | ✅ | |
-| **M-1** | **Data Model + GeoData** | **✅** | **lon/lat fields, real borders** |
-| **M-2** | **TileMapRenderer** | **✅** | **OSM + Topo dual-style** |
-| **M-3** | **WarshipMapBridge** | **✅** | **Government overlay toggle** |
-| **M-4** | **WorldGenerator rewrite** | **✅** | **Real-world placement** |
-| **M-5** | **Scene restructure** | **✅** | **Main.tscn updated** |
-| **M-6** | **Tile download** | **🟡** | **OSM ~15 GB downloading** |
-| **M-7** | **HUD restyling** | **⚪** | **Dark theme + gold accents** |
-| **M-8** | **Map mode tabs UI** | **⚪** | |
-| **M-9** | **City detail overlays** | **⚪** | |
-| **M-10** | **Frontline rendering** | **⚪** | |
-| FA-12 | Espionage Grid | ⚪ | |
-| FA-13 | Rebellions | ⚪ | |
-| FA-14 | National Debt | ⚪ | |
-| FA-15 | Black Market | ⚪ | |
+### Completed Phases (Historical)
+- Phases 1-14 (original Warship plan) — all done, then superseded by real-world map
+- FA-1 to FA-11 (Full Authority foundation) — all done
+- M-1 to M-5 (real-world map overhaul) — all done
+- M-6 (tile download) — in progress
 
 ---
 

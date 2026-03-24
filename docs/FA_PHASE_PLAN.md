@@ -1,5 +1,9 @@
-# FULL AUTHORITY (FA) 
+# [ARCHIVED] FULL AUTHORITY (FA)
 ## Phase Implementation Plan (Expanded Master Roadmap)
+
+> **ARCHIVED 2026-03-24:** This plan has been merged into `docs/ROADMAP.md`.
+> All phase statuses and future work are tracked there now.
+> Kept for historical reference only.
 
 We are aggressively driving development to complete all phases.
 
