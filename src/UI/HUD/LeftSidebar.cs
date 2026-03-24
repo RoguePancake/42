@@ -1,4 +1,6 @@
 using Godot;
+using Warship.Core;
+using Warship.Events;
 
 namespace Warship.UI.HUD;
 
@@ -52,29 +54,29 @@ public partial class LeftSidebar : Control
 
         // Diplomatic
         AddCategoryHeader(vbox, "DIPLOMATIC", new Color(0.3f, 0.6f, 1f));
-        AddActionButton(vbox, "Propose Alliance");
-        AddActionButton(vbox, "Trade Agreement");
-        AddActionButton(vbox, "Send Envoy");
-        AddActionButton(vbox, "Declare War");
+        AddActionButton(vbox, "diplomatic", "Propose Alliance");
+        AddActionButton(vbox, "diplomatic", "Trade Agreement");
+        AddActionButton(vbox, "diplomatic", "Send Envoy");
+        AddActionButton(vbox, "diplomatic", "Declare War");
 
         // Military
         AddCategoryHeader(vbox, "MILITARY", new Color(1f, 0.4f, 0.3f));
-        AddActionButton(vbox, "Border Watch");
-        AddActionButton(vbox, "Patrol");
-        AddActionButton(vbox, "Stage Army");
-        AddActionButton(vbox, "Attack");
+        AddActionButton(vbox, "military", "Border Watch");
+        AddActionButton(vbox, "military", "Patrol");
+        AddActionButton(vbox, "military", "Stage Army");
+        AddActionButton(vbox, "military", "Attack");
 
         // Economic
         AddCategoryHeader(vbox, "ECONOMIC", new Color(0.3f, 0.9f, 0.4f));
-        AddActionButton(vbox, "Adjust Budget");
-        AddActionButton(vbox, "Set Tariffs");
-        AddActionButton(vbox, "Open Trade Route");
+        AddActionButton(vbox, "economic", "Adjust Budget");
+        AddActionButton(vbox, "economic", "Set Tariffs");
+        AddActionButton(vbox, "economic", "Open Trade Route");
 
         // Intelligence
         AddCategoryHeader(vbox, "INTELLIGENCE", new Color(0.8f, 0.6f, 1f));
-        AddActionButton(vbox, "Deploy Spy");
-        AddActionButton(vbox, "Counter-Intel");
-        AddActionButton(vbox, "Sabotage");
+        AddActionButton(vbox, "intelligence", "Deploy Spy");
+        AddActionButton(vbox, "intelligence", "Counter-Intel");
+        AddActionButton(vbox, "intelligence", "Sabotage");
     }
 
     private void AddCategoryHeader(VBoxContainer parent, string text, Color accentColor)
@@ -102,7 +104,7 @@ public partial class LeftSidebar : Control
         parent.AddChild(container);
     }
 
-    private void AddActionButton(VBoxContainer parent, string text)
+    private void AddActionButton(VBoxContainer parent, string category, string text)
     {
         var btn = new Button
         {
@@ -127,6 +129,14 @@ public partial class LeftSidebar : Control
         btn.AddThemeStyleboxOverride("pressed", hover);
         btn.AddThemeFontSizeOverride("font_size", 14);
         btn.AddThemeColorOverride("font_color", new Color(0.75f, 0.75f, 0.8f));
+
+        // Wire button to publish PlayerActionEvent via EventBus
+        string actionId = text.ToLower().Replace(" ", "_");
+        btn.Pressed += () =>
+        {
+            GD.Print($"[LeftSidebar] Action: {category}/{actionId}");
+            EventBus.Instance?.Publish(new PlayerActionEvent(category, actionId));
+        };
 
         parent.AddChild(btn);
     }

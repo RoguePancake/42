@@ -199,9 +199,5 @@ public partial class BottomPanel : Control
         _unitCountLabel.Text = $"Units: {unitCount}";
     }
 
-    public override void _Process(double delta)
-    {
-        // Smooth bar animation
-        RefreshData();
-    }
+    // Data refreshes via TurnAdvancedEvent subscription — no per-frame polling needed
 }

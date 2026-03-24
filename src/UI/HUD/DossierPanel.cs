@@ -27,13 +27,14 @@ public partial class DossierPanel : Control
     private CharacterData? _target;
     private bool _isVisible = false;
     private float _slideProgress = 0f;
-    private const float PanelWidth = 320f;
+    private const float PanelWidth = 300f;
+    private const float RightSidebarWidth = 250f;
 
     public override void _Ready()
     {
-        // Start off-screen to the right
+        // Start off-screen to the right, accounting for RightSidebar
         Size = new Vector2(PanelWidth, 600);
-        Position = new Vector2(GetViewportRect().Size.X, 80); // Below News & TopBar
+        Position = new Vector2(GetViewportRect().Size.X, 64); // Below both top bars
 
         // Dark background panel
         _bg = new Panel();
@@ -270,10 +271,12 @@ public partial class DossierPanel : Control
 
     public override void _Process(double delta)
     {
-        // Slide animation
-        float target = _isVisible ? GetViewportRect().Size.X - PanelWidth : GetViewportRect().Size.X;
+        // Slide animation — dock left of the RightSidebar (not on top of it)
+        float dockX = GetViewportRect().Size.X - RightSidebarWidth - PanelWidth;
+        float hiddenX = GetViewportRect().Size.X - RightSidebarWidth;
+        float target = _isVisible ? dockX : hiddenX;
         float current = Position.X;
         float newX = Mathf.Lerp(current, target, 8f * (float)delta);
-        Position = new Vector2(newX, 80);
+        Position = new Vector2(newX, 64);
     }
 }
