@@ -59,72 +59,121 @@ All core systems work. This milestone is about making the existing game **stable
 
 ---
 
-## MILESTONE 2: CORE LOOP POLISH
-**Goal:** The core gameplay loop feels good. Player understands what's happening and has meaningful choices each turn.
+## MILESTONE 2: CLICK & COMMAND
+**Goal:** Player can select units, move them, and give basic orders. Replaces swarm-only control.
 **Tag:** `v0.10.0-alpha`
+**Design:** See `docs/MILITARY_SYSTEM.md`
 
 | # | Task | Priority | Status | Notes |
 |---|------|----------|--------|-------|
-| 2.1 | City detail overlays (population, strategic value, port/airfield icons) | MEDIUM | ⚪ | Click or hover on cities |
-| 2.2 | Frontline rendering (animated war zones between nations) | MEDIUM | ⚪ | Visual feedback for wars |
-| 2.3 | Espionage grid — fog of war for rival stats | HIGH | ⚪ | FA-12. Without this, player sees too much |
-| 2.4 | Improve news feed — categorize, color-code, make scannable | MEDIUM | ⚪ | Player needs to quickly read what happened |
-| 2.5 | Player unit commands — direct control (click unit → right-click target) | HIGH | ⚪ | Currently swarm-only; player needs agency |
-| 2.6 | Tutorial hints — first 3 turns explain controls | LOW | ⚪ | Tooltip or overlay text |
-| 2.7 | Balance pass — income/upkeep/combat numbers feel right | MEDIUM | ⚪ | Playtest and tune |
+| 2.1 | Unit selection (click, box-select, shift+click, double-click) | HIGH | ⚪ | UnitSelectionManager.cs |
+| 2.2 | A* pathfinding over tile grid (terrain costs, domain rules) | HIGH | ⚪ | PathfindingEngine.cs — land/sea/air domains |
+| 2.3 | Move + Attack-Move + Patrol + Waypoint orders | HIGH | ⚪ | Right-click, A+click, P+click, Shift+click |
+| 2.4 | Hold / Garrison / Fortify / Blockade defensive orders | MEDIUM | ⚪ | H, G, F keys + right-click sea zones |
+| 2.5 | Order queue per unit (max 8, execute in sequence) | MEDIUM | ⚪ | Visual queue in unit info panel |
+| 2.6 | Formations — Ctrl+1-9 save, 1-9 recall, rename | MEDIUM | ⚪ | FormationManager.cs + sidebar panel |
+| 2.7 | Improve news feed — categorize, color-code, scannable | MEDIUM | ⚪ | Player needs to quickly read what happened |
+| 2.8 | Frontline rendering (animated war zones) | LOW | ⚪ | Visual feedback for active wars |
 
-**Exit criteria:** A new player can figure out the game in 5 minutes. Wars are visible on the map. Intel creates real uncertainty. Turns feel meaningful.
+**Exit criteria:** Player clicks a tank, right-clicks a destination, tank pathfinds there. Can create "3rd Fleet" and recall it with hotkey. Orders feel responsive.
 
 ---
 
-## MILESTONE 3: DEPTH & SYSTEMS
-**Goal:** The game has enough systems interacting that emergent stories happen. Replayable.
-**Tag:** `v0.11.0-beta`
+## MILESTONE 3: RESOURCES & PRODUCTION
+**Goal:** Military-industrial pipeline works. Player builds facilities, manufactures units, manages resources.
+**Tag:** `v0.11.0-alpha`
+**Design:** See `docs/MILITARY_SYSTEM.md` Parts 1-3
 
 | # | Task | Priority | Status | Notes |
 |---|------|----------|--------|-------|
-| 3.1 | Rebellions & insurgency | HIGH | ⚪ | FA-13. Nations with low TA spawn rebel swarms |
-| 3.2 | National debt & bailouts | MEDIUM | ⚪ | FA-14. Borrowing, economic pressure |
-| 3.3 | Black market trading | LOW | ⚪ | FA-15. Shadow arms deals |
-| 3.4 | UN Assembly UI — embargoes, resolutions | MEDIUM | ⚪ | FA-16. Diplomatic layer |
-| 3.5 | Alliance webs — defensive pacts | HIGH | ⚪ | FA-17. Coalition warfare |
-| 3.6 | Border attrition — moving through enemy territory costs strength | LOW | ⚪ | FA-18 |
-| 3.7 | City siege mechanics — cities have HP before flipping | MEDIUM | ⚪ | FA-19 |
-| 3.8 | Media warfare — propaganda campaigns | LOW | ⚪ | FA-20 |
+| 3.1 | 6 resource types in data model (Iron, Oil, Uranium, Elec, Manpower, Food) | HIGH | ⚪ | Add to Models.cs, province yields by terrain |
+| 3.2 | ResourceEngine.cs — collect resources per province per turn | HIGH | ⚪ | Pure C# engine, Phase 1 of turn pipeline |
+| 3.3 | Facility system — build slots per city, construction timers | HIGH | ⚪ | FacilityData model, CityData gets slots |
+| 3.4 | Production queues — queue units at facilities, 1 at a time | HIGH | ⚪ | ProductionEngine.cs — runs each turn |
+| 3.5 | Expanded unit types (16 unit types across land/sea/air) | HIGH | ⚪ | Update UnitType enum, add UnitDomain |
+| 3.6 | National Production Panel UI (click city → see facilities → build) | HIGH | ⚪ | The main build interface |
+| 3.7 | City detail overlays (population, slots, port/airfield icons) | MEDIUM | ⚪ | Click or hover on cities |
+| 3.8 | Trade for missing resources (buy oil from allies) | MEDIUM | ⚪ | TradeEngine integration |
 
-**Exit criteria:** Multiple paths to victory feel viable. AI nations form alliances and betray each other. Economic and military strategies both work. 30+ turns consistently produce interesting stories.
+**Exit criteria:** Click London → build a Barracks (2 turns) → queue Infantry → watch it roll out. Resources tick up each turn. Run out of oil = vehicles grounded.
 
 ---
 
-## MILESTONE 4: ENDGAME & ESCALATION
-**Goal:** Nuclear weapons, DEFCON, and leader succession create dramatic late-game tension.
+## MILESTONE 4: UPKEEP, SUPPLY & MANPOWER
+**Goal:** Running a military has real costs. Player makes hard choices about army size vs economy.
+**Tag:** `v0.11.5-alpha`
+**Design:** See `docs/MILITARY_SYSTEM.md` Parts 4-5
+
+| # | Task | Priority | Status | Notes |
+|---|------|----------|--------|-------|
+| 4.1 | Unit upkeep costs per turn (money + fuel) | HIGH | ⚪ | EconomyEngine update |
+| 4.2 | Supply lines — units >5 tiles from city lose strength | HIGH | ⚪ | Supply range calc, Fuel Depot extends +3 |
+| 4.3 | Manpower pool — finite, scales with population | MEDIUM | ⚪ | Can't spam infinite infantry |
+| 4.4 | Conscription mechanic (emergency boost, stability penalty) | MEDIUM | ⚪ | Desperate times button |
+| 4.5 | Bankruptcy consequences (units weaken, vehicles stop) | HIGH | ⚪ | Already partial in EconomyEngine |
+| 4.6 | Combat modifiers (terrain, fortification, encirclement, morale) | HIGH | ⚪ | Replace simple RNG combat |
+| 4.7 | City siege mechanics — cities have HP before flipping | MEDIUM | ⚪ | FA-19. No more instant capture |
+| 4.8 | Balance pass — income/upkeep/combat numbers feel right | MEDIUM | ⚪ | Playtest and tune |
+
+**Exit criteria:** Building 50 tanks feels powerful but drains treasury. Overextended armies wither. Lean forces with good supply beat bloated ones.
+
+---
+
+## MILESTONE 5: WAR ROOM & OPERATIONS
+**Goal:** Player can plan multi-phase invasions and see strategic targets at a glance.
 **Tag:** `v0.12.0-beta`
+**Design:** See `docs/MILITARY_SYSTEM.md` Parts 6-7
 
 | # | Task | Priority | Status | Notes |
 |---|------|----------|--------|-------|
-| 4.1 | Military research facilities — upgrade units to tanks/jets/fleets | HIGH | ⚪ | FA-21 |
-| 4.2 | Nuclear silo construction | HIGH | ⚪ | FA-22. The game's signature mechanic |
-| 4.3 | DEFCON system — global panic meter | MEDIUM | ⚪ | FA-23 |
-| 4.4 | WMD strikes — nuke a city, permanent consequences | HIGH | ⚪ | FA-24 |
-| 4.5 | Leader succession — assassination creates vengeful successor | MEDIUM | ⚪ | FA-25 |
+| 5.1 | War Room panel — strategic targets, chokepoints, enemy capitals | HIGH | ⚪ | Click target → deploy forces |
+| 5.2 | Invasion Planner — multi-phase operations (blockade → air → land) | HIGH | ⚪ | OperationData model, auto-generate orders |
+| 5.3 | Bombardment orders (artillery + cruiser ranged attacks) | MEDIUM | ⚪ | Pre-combat softening |
+| 5.4 | Amphibious assault (transports → beach landing at -30%) | MEDIUM | ⚪ | D-Day style operations |
+| 5.5 | Airlift (mech infantry → distant airfield, needs air superiority) | LOW | ⚪ | Rapid deployment |
+| 5.6 | Alliance webs — defensive pacts, coalition warfare | HIGH | ⚪ | FA-17. Allies join wars |
+| 5.7 | Espionage grid — fog of war, DECEIVED state for fake intel | HIGH | ⚪ | FA-12. Intel integration with military |
+| 5.8 | Rebellions & insurgency (low TA → rebel swarms) | MEDIUM | ⚪ | FA-13 |
 
-**Exit criteria:** Late game is dramatically different from early game. Nuclear weapons change everything. DEFCON creates tension even without war.
+**Exit criteria:** Player plans "Operation Iron Dawn" with naval blockade phase, air superiority phase, and ground assault phase. Executes it over 10 turns. Feels like a real commander.
 
 ---
 
-## MILESTONE 5: POLISH & SHIP
+## MILESTONE 6: ENDGAME & ESCALATION
+**Goal:** Nuclear weapons, upgrades, DEFCON, and leader succession create dramatic late-game tension.
+**Tag:** `v0.13.0-beta`
+**Design:** See `docs/MILITARY_SYSTEM.md` Part 9
+
+| # | Task | Priority | Status | Notes |
+|---|------|----------|--------|-------|
+| 6.1 | Facility upgrades (Elite Training, Advanced Armor, Stealth Hangar) | HIGH | ⚪ | Unlock advanced unit variants |
+| 6.2 | Nuclear escalation path (Uranium Mine → Lab → Silo → Warheads) | HIGH | ⚪ | FA-22. The game's signature mechanic |
+| 6.3 | Nuclear Sub Bay upgrade — mobile hidden launch platforms | HIGH | ⚪ | Late-game strategic terror |
+| 6.4 | DEFCON system — global panic meter, each nuke built raises it | MEDIUM | ⚪ | FA-23 |
+| 6.5 | WMD strikes — nuke a city, permanent consequences | HIGH | ⚪ | FA-24. Double-confirm, world reacts |
+| 6.6 | Leader succession — assassination creates vengeful successor | MEDIUM | ⚪ | FA-25 |
+| 6.7 | UN Assembly — embargoes, resolutions, diplomatic pressure | MEDIUM | ⚪ | FA-16 |
+
+**Exit criteria:** Late game is dramatically different from early game. Building your second nuke makes the whole world panic. Nuclear subs prowl the oceans as hidden second-strike capability.
+
+---
+
+## MILESTONE 7: POLISH & SHIP
 **Goal:** Feature-complete, polished, ready for wider release.
 **Tag:** `v1.0.0`
 
 | # | Task | Priority | Status | Notes |
 |---|------|----------|--------|-------|
-| 5.1 | Espionage agency bases — spies on the map | LOW | ⚪ | FA-26 |
-| 5.2 | True leader permadeath — nation collapse | LOW | ⚪ | FA-27 |
-| 5.3 | Procedural global objectives ("Oil Crisis", "Pandemic") | MEDIUM | ⚪ | FA-28 |
-| 5.4 | Save & load game state | HIGH | ⚪ | FA-29. Critical for real play sessions |
-| 5.5 | Sound effects + music + animations | MEDIUM | ⚪ | FA-30 |
-| 5.6 | Final balance, difficulty levels, performance optimization | HIGH | ⚪ | |
-| 5.7 | Opening speech scene ("First Fire" narrative) | LOW | ⚪ | Dramatic intro from GAME_FLOW.md |
+| 7.1 | Save & load game state | HIGH | ⚪ | FA-29. Critical for real play sessions |
+| 7.2 | Espionage agency bases — spies on the map | LOW | ⚪ | FA-26 |
+| 7.3 | True leader permadeath — nation collapse | LOW | ⚪ | FA-27 |
+| 7.4 | Procedural global objectives ("Oil Crisis", "Pandemic") | MEDIUM | ⚪ | FA-28 |
+| 7.5 | Black market trading — shadow arms deals | LOW | ⚪ | FA-15 |
+| 7.6 | Media warfare — propaganda campaigns | LOW | ⚪ | FA-20 |
+| 7.7 | Sound effects + music + animations | MEDIUM | ⚪ | FA-30 |
+| 7.8 | Tutorial hints — first 3 turns explain controls | MEDIUM | ⚪ | New players need onboarding |
+| 7.9 | Opening speech scene ("First Fire" narrative) | LOW | ⚪ | Dramatic intro from GAME_FLOW.md |
+| 7.10 | Final balance, difficulty levels, performance optimization | HIGH | ⚪ | |
 
 **Exit criteria:** Someone can play a full game (200 turns), save mid-game, come back, and have a satisfying experience start to finish.
 
