@@ -1,4 +1,5 @@
 using Godot;
+using Warship.UI;
 
 namespace Warship.UI.Map;
 
@@ -21,10 +22,10 @@ public partial class MapCamera : Camera2D
     private const float EdgeScrollMargin = 30f; // pixels from screen edge
 
     // UI insets — edge scroll only triggers within the map viewport area
-    private const float UiInsetTop = 64f;     // Top Bar A (32) + Top Bar B (32)
-    private const float UiInsetBottom = 200f;  // BottomPanel
-    private const float UiInsetLeft = 250f;    // LeftSidebar
-    private const float UiInsetRight = 250f;   // RightSidebar
+    private const float UiInsetTop = UITheme.TopBarsTotal;
+    private const float UiInsetBottom = UITheme.BottomPanelHeight;
+    private const float UiInsetLeft = UITheme.LeftSidebarWidth;
+    private const float UiInsetRight = UITheme.RightSidebarWidth;
 
     // Drag state
     private bool _dragging = false;

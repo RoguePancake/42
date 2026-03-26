@@ -7,7 +7,6 @@ namespace Warship.UI.HUD;
 /// <summary>
 /// A single hot zone minimap — a small focused view of a specific map region.
 /// Renders terrain ownership and unit positions as colored pixels on a TextureRect.
-/// Can be pinned to any area and given a label.
 /// </summary>
 public partial class HotZoneMap : Control
 {
@@ -23,11 +22,9 @@ public partial class HotZoneMap : Control
     private int _slotIndex;
     private bool _isPinned = false;
 
-    // How many tiles to show in each direction from center
     private const int ViewRadius = 12;
-    private const int ImgSize = 120; // Pixel size of the rendered minimap
+    private const int ImgSize = 120;
 
-    // Colors for terrain
     private static readonly Color[] TerrainColors = {
         new(0.05f, 0.1f, 0.3f),   // DeepWater
         new(0.1f, 0.2f, 0.5f),    // Water
@@ -53,22 +50,24 @@ public partial class HotZoneMap : Control
         Size = new Vector2(140, 160);
         MouseFilter = MouseFilterEnum.Stop;
 
-        // Background
         var bg = new Panel();
         var style = new StyleBoxFlat
         {
-            BgColor = new Color(0.06f, 0.06f, 0.09f, 0.95f),
-            BorderColor = new Color(0.3f, 0.5f, 0.9f, 0.8f),
-            BorderWidthTop = 2, BorderWidthBottom = 1,
-            BorderWidthLeft = 1, BorderWidthRight = 1,
-            CornerRadiusTopLeft = 4, CornerRadiusTopRight = 4,
-            CornerRadiusBottomLeft = 4, CornerRadiusBottomRight = 4
+            BgColor = UITheme.BgDark,
+            BorderColor = UITheme.AccentBlueDim,
+            BorderWidthTop = UITheme.BorderMediumW,
+            BorderWidthBottom = UITheme.BorderThin,
+            BorderWidthLeft = UITheme.BorderThin,
+            BorderWidthRight = UITheme.BorderThin,
+            CornerRadiusTopLeft = UITheme.CornerRadius,
+            CornerRadiusTopRight = UITheme.CornerRadius,
+            CornerRadiusBottomLeft = UITheme.CornerRadius,
+            CornerRadiusBottomRight = UITheme.CornerRadius
         };
         bg.AddThemeStyleboxOverride("panel", style);
         bg.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(bg);
 
-        // Header row
         var headerRow = new HBoxContainer();
         headerRow.OffsetLeft = 4;
         headerRow.OffsetRight = -4;
@@ -82,8 +81,8 @@ public partial class HotZoneMap : Control
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
             VerticalAlignment = VerticalAlignment.Center
         };
-        _titleLabel.AddThemeFontSizeOverride("font_size", 10);
-        _titleLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.7f, 1f));
+        _titleLabel.AddThemeFontSizeOverride("font_size", UITheme.FontTiny);
+        _titleLabel.AddThemeColorOverride("font_color", UITheme.TextAccent);
         headerRow.AddChild(_titleLabel);
 
         _closeBtn = new Button
@@ -91,13 +90,12 @@ public partial class HotZoneMap : Control
             Text = "x",
             CustomMinimumSize = new Vector2(18, 18)
         };
-        _closeBtn.AddThemeFontSizeOverride("font_size", 10);
+        _closeBtn.AddThemeFontSizeOverride("font_size", UITheme.FontTiny);
         _closeBtn.Pressed += OnClose;
         headerRow.AddChild(_closeBtn);
 
-        // Map image
         _img = Image.CreateEmpty(ImgSize, ImgSize, false, Image.Format.Rgb8);
-        _img.Fill(new Color(0.05f, 0.05f, 0.08f));
+        _img.Fill(UITheme.BgDarkest);
 
         _mapImage = new TextureRect
         {
@@ -111,7 +109,6 @@ public partial class HotZoneMap : Control
         _mapImage.Texture = ImageTexture.CreateFromImage(_img);
         AddChild(_mapImage);
 
-        // Coord label
         _coordLabel = new Label
         {
             Text = "---",
@@ -121,10 +118,10 @@ public partial class HotZoneMap : Control
         _coordLabel.OffsetLeft = 4;
         _coordLabel.Size = new Vector2(132, 14);
         _coordLabel.AddThemeFontSizeOverride("font_size", 9);
-        _coordLabel.AddThemeColorOverride("font_color", new Color(0.4f, 0.4f, 0.5f));
+        _coordLabel.AddThemeColorOverride("font_color", UITheme.TextDim);
         AddChild(_coordLabel);
 
-        Visible = false; // Hidden until pinned
+        Visible = false;
     }
 
     public void PinToLocation(int tileX, int tileY, string label)
@@ -182,7 +179,6 @@ public partial class HotZoneMap : Control
                         ? TerrainColors[terrain]
                         : new Color(0.1f, 0.1f, 0.1f);
 
-                    // Tint by owner color
                     if (owner >= 0 && owner < data.Nations.Count)
                     {
                         var nationColor = data.Nations[owner].NationColor;
@@ -190,7 +186,6 @@ public partial class HotZoneMap : Control
                     }
                 }
 
-                // Fill scaled pixels
                 int px = (int)(dx * scale);
                 int py = (int)(dy * scale);
                 int pxEnd = (int)((dx + 1) * scale);
@@ -201,7 +196,6 @@ public partial class HotZoneMap : Control
             }
         }
 
-        // Draw units as bright dots
         foreach (var unit in data.Units)
         {
             if (!unit.IsAlive) continue;
@@ -216,7 +210,6 @@ public partial class HotZoneMap : Control
             Color unitColor = owner >= 0 ? data.Nations[owner].NationColor : Colors.White;
             int upx = (int)(rx * scale + scale / 2);
             int upy = (int)(ry * scale + scale / 2);
-            // Draw a 3x3 bright dot
             for (int oy = -1; oy <= 1; oy++)
                 for (int ox = -1; ox <= 1; ox++)
                 {
@@ -226,7 +219,6 @@ public partial class HotZoneMap : Control
                 }
         }
 
-        // Cities as white/gold squares
         foreach (var city in data.Cities)
         {
             int rx = city.TileX - (_centerTileX - ViewRadius);

@@ -13,27 +13,23 @@ public partial class HotZoneManager : Control
 {
     private HotZoneMap[] _slots = new HotZoneMap[3];
 
-    // Position in the main section area (top-right corner, just inside the RightSidebar)
-    private const float RightSidebarWidth = 250f;
-    private const float TopOffset = 100f; // Below top bars + view switcher tabs
+    private const float TopOffset = UITheme.TopBarsTotal + UITheme.TabBarHeight + UITheme.PaddingSmall;
     private const float SlotSpacing = 8f;
     private const float SlotWidth = 140f;
     private const float SlotHeight = 160f;
 
     public override void _Ready()
     {
-        // Anchor to top-right, inset from RightSidebar
         AnchorLeft = 1f;
         AnchorRight = 1f;
         AnchorTop = 0f;
         AnchorBottom = 0f;
-        OffsetLeft = -(RightSidebarWidth + SlotWidth + 12f);
-        OffsetRight = -(RightSidebarWidth + 12f);
+        OffsetLeft = -(UITheme.RightSidebarWidth + SlotWidth + 12f);
+        OffsetRight = -(UITheme.RightSidebarWidth + 12f);
         OffsetTop = TopOffset;
         OffsetBottom = TopOffset + (SlotHeight + SlotSpacing) * 3;
         MouseFilter = MouseFilterEnum.Ignore;
 
-        // Create 3 hot zone slots stacked vertically
         for (int i = 0; i < 3; i++)
         {
             var zone = new HotZoneMap();
@@ -43,7 +39,6 @@ public partial class HotZoneManager : Control
             _slots[i] = zone;
         }
 
-        // Subscribe to events
         EventBus.Instance?.Subscribe<HotZonePinEvent>(OnPin);
         EventBus.Instance?.Subscribe<HotZoneClearEvent>(OnClear);
         EventBus.Instance?.Subscribe<TurnAdvancedEvent>(_ => RefreshAll());
@@ -81,6 +76,6 @@ public partial class HotZoneManager : Control
                 return i;
             }
         }
-        return -1; // All slots occupied
+        return -1;
     }
 }

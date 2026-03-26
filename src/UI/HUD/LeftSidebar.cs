@@ -13,23 +13,15 @@ public partial class LeftSidebar : Control
     public override void _Ready()
     {
         SetAnchorsAndOffsetsPreset(LayoutPreset.LeftWide);
-        OffsetTop = 64;   // Below both top bars (32 + 32)
-        OffsetRight = 250; // 250px wide
+        OffsetTop = UITheme.TopBarsTotal;
+        OffsetRight = UITheme.LeftSidebarWidth;
         OffsetBottom = 0;
 
-        // Background
         var bg = new Panel();
-        var style = new StyleBoxFlat
-        {
-            BgColor = new Color(0.1f, 0.11f, 0.13f, 1f),
-            BorderColor = new Color(0.2f, 0.22f, 0.25f, 1f),
-            BorderWidthRight = 2
-        };
-        bg.AddThemeStyleboxOverride("panel", style);
+        bg.AddThemeStyleboxOverride("panel", UITheme.SidebarStyle(rightBorder: true));
         bg.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(bg);
 
-        // Scrollable content
         var scroll = new ScrollContainer();
         scroll.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
@@ -45,92 +37,67 @@ public partial class LeftSidebar : Control
         {
             Text = "COMMANDS",
             HorizontalAlignment = HorizontalAlignment.Center,
-            CustomMinimumSize = new Vector2(0, 36)
+            VerticalAlignment = VerticalAlignment.Center,
+            CustomMinimumSize = new Vector2(0, UITheme.RowHeight)
         };
-        header.AddThemeFontSizeOverride("font_size", 13);
-        header.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.6f));
-        header.VerticalAlignment = VerticalAlignment.Center;
+        header.AddThemeFontSizeOverride("font_size", UITheme.FontSmall);
+        header.AddThemeColorOverride("font_color", UITheme.TextDim);
         vbox.AddChild(header);
 
         // Diplomatic
-        AddCategoryHeader(vbox, "DIPLOMATIC", new Color(0.3f, 0.6f, 1f));
-        AddActionButton(vbox, "diplomatic", "Propose Alliance");
-        AddActionButton(vbox, "diplomatic", "Trade Agreement");
-        AddActionButton(vbox, "diplomatic", "Send Envoy");
-        AddActionButton(vbox, "diplomatic", "Declare War");
+        AddCategoryHeader(vbox, "DIPLOMATIC", UITheme.CatDiplomatic);
+        AddActionButton(vbox, "diplomatic", "Propose Alliance", UITheme.CatDiplomatic);
+        AddActionButton(vbox, "diplomatic", "Trade Agreement", UITheme.CatDiplomatic);
+        AddActionButton(vbox, "diplomatic", "Send Envoy", UITheme.CatDiplomatic);
+        AddActionButton(vbox, "diplomatic", "Declare War", UITheme.CatDiplomatic);
 
         // Military
-        AddCategoryHeader(vbox, "MILITARY", new Color(1f, 0.4f, 0.3f));
-        AddActionButton(vbox, "military", "Border Watch");
-        AddActionButton(vbox, "military", "Patrol");
-        AddActionButton(vbox, "military", "Stage Army");
-        AddActionButton(vbox, "military", "Attack");
+        AddCategoryHeader(vbox, "MILITARY", UITheme.CatMilitary);
+        AddActionButton(vbox, "military", "Border Watch", UITheme.CatMilitary);
+        AddActionButton(vbox, "military", "Patrol", UITheme.CatMilitary);
+        AddActionButton(vbox, "military", "Stage Army", UITheme.CatMilitary);
+        AddActionButton(vbox, "military", "Attack", UITheme.CatMilitary);
 
         // Economic
-        AddCategoryHeader(vbox, "ECONOMIC", new Color(0.3f, 0.9f, 0.4f));
-        AddActionButton(vbox, "economic", "Adjust Budget");
-        AddActionButton(vbox, "economic", "Set Tariffs");
-        AddActionButton(vbox, "economic", "Open Trade Route");
+        AddCategoryHeader(vbox, "ECONOMIC", UITheme.CatEconomic);
+        AddActionButton(vbox, "economic", "Adjust Budget", UITheme.CatEconomic);
+        AddActionButton(vbox, "economic", "Set Tariffs", UITheme.CatEconomic);
+        AddActionButton(vbox, "economic", "Open Trade Route", UITheme.CatEconomic);
 
         // Intelligence
-        AddCategoryHeader(vbox, "INTELLIGENCE", new Color(0.8f, 0.6f, 1f));
-        AddActionButton(vbox, "intelligence", "Deploy Spy");
-        AddActionButton(vbox, "intelligence", "Counter-Intel");
-        AddActionButton(vbox, "intelligence", "Sabotage");
+        AddCategoryHeader(vbox, "INTELLIGENCE", UITheme.CatIntelligence);
+        AddActionButton(vbox, "intelligence", "Deploy Spy", UITheme.CatIntelligence);
+        AddActionButton(vbox, "intelligence", "Counter-Intel", UITheme.CatIntelligence);
+        AddActionButton(vbox, "intelligence", "Sabotage", UITheme.CatIntelligence);
     }
 
     private void AddCategoryHeader(VBoxContainer parent, string text, Color accentColor)
     {
         var container = new PanelContainer();
-        var headerStyle = new StyleBoxFlat
-        {
-            BgColor = new Color(0.08f, 0.09f, 0.11f, 1f),
-            BorderColor = accentColor,
-            BorderWidthLeft = 4,
-            ContentMarginLeft = 12,
-            ContentMarginTop = 6,
-            ContentMarginBottom = 6
-        };
-        container.AddThemeStyleboxOverride("panel", headerStyle);
+        container.AddThemeStyleboxOverride("panel", UITheme.CategoryHeaderStyle(accentColor));
 
         var label = new Label
         {
             Text = text,
             VerticalAlignment = VerticalAlignment.Center
         };
-        label.AddThemeFontSizeOverride("font_size", 12);
+        label.AddThemeFontSizeOverride("font_size", UITheme.FontSmall);
         label.AddThemeColorOverride("font_color", accentColor);
         container.AddChild(label);
         parent.AddChild(container);
     }
 
-    private void AddActionButton(VBoxContainer parent, string category, string text)
+    private void AddActionButton(VBoxContainer parent, string category, string text, Color accent)
     {
         var btn = new Button
         {
             Text = text,
-            CustomMinimumSize = new Vector2(0, 40),
+            CustomMinimumSize = new Vector2(0, UITheme.ButtonHeight),
             Alignment = HorizontalAlignment.Left
         };
 
-        var normal = new StyleBoxFlat
-        {
-            BgColor = new Color(0.12f, 0.13f, 0.16f, 1f),
-            BorderColor = new Color(0.15f, 0.17f, 0.2f, 1f),
-            BorderWidthBottom = 1,
-            ContentMarginLeft = 20
-        };
+        UITheme.ApplyButtonStyle(btn, accent);
 
-        var hover = (StyleBoxFlat)normal.Duplicate();
-        hover.BgColor = new Color(0.2f, 0.22f, 0.28f, 1f);
-
-        btn.AddThemeStyleboxOverride("normal", normal);
-        btn.AddThemeStyleboxOverride("hover", hover);
-        btn.AddThemeStyleboxOverride("pressed", hover);
-        btn.AddThemeFontSizeOverride("font_size", 14);
-        btn.AddThemeColorOverride("font_color", new Color(0.75f, 0.75f, 0.8f));
-
-        // Wire button to publish PlayerActionEvent via EventBus
         string actionId = text.ToLower().Replace(" ", "_");
         btn.Pressed += () =>
         {

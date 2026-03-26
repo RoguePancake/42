@@ -15,23 +15,15 @@ public partial class RightSidebar : Control
     public override void _Ready()
     {
         SetAnchorsAndOffsetsPreset(LayoutPreset.RightWide);
-        OffsetTop = 64;     // Below both top bars (32 + 32)
-        OffsetLeft = -250;  // 250px wide
+        OffsetTop = UITheme.TopBarsTotal;
+        OffsetLeft = -UITheme.RightSidebarWidth;
         OffsetBottom = 0;
 
-        // Background
         var bg = new Panel();
-        var style = new StyleBoxFlat
-        {
-            BgColor = new Color(0.1f, 0.11f, 0.13f, 1f),
-            BorderColor = new Color(0.2f, 0.22f, 0.25f, 1f),
-            BorderWidthLeft = 2
-        };
-        bg.AddThemeStyleboxOverride("panel", style);
+        bg.AddThemeStyleboxOverride("panel", UITheme.SidebarStyle(rightBorder: false));
         bg.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(bg);
 
-        // Scrollable content
         var scroll = new ScrollContainer();
         scroll.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
@@ -42,40 +34,34 @@ public partial class RightSidebar : Control
         vbox.AddThemeConstantOverride("separation", 0);
         scroll.AddChild(vbox);
 
-        // Header
         var header = new Label
         {
             Text = "INTEL & DIPLOMACY",
             HorizontalAlignment = HorizontalAlignment.Center,
-            CustomMinimumSize = new Vector2(0, 36)
+            VerticalAlignment = VerticalAlignment.Center,
+            CustomMinimumSize = new Vector2(0, UITheme.RowHeight)
         };
-        header.AddThemeFontSizeOverride("font_size", 13);
-        header.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.6f));
-        header.VerticalAlignment = VerticalAlignment.Center;
+        header.AddThemeFontSizeOverride("font_size", UITheme.FontSmall);
+        header.AddThemeColorOverride("font_color", UITheme.TextDim);
         vbox.AddChild(header);
 
-        // Diplomacy section
-        AddSectionHeader(vbox, "RELATIONS", new Color(0.3f, 0.6f, 1f));
+        AddSectionHeader(vbox, "RELATIONS", UITheme.CatDiplomatic);
 
         _relationsBox = new VBoxContainer();
         _relationsBox.AddThemeConstantOverride("separation", 0);
         vbox.AddChild(_relationsBox);
 
-        // Intel section
-        AddSectionHeader(vbox, "SPY NETWORK", new Color(0.8f, 0.6f, 1f));
+        AddSectionHeader(vbox, "SPY NETWORK", UITheme.CatIntelligence);
         AddIntelRow(vbox, "Active Agents", "0");
         AddIntelRow(vbox, "Intel Quality", "LOW");
         AddIntelRow(vbox, "Counter-Intel", "NORMAL");
 
-        // Populate relations from world data
         CallDeferred(nameof(PopulateRelations));
-
         EventBus.Instance?.Subscribe<TurnAdvancedEvent>(_ => CallDeferred(nameof(PopulateRelations)));
     }
 
     private void PopulateRelations()
     {
-        // Clear existing
         foreach (var child in _relationsBox.GetChildren())
             child.QueueFree();
 
@@ -98,12 +84,12 @@ public partial class RightSidebar : Control
 
             var color = status switch
             {
-                "HOSTILE" => new Color(1f, 0.3f, 0.3f),
-                "WARY" => new Color(1f, 0.6f, 0.2f),
-                "COOL" => new Color(0.8f, 0.8f, 0.3f),
-                "NEUTRAL" => new Color(0.6f, 0.6f, 0.7f),
-                "FRIENDLY" => new Color(0.3f, 0.9f, 0.4f),
-                _ => new Color(0.5f, 0.5f, 0.5f)
+                "HOSTILE"  => UITheme.StatusHostile,
+                "WARY"     => UITheme.StatusWary,
+                "COOL"     => UITheme.StatusCool,
+                "NEUTRAL"  => UITheme.StatusNeutral,
+                "FRIENDLY" => UITheme.StatusFriendly,
+                _          => UITheme.TextDim
             };
 
             AddRelationRow(nation.Name, status, color, nation.NationColor);
@@ -113,23 +99,14 @@ public partial class RightSidebar : Control
     private void AddSectionHeader(VBoxContainer parent, string text, Color accentColor)
     {
         var container = new PanelContainer();
-        var headerStyle = new StyleBoxFlat
-        {
-            BgColor = new Color(0.08f, 0.09f, 0.11f, 1f),
-            BorderColor = accentColor,
-            BorderWidthLeft = 4,
-            ContentMarginLeft = 12,
-            ContentMarginTop = 6,
-            ContentMarginBottom = 6
-        };
-        container.AddThemeStyleboxOverride("panel", headerStyle);
+        container.AddThemeStyleboxOverride("panel", UITheme.CategoryHeaderStyle(accentColor));
 
         var label = new Label
         {
             Text = text,
             VerticalAlignment = VerticalAlignment.Center
         };
-        label.AddThemeFontSizeOverride("font_size", 12);
+        label.AddThemeFontSizeOverride("font_size", UITheme.FontSmall);
         label.AddThemeColorOverride("font_color", accentColor);
         container.AddChild(label);
         parent.AddChild(container);
@@ -138,22 +115,11 @@ public partial class RightSidebar : Control
     private void AddRelationRow(string nationName, string status, Color statusColor, Color nationColor)
     {
         var row = new PanelContainer();
-        var rowStyle = new StyleBoxFlat
-        {
-            BgColor = new Color(0.12f, 0.13f, 0.16f, 1f),
-            BorderColor = new Color(0.15f, 0.17f, 0.2f, 1f),
-            BorderWidthBottom = 1,
-            ContentMarginLeft = 12,
-            ContentMarginRight = 12,
-            ContentMarginTop = 6,
-            ContentMarginBottom = 6
-        };
-        row.AddThemeStyleboxOverride("panel", rowStyle);
+        row.AddThemeStyleboxOverride("panel", UITheme.RowStyle());
 
         var hbox = new HBoxContainer();
-        hbox.AddThemeConstantOverride("separation", 8);
+        hbox.AddThemeConstantOverride("separation", UITheme.PaddingSmall);
 
-        // Nation color indicator
         var colorDot = new ColorRect
         {
             Color = nationColor,
@@ -161,24 +127,22 @@ public partial class RightSidebar : Control
         };
         hbox.AddChild(colorDot);
 
-        // Nation name
         var nameLabel = new Label
         {
             Text = nationName,
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
             VerticalAlignment = VerticalAlignment.Center
         };
-        nameLabel.AddThemeFontSizeOverride("font_size", 13);
-        nameLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.75f, 0.8f));
+        nameLabel.AddThemeFontSizeOverride("font_size", UITheme.FontSmall);
+        nameLabel.AddThemeColorOverride("font_color", UITheme.TextPrimary);
         hbox.AddChild(nameLabel);
 
-        // Status
         var statusLabel = new Label
         {
             Text = status,
             VerticalAlignment = VerticalAlignment.Center
         };
-        statusLabel.AddThemeFontSizeOverride("font_size", 11);
+        statusLabel.AddThemeFontSizeOverride("font_size", UITheme.FontTiny);
         statusLabel.AddThemeColorOverride("font_color", statusColor);
         hbox.AddChild(statusLabel);
 
@@ -189,17 +153,7 @@ public partial class RightSidebar : Control
     private void AddIntelRow(VBoxContainer parent, string label, string value)
     {
         var row = new PanelContainer();
-        var rowStyle = new StyleBoxFlat
-        {
-            BgColor = new Color(0.12f, 0.13f, 0.16f, 1f),
-            BorderColor = new Color(0.15f, 0.17f, 0.2f, 1f),
-            BorderWidthBottom = 1,
-            ContentMarginLeft = 12,
-            ContentMarginRight = 12,
-            ContentMarginTop = 6,
-            ContentMarginBottom = 6
-        };
-        row.AddThemeStyleboxOverride("panel", rowStyle);
+        row.AddThemeStyleboxOverride("panel", UITheme.RowStyle());
 
         var hbox = new HBoxContainer();
 
@@ -209,8 +163,8 @@ public partial class RightSidebar : Control
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
             VerticalAlignment = VerticalAlignment.Center
         };
-        nameLabel.AddThemeFontSizeOverride("font_size", 13);
-        nameLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.65f));
+        nameLabel.AddThemeFontSizeOverride("font_size", UITheme.FontSmall);
+        nameLabel.AddThemeColorOverride("font_color", UITheme.TextSecondary);
         hbox.AddChild(nameLabel);
 
         var valueLabel = new Label
@@ -218,8 +172,8 @@ public partial class RightSidebar : Control
             Text = value,
             VerticalAlignment = VerticalAlignment.Center
         };
-        valueLabel.AddThemeFontSizeOverride("font_size", 13);
-        valueLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.6f, 1f));
+        valueLabel.AddThemeFontSizeOverride("font_size", UITheme.FontSmall);
+        valueLabel.AddThemeColorOverride("font_color", UITheme.CatIntelligence);
         hbox.AddChild(valueLabel);
 
         row.AddChild(hbox);

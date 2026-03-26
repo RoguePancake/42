@@ -26,73 +26,69 @@ public partial class BottomPanel : Control
     public override void _Ready()
     {
         SetAnchorsAndOffsetsPreset(LayoutPreset.BottomWide);
-        OffsetTop = -200;
+        OffsetTop = -UITheme.BottomPanelHeight;
         OffsetBottom = 0;
-        OffsetLeft = 250;   // Clears LeftSidebar
-        OffsetRight = -250; // Clears RightSidebar
+        OffsetLeft = UITheme.LeftSidebarWidth;
+        OffsetRight = -UITheme.RightSidebarWidth;
 
         // Background
         var bg = new Panel();
         var style = new StyleBoxFlat
         {
-            BgColor = new Color(0.1f, 0.11f, 0.13f, 1f),
-            BorderColor = new Color(0.2f, 0.4f, 0.8f, 1f),
-            BorderWidthTop = 3
+            BgColor = UITheme.BgSurface,
+            BorderColor = UITheme.BorderAccent,
+            BorderWidthTop = UITheme.BorderThick
         };
         bg.AddThemeStyleboxOverride("panel", style);
         bg.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(bg);
 
-        // Main layout: two columns
         var margin = new MarginContainer();
         margin.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        margin.AddThemeConstantOverride("margin_left", 16);
-        margin.AddThemeConstantOverride("margin_right", 16);
-        margin.AddThemeConstantOverride("margin_top", 8);
-        margin.AddThemeConstantOverride("margin_bottom", 8);
+        margin.AddThemeConstantOverride("margin_left", UITheme.PaddingMedium);
+        margin.AddThemeConstantOverride("margin_right", UITheme.PaddingMedium);
+        margin.AddThemeConstantOverride("margin_top", UITheme.PaddingSmall);
+        margin.AddThemeConstantOverride("margin_bottom", UITheme.PaddingSmall);
         AddChild(margin);
 
         var columns = new HBoxContainer();
-        columns.AddThemeConstantOverride("separation", 24);
+        columns.AddThemeConstantOverride("separation", UITheme.PaddingLarge);
         margin.AddChild(columns);
 
-        // Left column: Economy stats
+        // Left column: Economy
         var leftCol = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         leftCol.AddThemeConstantOverride("separation", 4);
         columns.AddChild(leftCol);
 
-        AddColumnHeader(leftCol, "ECONOMY", new Color(0.3f, 0.9f, 0.4f));
-        (_treasuryBar, _treasuryValue) = AddStatBar(leftCol, "Treasury", 0, 10000, new Color(0.3f, 0.8f, 0.3f));
-        (_prestigeBar, _prestigeValue) = AddStatBar(leftCol, "Prestige", 0, 100, new Color(0.9f, 0.8f, 0.2f));
+        AddColumnHeader(leftCol, "ECONOMY", UITheme.CatEconomic);
+        (_treasuryBar, _treasuryValue) = AddStatBar(leftCol, "Treasury", 0, 10000, UITheme.CatEconomic);
+        (_prestigeBar, _prestigeValue) = AddStatBar(leftCol, "Prestige", 0, 100, UITheme.AccentGold);
 
-        // Counts row
         var countsRow = new HBoxContainer();
-        countsRow.AddThemeConstantOverride("separation", 20);
+        countsRow.AddThemeConstantOverride("separation", UITheme.PaddingLarge);
         leftCol.AddChild(countsRow);
 
         _provinceCountLabel = new Label { Text = "Provinces: 4" };
-        _provinceCountLabel.AddThemeFontSizeOverride("font_size", 12);
-        _provinceCountLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.7f));
+        _provinceCountLabel.AddThemeFontSizeOverride("font_size", UITheme.FontSmall);
+        _provinceCountLabel.AddThemeColorOverride("font_color", UITheme.TextSecondary);
         countsRow.AddChild(_provinceCountLabel);
 
         _unitCountLabel = new Label { Text = "Units: 0" };
-        _unitCountLabel.AddThemeFontSizeOverride("font_size", 12);
-        _unitCountLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.7f));
+        _unitCountLabel.AddThemeFontSizeOverride("font_size", UITheme.FontSmall);
+        _unitCountLabel.AddThemeColorOverride("font_color", UITheme.TextSecondary);
         countsRow.AddChild(_unitCountLabel);
 
-        // Separator
-        var sep = new VSeparator();
-        columns.AddChild(sep);
+        columns.AddChild(new VSeparator());
 
-        // Right column: Authority meters
+        // Right column: Authority
         var rightCol = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         rightCol.AddThemeConstantOverride("separation", 4);
         columns.AddChild(rightCol);
 
-        AddColumnHeader(rightCol, "AUTHORITY", new Color(0.5f, 0.7f, 1f));
-        (_taBar, _taValue) = AddStatBar(rightCol, "Territory (TA)", 0, 100, new Color(0.3f, 0.6f, 1f));
-        (_waBar, _waValue) = AddStatBar(rightCol, "World (WA)", 0, 100, new Color(0.4f, 0.8f, 1f));
-        (_bsaBar, _bsaValue) = AddStatBar(rightCol, "Behind Scenes (BSA)", 0, 100, new Color(0.6f, 0.5f, 1f));
+        AddColumnHeader(rightCol, "AUTHORITY", UITheme.TextAccent);
+        (_taBar, _taValue) = AddStatBar(rightCol, "Territory (TA)", 0, 100, UITheme.CatDiplomatic);
+        (_waBar, _waValue) = AddStatBar(rightCol, "World (WA)", 0, 100, UITheme.AccentBlueBright);
+        (_bsaBar, _bsaValue) = AddStatBar(rightCol, "Behind Scenes (BSA)", 0, 100, UITheme.CatIntelligence);
 
         EventBus.Instance?.Subscribe<TurnAdvancedEvent>(_ => CallDeferred(nameof(RefreshData)));
         CallDeferred(nameof(RefreshData));
@@ -105,7 +101,7 @@ public partial class BottomPanel : Control
             Text = text,
             CustomMinimumSize = new Vector2(0, 24)
         };
-        label.AddThemeFontSizeOverride("font_size", 12);
+        label.AddThemeFontSizeOverride("font_size", UITheme.FontSmall);
         label.AddThemeColorOverride("font_color", color);
         parent.AddChild(label);
     }
@@ -122,13 +118,13 @@ public partial class BottomPanel : Control
             Text = label,
             SizeFlagsHorizontal = SizeFlags.ExpandFill
         };
-        nameLabel.AddThemeFontSizeOverride("font_size", 12);
-        nameLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.7f));
+        nameLabel.AddThemeFontSizeOverride("font_size", UITheme.FontSmall);
+        nameLabel.AddThemeColorOverride("font_color", UITheme.TextSecondary);
         headerRow.AddChild(nameLabel);
 
         var valueLabel = new Label { Text = "---" };
-        valueLabel.AddThemeFontSizeOverride("font_size", 12);
-        valueLabel.AddThemeColorOverride("font_color", Colors.White);
+        valueLabel.AddThemeFontSizeOverride("font_size", UITheme.FontSmall);
+        valueLabel.AddThemeColorOverride("font_color", UITheme.TextPrimary);
         headerRow.AddChild(valueLabel);
 
         row.AddChild(headerRow);
@@ -141,23 +137,7 @@ public partial class BottomPanel : Control
             CustomMinimumSize = new Vector2(0, 12),
             ShowPercentage = false
         };
-
-        // Style the bar
-        var barBg = new StyleBoxFlat
-        {
-            BgColor = new Color(0.06f, 0.06f, 0.08f, 1f),
-            CornerRadiusTopLeft = 2, CornerRadiusTopRight = 2,
-            CornerRadiusBottomLeft = 2, CornerRadiusBottomRight = 2
-        };
-        bar.AddThemeStyleboxOverride("background", barBg);
-
-        var barFill = new StyleBoxFlat
-        {
-            BgColor = barColor,
-            CornerRadiusTopLeft = 2, CornerRadiusTopRight = 2,
-            CornerRadiusBottomLeft = 2, CornerRadiusBottomRight = 2
-        };
-        bar.AddThemeStyleboxOverride("fill", barFill);
+        UITheme.ApplyBarStyle(bar, barColor);
 
         row.AddChild(bar);
         parent.AddChild(row);
@@ -198,6 +178,4 @@ public partial class BottomPanel : Control
             if (u.NationId == nat.Id && u.IsAlive) unitCount++;
         _unitCountLabel.Text = $"Units: {unitCount}";
     }
-
-    // Data refreshes via TurnAdvancedEvent subscription — no per-frame polling needed
 }

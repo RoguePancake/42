@@ -7,65 +7,62 @@ namespace Warship.UI.HUD;
 /// <summary>
 /// Top Bar B — 32px tall bar showing turn counter, date, and player stats.
 /// Sits directly below the alert bar (Top Bar A).
+/// Event-driven: refreshes on TurnAdvancedEvent instead of polling every frame.
 /// </summary>
 public partial class TopBar : Control
 {
-    private Label _turnLabel;
-    private Label _statsLabel;
+    private Label _turnLabel = null!;
+    private Label _statsLabel = null!;
 
     public override void _Ready()
     {
         SetAnchorsAndOffsetsPreset(LayoutPreset.TopWide);
-        OffsetTop = 32;  // Under alert bar (Top Bar A)
-        OffsetBottom = 64; // 32px tall (was 48px)
+        OffsetTop = UITheme.AlertBarHeight;
+        OffsetBottom = UITheme.TopBarsTotal;
 
-        // Background
         var bg = new ColorRect
         {
-            Color = new Color(0.08f, 0.08f, 0.12f, 0.95f),
+            Color = UITheme.BgPanel,
             AnchorsPreset = (int)LayoutPreset.FullRect
         };
         AddChild(bg);
 
-        // Bottom border
         var border = new ColorRect
         {
-            Color = new Color(0.2f, 0.4f, 0.8f, 1f),
-            CustomMinimumSize = new Vector2(0, 3)
+            Color = UITheme.BorderAccent,
+            CustomMinimumSize = new Vector2(0, UITheme.BorderThick)
         };
         border.SetAnchorsAndOffsetsPreset(LayoutPreset.BottomWide);
         AddChild(border);
 
-        // Layout container
         var hbox = new HBoxContainer
         {
             AnchorsPreset = (int)LayoutPreset.FullRect
         };
         AddChild(hbox);
 
-        // Left margin
         var leftMargin = new MarginContainer();
-        leftMargin.AddThemeConstantOverride("margin_left", 16);
+        leftMargin.AddThemeConstantOverride("margin_left", UITheme.PaddingMedium);
 
-        // Right margin
         var rightMargin = new MarginContainer();
-        rightMargin.AddThemeConstantOverride("margin_right", 16);
+        rightMargin.AddThemeConstantOverride("margin_right", UITheme.PaddingMedium);
         rightMargin.SizeFlagsHorizontal = SizeFlags.Expand | SizeFlags.ShrinkEnd;
 
-        // Labels (smaller font to fit 32px height)
         _turnLabel = new Label
         {
             Text = " Turn 1 | Jan 1900 ",
             VerticalAlignment = VerticalAlignment.Center
         };
-        _turnLabel.AddThemeFontSizeOverride("font_size", 14);
+        _turnLabel.AddThemeFontSizeOverride("font_size", UITheme.FontBody);
+        _turnLabel.AddThemeColorOverride("font_color", UITheme.TextPrimary);
 
         _statsLabel = new Label
         {
             Text = " TA: ... WA: ... BSA: ... [FAI: ...] ",
             VerticalAlignment = VerticalAlignment.Center
         };
-        _statsLabel.AddThemeFontSizeOverride("font_size", 14);
+        _statsLabel.AddThemeFontSizeOverride("font_size", UITheme.FontBody);
+        _statsLabel.AddThemeColorOverride("font_color", UITheme.TextSecondary);
 
         leftMargin.AddChild(_turnLabel);
         rightMargin.AddChild(_statsLabel);
@@ -73,24 +70,28 @@ public partial class TopBar : Control
         hbox.AddChild(leftMargin);
         hbox.AddChild(rightMargin);
 
-        // Subscribe to events
-        EventBus.Instance?.Subscribe<TurnAdvancedEvent>(ev => {
-            _turnLabel.Text = $" Turn {ev.Turn} | M{ev.Month} Y{ev.Year} ";
-        });
+        EventBus.Instance?.Subscribe<TurnAdvancedEvent>(OnTurnAdvanced);
+
+        // Initial data refresh
+        CallDeferred(nameof(RefreshStats));
     }
 
-    public override void _Process(double delta)
+    private void OnTurnAdvanced(TurnAdvancedEvent ev)
+    {
+        _turnLabel.Text = $" Turn {ev.Turn} | M{ev.Month} Y{ev.Year} ";
+        CallDeferred(nameof(RefreshStats));
+    }
+
+    private void RefreshStats()
     {
         var data = WorldStateManager.Instance?.Data;
-        if (data != null && data.Characters.Count > 0)
-        {
-            var pc = data.Characters.Find(c => c.IsPlayer);
-            if (pc != null)
-            {
-                int natIdx = int.Parse(pc.NationId.Split('_')[1]);
-                var nat = data.Nations[natIdx];
-                _statsLabel.Text = $" Treasury: ${nat.Treasury:0}M  |  {pc.Role} {pc.Name}  |  TA: {pc.TerritoryAuthority:0}%  WA: {pc.WorldAuthority:0}%  BSA: {pc.BehindTheScenesAuthority:0}%  [FAI: {pc.FullAuthorityIndex:0}%] ";
-            }
-        }
+        if (data == null || data.Characters.Count == 0) return;
+
+        var pc = data.Characters.Find(c => c.IsPlayer);
+        if (pc == null) return;
+
+        int natIdx = int.Parse(pc.NationId.Split('_')[1]);
+        var nat = data.Nations[natIdx];
+        _statsLabel.Text = $" Treasury: ${nat.Treasury:0}M  |  {pc.Role} {pc.Name}  |  TA: {pc.TerritoryAuthority:0}%  WA: {pc.WorldAuthority:0}%  BSA: {pc.BehindTheScenesAuthority:0}%  [FAI: {pc.FullAuthorityIndex:0}%] ";
     }
 }
