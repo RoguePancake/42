@@ -5,28 +5,35 @@ using Warship.Events;
 namespace Warship.UI.HUD;
 
 /// <summary>
-/// A scrolling marquee at the bottom of the screen reporting live geopolitical events.
-/// Adds immense immersion and life to the simulation.
+/// Top Bar A — a full-width notification/alert bar at the very top of the screen.
+/// Displays color-coded alerts and notifications (replaces the old scrolling marquee).
 /// </summary>
 public partial class NewsTicker : Control
 {
-    private Label _scrollLabel = null!;
-    private float _scrollSpeed = 80f; // Pixels per second
-    private string _currentHeadlines = " /// SYSTEM ONLINE /// INITIATING GLOBAL MONITORING /// SECURE LINE ESTABLISHED /// ";
+    private HBoxContainer _alertContainer = null!;
+    private Label _latestAlert = null!;
+    private ColorRect _bg = null!;
+    private const int MaxVisibleAlerts = 3;
+
+    // Alert colors by type
+    private static readonly Color AlertInfo = new(0.3f, 0.6f, 1f);
+    private static readonly Color AlertWarning = new(1f, 0.8f, 0.2f);
+    private static readonly Color AlertDanger = new(1f, 0.3f, 0.3f);
+    private static readonly Color AlertSuccess = new(0.3f, 0.9f, 0.4f);
 
     public override void _Ready()
     {
-        // Anchor to the very top of the screen matching the sketch
         SetAnchorsAndOffsetsPreset(LayoutPreset.TopWide);
         CustomMinimumSize = new Vector2(0, 32);
+        MouseFilter = MouseFilterEnum.Ignore;
 
-        // Dark tech background
-        var bg = new ColorRect
+        // Dark background
+        _bg = new ColorRect
         {
             Color = new Color(0.04f, 0.04f, 0.06f, 0.98f),
             AnchorsPreset = (int)LayoutPreset.FullRect
         };
-        AddChild(bg);
+        AddChild(_bg);
 
         // Bottom border
         var border = new ColorRect
@@ -37,59 +44,77 @@ public partial class NewsTicker : Control
         border.SetAnchorsAndOffsetsPreset(LayoutPreset.BottomWide);
         AddChild(border);
 
-        // Clipping wrapper so text doesn't display outside the ticker box
-        var clipBox = new Control
+        // Alert layout
+        _alertContainer = new HBoxContainer
         {
-            ClipContents = true,
             AnchorsPreset = (int)LayoutPreset.FullRect
         };
-        AddChild(clipBox);
+        _alertContainer.AddThemeConstantOverride("separation", 20);
+        AddChild(_alertContainer);
 
-        _scrollLabel = new Label
+        // Left icon/label
+        var icon = new Label
         {
-            Text = _currentHeadlines,
-            VerticalAlignment = VerticalAlignment.Center
+            Text = " ALERTS ",
+            VerticalAlignment = VerticalAlignment.Center,
+            CustomMinimumSize = new Vector2(80, 0)
         };
-        _scrollLabel.AddThemeFontSizeOverride("font_size", 16);
-        _scrollLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.8f, 1f)); // Sci-fi blue
-        clipBox.AddChild(_scrollLabel);
+        icon.AddThemeFontSizeOverride("font_size", 12);
+        icon.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.6f));
+        _alertContainer.AddChild(icon);
 
-        // Position it off screen to start scrolling
-        _scrollLabel.Position = new Vector2(GetViewportRect().Size.X + 100, 4);
+        // Separator
+        var sep = new VSeparator();
+        _alertContainer.AddChild(sep);
 
-        // Subscribe to world events
-        EventBus.Instance?.Subscribe<NotificationEvent>(OnGlobalEvent);
+        // Latest alert label (fills remaining space)
+        _latestAlert = new Label
+        {
+            Text = "SYSTEM ONLINE — GLOBAL MONITORING ACTIVE",
+            VerticalAlignment = VerticalAlignment.Center,
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            ClipText = true
+        };
+        _latestAlert.AddThemeFontSizeOverride("font_size", 13);
+        _latestAlert.AddThemeColorOverride("font_color", AlertInfo);
+        _alertContainer.AddChild(_latestAlert);
+
+        // Subscribe to events
+        EventBus.Instance?.Subscribe<NotificationEvent>(OnNotification);
         EventBus.Instance?.Subscribe<CrisisTriggeredEvent>(OnCrisis);
     }
 
-    private void OnGlobalEvent(NotificationEvent ev)
+    private void OnNotification(NotificationEvent ev)
     {
-        CallDeferred(nameof(AppendHeadline), ev.Message.ToUpper());
-    }
-    
-    private void OnCrisis(CrisisTriggeredEvent ev)
-    {
-        CallDeferred(nameof(AppendHeadline), $"BREAKING NEWS: {ev.Title.ToUpper()} - {ev.Description.Substring(0, Mathf.Min(ev.Description.Length, 60))}...");
+        CallDeferred(nameof(ShowAlert), ev.Message.ToUpper(), ev.Type);
     }
 
-    private void AppendHeadline(string headline)
+    private void OnCrisis(CrisisTriggeredEvent ev)
     {
-        _currentHeadlines += $"   ///   {headline} ";
-        _scrollLabel.Text = _currentHeadlines;
+        CallDeferred(nameof(ShowAlert), $"CRISIS: {ev.Title.ToUpper()}", "danger");
+    }
+
+    private void ShowAlert(string message, string type)
+    {
+        var color = type switch
+        {
+            "danger" => AlertDanger,
+            "warning" => AlertWarning,
+            "success" => AlertSuccess,
+            _ => AlertInfo
+        };
+
+        _latestAlert.Text = message;
+        _latestAlert.RemoveThemeColorOverride("font_color");
+        _latestAlert.AddThemeColorOverride("font_color", color);
+
+        // Flash the background briefly
+        _bg.Color = new Color(color.R * 0.15f, color.G * 0.15f, color.B * 0.15f, 0.98f);
     }
 
     public override void _Process(double delta)
     {
-        // Scroll left continuously
-        var pos = _scrollLabel.Position;
-        pos.X -= _scrollSpeed * (float)delta;
-        
-        // If the entire text scrolled way past the left edge, restart it
-        if (pos.X < -_scrollLabel.Size.X)
-        {
-            pos.X = GetViewportRect().Size.X + 100;
-        }
-        
-        _scrollLabel.Position = pos;
+        // Fade background back to default over time
+        _bg.Color = _bg.Color.Lerp(new Color(0.04f, 0.04f, 0.06f, 0.98f), (float)delta * 2f);
     }
 }

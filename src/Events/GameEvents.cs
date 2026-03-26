@@ -28,3 +28,13 @@ public record CrisisResolvedEvent(string CrisisId, int ChoiceIndex) : IGameEvent
 public record NationSelectedEvent(string NationId) : IGameEvent;
 public record MapStyleChangedEvent(string Style) : IGameEvent;
 public record UnitMoveToCoordRequested(string UnitId, float Longitude, float Latitude) : IGameEvent;
+
+// Main View System
+public record ViewSwitchEvent(string ViewId) : IGameEvent; // "map", "intel", "warroom", "economy"
+
+// Hot Zone Maps
+public record HotZonePinEvent(int SlotIndex, int CenterTileX, int CenterTileY, string Label) : IGameEvent; // Pin a hot zone (0-2)
+public record HotZoneClearEvent(int SlotIndex) : IGameEvent; // Clear a hot zone slot
+
+// Player Actions (UI -> Engines)
+public record PlayerActionEvent(string Category, string Action) : IGameEvent; // "diplomatic/propose_alliance", "military/attack", etc.

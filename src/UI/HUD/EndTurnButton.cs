@@ -15,10 +15,10 @@ public partial class EndTurnButton : Control
 
     public override void _Ready()
     {
-        // Position bottom-right
+        // Position bottom-right, inset from RightSidebar (250px) and BottomPanel (200px)
         AnchorsPreset = (int)LayoutPreset.BottomRight;
-        OffsetLeft = -180;
-        OffsetTop = -64;
+        OffsetLeft = -180 - 250;  // Clear the 250px RightSidebar
+        OffsetTop = -64 - 200;    // Sit above the 200px BottomPanel
 
         _button = new Button
         {

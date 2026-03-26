@@ -20,6 +20,12 @@ public partial class MapCamera : Camera2D
     private const float EdgeScrollSpeed = 400f;
     private const float EdgeScrollMargin = 30f; // pixels from screen edge
 
+    // UI insets — edge scroll only triggers within the map viewport area
+    private const float UiInsetTop = 64f;     // Top Bar A (32) + Top Bar B (32)
+    private const float UiInsetBottom = 200f;  // BottomPanel
+    private const float UiInsetLeft = 250f;    // LeftSidebar
+    private const float UiInsetRight = 250f;   // RightSidebar
+
     // Drag state
     private bool _dragging = false;
     private Vector2 _dragStart;
@@ -100,10 +106,17 @@ public partial class MapCamera : Camera2D
             var viewportSize = GetViewportRect().Size;
             var edgeDir = Vector2.Zero;
 
-            if (mousePos.X < EdgeScrollMargin) edgeDir.X -= 1;
-            if (mousePos.X > viewportSize.X - EdgeScrollMargin) edgeDir.X += 1;
-            if (mousePos.Y < EdgeScrollMargin) edgeDir.Y -= 1;
-            if (mousePos.Y > viewportSize.Y - EdgeScrollMargin) edgeDir.Y += 1;
+            // Only trigger edge scroll when mouse is in the map area (not over UI panels)
+            bool inMapArea = mousePos.X > UiInsetLeft && mousePos.X < viewportSize.X - UiInsetRight
+                          && mousePos.Y > UiInsetTop && mousePos.Y < viewportSize.Y - UiInsetBottom;
+
+            if (inMapArea)
+            {
+                if (mousePos.X < UiInsetLeft + EdgeScrollMargin) edgeDir.X -= 1;
+                if (mousePos.X > viewportSize.X - UiInsetRight - EdgeScrollMargin) edgeDir.X += 1;
+                if (mousePos.Y < UiInsetTop + EdgeScrollMargin) edgeDir.Y -= 1;
+                if (mousePos.Y > viewportSize.Y - UiInsetBottom - EdgeScrollMargin) edgeDir.Y += 1;
+            }
 
             if (edgeDir != Vector2.Zero)
                 Position += edgeDir.Normalized() * EdgeScrollSpeed * dt / currentZoom;

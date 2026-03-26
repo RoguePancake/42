@@ -1,215 +1,280 @@
-# FULL AUTHORITY — Game Update Roadmap
-## Single Source of Truth for Development
+# FULL AUTHORITY — The Phone Rings
+## Consolidated Roadmap
 
-> **Last updated:** 2026-03-24
-> **Game:** Full Authority (formerly "Warship: Leaders of the Warship")
-> **Engine:** Godot 4 + C# | **Platform:** Desktop | **Style:** Real-world geopolitical thriller
+> **One document. One plan. Every milestone ends with a testable build.**
 
 ---
 
-## What's Built (Baseline)
+## The Game
 
-Everything below is **coded and functional** as of Session 3 (2026-03-23):
+Real-time geopolitical thriller. You're not a god — you're a political operator climbing to power in a world that won't wait for you.
 
-| System | Status | Key Files |
-|--------|--------|-----------|
-| Core architecture | Done | EventBus, WorldStateManager, RuntimeBridge |
-| Data models | Done | Models.cs (6 classes), GeoData.cs (6 nations, 80+ cities) |
-| Economy engine | Done | Income, upkeep, bankruptcy |
-| Military engine | Done | Swarm movement, combat, city capture |
-| Political engine | Done | 7 action types, authority shifts |
-| AI engine | Done | Rival decision-making each turn |
-| Crisis engine | Done | Random events with player choices |
-| Victory engine | Done | FAI >= 90 triggers win |
-| Real-world map | Done | TileMapRenderer (OSM + Topo), WarshipMapBridge |
-| World generator | Done | Real coordinates, named leaders, military bases |
-| Main menu | Done | Title screen, character setup |
-| HUD | Done | TopBar, EndTurn, DossierPanel, MilitaryCommandPanel |
-| Crisis/Victory UI | Done | Modal panels for events and win state |
-| News ticker | Done | Scrolling event feed |
-| Notifications | Done | Slide-in alerts |
+**Normal state:** Time flows. You manage your nation — move units, set budgets, deploy spies, read intel. Adjustable speed (1x, 2x, 5x, 10x). Pause anytime.
 
-**The game runs end-to-end:** Menu → Setup → Map → Turns → Economy/Combat/Politics/Crisis → Victory.
+**Then the phone rings.** The simulation generates an **Interrupt** — a time-sensitive decision that demands your attention. A panel slams in with a countdown timer and 2-4 choices. If you don't pick, a default (usually bad) outcome fires. The world doesn't stop while you decide.
+
+The timer length IS the design:
+- Nuclear launch detected → 20 seconds
+- Assassination window → 15 seconds
+- Coup attempt on you → 10 seconds
+- Military flashpoint → 45 seconds
+- Economic crisis → 60 seconds
+- Diplomatic offer → 90 seconds
+
+**Win** by reaching Full Authority Index 100 through any combination of Territory Authority, World Authority, and Behind-the-Scenes Authority.
+
+**Lose** if your FAI hits 0, your nation is conquered, or you're assassinated.
 
 ---
 
-## The Goal
+## What's Already Built
 
-Ship a testable build at each milestone. Every milestone = someone can download it, play it, and give feedback. No milestone depends on "finishing everything first."
-
----
-
-## MILESTONE 1: FIRST PLAYABLE BUILD
-**Goal:** Hand someone the game and say "play 30 turns, tell me what's broken."
-**Tag:** `v0.9.0-alpha`
-
-All core systems work. This milestone is about making the existing game **stable, visible, and testable** — not adding new features.
-
-| # | Task | Priority | Status | Notes |
-|---|------|----------|--------|-------|
-| 1.1 | Complete OSM tile download (zoom 0-10) | HIGH | 🟡 In Progress | ~15 GB, running on MacBook |
-| 1.2 | Complete Topo tile download (zoom 0-9) | MEDIUM | ⚪ Queued | ~4 GB, after OSM finishes |
-| 1.3 | Fallback for missing tiles | HIGH | ⚪ | Solid color or "loading" texture so game doesn't break without tiles |
-| 1.4 | HUD restyle — dark theme + gold accents | MEDIUM | ⚪ | Match Plague Inc / DEFCON aesthetic |
-| 1.5 | Map mode tab bar (F1/F2/G as clickable buttons) | LOW | ⚪ | Currently keyboard-only |
-| 1.6 | Smoke test: play 50 turns without crash | HIGH | ⚪ | Fix any stability issues found |
-| 1.7 | Bundle test build (export template) | HIGH | ⚪ | Verify someone else can run it |
-
-**Exit criteria:** Game launches, map renders, turns advance, no crashes for 50 turns, economy/combat/politics all visibly working.
-
----
-
-## MILESTONE 2: CLICK & COMMAND
-**Goal:** Player can select units, move them, and give basic orders. Replaces swarm-only control.
-**Tag:** `v0.10.0-alpha`
-**Design:** See `docs/MILITARY_SYSTEM.md`
-
-| # | Task | Priority | Status | Notes |
-|---|------|----------|--------|-------|
-| 2.1 | Unit selection (click, box-select, shift+click, double-click) | HIGH | ⚪ | UnitSelectionManager.cs |
-| 2.2 | A* pathfinding over tile grid (terrain costs, domain rules) | HIGH | ⚪ | PathfindingEngine.cs — land/sea/air domains |
-| 2.3 | Move + Attack-Move + Patrol + Waypoint orders | HIGH | ⚪ | Right-click, A+click, P+click, Shift+click |
-| 2.4 | Hold / Garrison / Fortify / Blockade defensive orders | MEDIUM | ⚪ | H, G, F keys + right-click sea zones |
-| 2.5 | Order queue per unit (max 8, execute in sequence) | MEDIUM | ⚪ | Visual queue in unit info panel |
-| 2.6 | Formations — Ctrl+1-9 save, 1-9 recall, rename | MEDIUM | ⚪ | FormationManager.cs + sidebar panel |
-| 2.7 | Improve news feed — categorize, color-code, scannable | MEDIUM | ⚪ | Player needs to quickly read what happened |
-| 2.8 | Frontline rendering (animated war zones) | LOW | ⚪ | Visual feedback for active wars |
-
-**Exit criteria:** Player clicks a tank, right-clicks a destination, tank pathfinds there. Can create "3rd Fleet" and recall it with hotkey. Orders feel responsive.
+| System | Status | Files |
+|--------|--------|-------|
+| EventBus (typed pub/sub) | Working | `Core/EventBus.cs` |
+| WorldStateManager (state + deltas) | Working | `Core/WorldStateManager.cs` |
+| World generator (6 real nations, 80+ cities) | Working | `World/WorldGenerator.cs`, `Data/GeoData.cs` |
+| Data models (Nations, Cities, Units, Characters, Authority) | Working | `Data/Models.cs` |
+| Character setup (pick nation/role) | Working | `UI/Menus/CharacterSetupPanel.cs` |
+| Political engine (bribes, threats, investigations) | Working | `Engines/PoliticalEngine.cs` |
+| Crisis engine (random events with choices) | Working | `Engines/CrisisEngine.cs` |
+| Military engine (swarm movement, combat, assassination) | Working | `Engines/MilitaryEngine.cs` |
+| AI engine (rival nation behavior) | Working | `Engines/AIEngine.cs` |
+| Economy engine (treasury, income) | Working | `Engines/EconomyEngine.cs` |
+| Victory engine (win conditions) | Working | `Engines/VictoryEngine.cs` |
+| Real-world map renderer (OSM tiles, dual style) | Working | `UI/Map/TileMapRenderer.cs` |
+| Government overlay (borders, cities, units) | Working | `UI/Map/WarshipMapBridge.cs` |
+| HUD (top bar, sidebars, news ticker, dossier) | Working | `UI/HUD/*.cs` |
+| HotZone minimaps (pinnable 24×24 tile views) | Working | `UI/HUD/HotZoneMap.cs`, `UI/HUD/HotZoneManager.cs` |
+| View switcher (Map/Intel/WarRoom/Economy tabs) | Working | `UI/HUD/MainViewSwitcher.cs` |
+| Main menu | Working | `UI/Menus/MainMenu.cs` |
+| Game events (typed event records) | Working | `Events/GameEvents.cs` |
 
 ---
 
-## MILESTONE 3: RESOURCES & PRODUCTION
-**Goal:** Military-industrial pipeline works. Player builds facilities, manufactures units, manages resources.
-**Tag:** `v0.11.0-alpha`
-**Design:** See `docs/MILITARY_SYSTEM.md` Parts 1-3
+## The Plan: 8 Milestones
 
-| # | Task | Priority | Status | Notes |
-|---|------|----------|--------|-------|
-| 3.1 | 6 resource types in data model (Iron, Oil, Uranium, Elec, Manpower, Food) | HIGH | ⚪ | Add to Models.cs, province yields by terrain |
-| 3.2 | ResourceEngine.cs — collect resources per province per turn | HIGH | ⚪ | Pure C# engine, Phase 1 of turn pipeline |
-| 3.3 | Facility system — build slots per city, construction timers | HIGH | ⚪ | FacilityData model, CityData gets slots |
-| 3.4 | Production queues — queue units at facilities, 1 at a time | HIGH | ⚪ | ProductionEngine.cs — runs each turn |
-| 3.5 | Expanded unit types (16 unit types across land/sea/air) | HIGH | ⚪ | Update UnitType enum, add UnitDomain |
-| 3.6 | National Production Panel UI (click city → see facilities → build) | HIGH | ⚪ | The main build interface |
-| 3.7 | City detail overlays (population, slots, port/airfield icons) | MEDIUM | ⚪ | Click or hover on cities |
-| 3.8 | Trade for missing resources (buy oil from allies) | MEDIUM | ⚪ | TradeEngine integration |
-
-**Exit criteria:** Click London → build a Barracks (2 turns) → queue Infantry → watch it roll out. Resources tick up each turn. Run out of oil = vehicles grounded.
+Each milestone = a testable build. You can hand it to someone and say "play this."
 
 ---
 
-## MILESTONE 4: COMBAT DEPTH & SUPPLY
-**Goal:** Combat has real strategy. Units have HP, morale, experience. Supply lines matter. Cities don't fall instantly.
-**Tag:** `v0.11.5-alpha`
-**Design:** See `docs/MILITARY_SYSTEM.md` Parts 11-20
+### MILESTONE 1: The Clock Ticks
+**Goal:** Convert from turn-based to real-time. Time flows, simulation ticks automatically.
 
-| # | Task | Priority | Status | Notes |
-|---|------|----------|--------|-------|
-| 4.1 | Unit stats — HP, BaseAttack, BaseDefense, Speed, Range, Domain | HIGH | ⚪ | Part 11. Replace binary alive/dead |
-| 4.2 | Combat formula — damage calc with all modifiers | HIGH | ⚪ | Part 11. CombatResolver.cs (pure C#) |
-| 4.3 | Ranged combat phase — artillery/cruisers fire before melee | HIGH | ⚪ | Part 13. Two-phase combat |
-| 4.4 | Retreat & routing — units flee at low HP/morale | HIGH | ⚪ | Part 12. Shattered/Routed states |
-| 4.5 | Morale system — wins boost, losses crush, leader death = -30 all | HIGH | ⚪ | Part 18. Multiplies combat power |
-| 4.6 | Veterancy — Green/Regular/Veteran/Elite tiers from combat XP | MEDIUM | ⚪ | Part 17. Up to +30% stats |
-| 4.7 | Combined arms bonuses — mixed unit types get synergy | HIGH | ⚪ | Part 28. Inf+Tank+Arty = +25% |
-| 4.8 | Supply chain — BFS flood-fill, out-of-supply attrition | HIGH | ⚪ | Part 19. SupplyEngine.cs |
-| 4.9 | City siege system — cities have HP, multi-turn capture | HIGH | ⚪ | Part 20. Replace instant capture |
-| 4.10 | Unit upkeep costs per turn (money + fuel) | HIGH | ⚪ | Part 4. EconomyEngine update |
-| 4.11 | Manpower pool — finite, conscription mechanic | MEDIUM | ⚪ | Part 5. Can't spam infinite units |
-| 4.12 | Bankruptcy consequences (units weaken, vehicles stop) | MEDIUM | ⚪ | Already partial in EconomyEngine |
-| 4.13 | Balance pass — combat numbers feel right | MEDIUM | ⚪ | Playtest and tune |
+**What changes:**
+- `SimulationClock.cs` — New Node that replaces END TURN button. Runs the simulation pipeline on a timer. Adjustable speed (1x/2x/5x/10x). Pause/unpause with SPACE.
+- `EndTurnButton.cs` → becomes speed control bar (Pause / 1x / 2x / 5x / 10x)
+- All engines that listen to `TurnAdvancedEvent` keep working — they just fire on clock ticks instead of button presses
+- HUD shows elapsed time + current speed instead of "Turn 1"
 
-**Exit criteria:** Tanks with veteran crews and artillery support crush green infantry in the open. But those same infantry fortified in a forest with good supply hold off twice their number. Overextended armies starve. City sieges take multiple turns. Combat feels strategic, not random.
+**New events:**
+- `SimSpeedChangedEvent(float Speed)` — UI updates speed display
+- `SimPausedEvent(bool IsPaused)` — freeze/unfreeze rendering
+
+**Test:** Launch game → time advances automatically → economy ticks → AI moves units → crises fire on their own → player can pause/unpause with SPACE and change speed.
 
 ---
 
-## MILESTONE 5: DOMAIN WARFARE & OPERATIONS
-**Goal:** Air, naval, and combined operations create rich strategic gameplay. Weather and doctrine matter.
-**Tag:** `v0.12.0-beta`
-**Design:** See `docs/MILITARY_SYSTEM.md` Parts 14-16, 21-22, 25, 27
+### MILESTONE 2: The Phone Rings
+**Goal:** Interrupt system. Time-sensitive decisions slam onto the screen with countdown timers.
 
-| # | Task | Priority | Status | Notes |
-|---|------|----------|--------|-------|
-| 5.1 | Air superiority zones — fighters control airspace, CAS bonus | HIGH | ⚪ | Part 14. Sortie fuel, carrier basing |
-| 5.2 | Naval engagement depth — sub stealth, destroyer detect, sea zones | HIGH | ⚪ | Part 15. Invisible subs, escort mechanics |
-| 5.3 | Strategic bombing — bombers disable enemy facilities | HIGH | ⚪ | Part 16. Target refineries/factories |
-| 5.4 | Convoy/trade raiding — subs disrupt trade routes | MEDIUM | ⚪ | Part 25. Battle of the Atlantic |
-| 5.5 | Weather & seasons — winter slows tanks, rain cuts attack | MEDIUM | ⚪ | Part 21. Deterministic by month |
-| 5.6 | Combat doctrine — Blitzkrieg/Fortress/Guerrilla/Combined Arms | HIGH | ⚪ | Part 22. Nation-level, 3-turn switch |
-| 5.7 | Generals — assign characters to formations, command bonuses | MEDIUM | ⚪ | Part 27. TA/5 bonus, death penalty |
-| 5.8 | War Room panel — strategic targets, chokepoints | HIGH | ⚪ | Click target → deploy forces |
-| 5.9 | Invasion Planner — multi-phase operations | HIGH | ⚪ | Blockade → air → land phases |
-| 5.10 | Amphibious assault — transports + beach landing | MEDIUM | ⚪ | D-Day style, -30% first turn |
-| 5.11 | Alliance webs — defensive pacts, coalition warfare | HIGH | ⚪ | FA-17. Allies join wars |
-| 5.12 | Espionage grid — fog of war, intel depth | HIGH | ⚪ | FA-12. Intel integration |
-| 5.13 | Rebellions & insurgency | MEDIUM | ⚪ | FA-13. Low TA → rebel swarms |
+**What changes:**
+- `InterruptEngine.cs` — Pure C# engine. Each tick, evaluates world state against trigger conditions. Generates `InterruptEvent`s with priority, timer duration, choices, and default outcome.
+- `InterruptPanel.cs` — UI panel. Slides in from the side. Shows title, description, countdown bar, choice buttons. Auto-resolves on timeout.
+- `InterruptQueue` — Priority queue in WorldStateManager. Multiple interrupts stack. Higher priority interrupts display first. Player works through the queue.
 
-**Exit criteria:** Player establishes air superiority over the Channel, sends subs to raid Atlantic trade, times invasion for summer, and uses Blitzkrieg doctrine to blitz through France. Feels like commanding a real military campaign.
+**New events:**
+- `InterruptTriggeredEvent(string Id, string Title, string Description, float TimerSeconds, InterruptChoice[] Choices, int DefaultChoiceIndex, InterruptPriority Priority)`
+- `InterruptResolvedEvent(string Id, int ChoiceIndex, bool WasTimeout)`
 
----
+**Interrupt priority levels:**
+- `CRITICAL` (nuclear, coup, assassination) — auto-pauses sim, red border, alarm sound
+- `URGENT` (military, political crisis) — doesn't pause, orange border, 30-45s timer
+- `ROUTINE` (trade deal, diplomatic offer) — doesn't pause, blue border, 60-90s timer
 
-## MILESTONE 6: ENDGAME, NUKES & GEOPOLITICS
-**Goal:** Nuclear weapons, DEFCON, deterrence, deception, and war weariness create dramatic late-game tension.
-**Tag:** `v0.13.0-beta`
-**Design:** See `docs/MILITARY_SYSTEM.md` Parts 9, 23-26, 29
+**Starter interrupts (expand later):**
+- "Enemy fleet approaching your waters" (URGENT, 45s)
+- "General offers to defect — wants asylum NOW" (URGENT, 30s)
+- "Assassination window — your spy has the target alone" (CRITICAL, 15s)
+- "Trade agreement expiring — renew or renegotiate?" (ROUTINE, 90s)
+- "ICBM launch detected" (CRITICAL, 20s)
+- "Coup plotters approaching your residence" (CRITICAL, 10s)
 
-| # | Task | Priority | Status | Notes |
-|---|------|----------|--------|-------|
-| 6.1 | Facility upgrades (Elite Training, Advanced Armor, Stealth Hangar) | HIGH | ⚪ | Part 9. Unlock advanced variants |
-| 6.2 | Nuclear escalation path (Mine → Lab → Silo → Warheads) | HIGH | ⚪ | FA-22. Signature mechanic |
-| 6.3 | Nuclear Sub Bay — mobile hidden launch platforms | HIGH | ⚪ | Deterrence jumps to 250+ |
-| 6.4 | DEFCON system — 5-to-1 global panic, HUD gauge | HIGH | ⚪ | Part 23. Economy penalties, AI behavior |
-| 6.5 | Nuclear deterrence — AI evaluates threat score before attacking | HIGH | ⚪ | Part 24. Score 200+ = MAD |
-| 6.6 | WMD strikes — nuke a city, double-confirm, world reacts | HIGH | ⚪ | FA-24. Permanent consequences |
-| 6.7 | War weariness — long wars drain production, morale, TA | HIGH | ⚪ | Part 29. Anti-war protests, coup risk |
-| 6.8 | Decoy units & deception — fake armies, dummy facilities | MEDIUM | ⚪ | Part 26. Exploit DECEIVED state |
-| 6.9 | Leader succession — assassination creates vengeful successor | MEDIUM | ⚪ | FA-25 |
-| 6.10 | UN Assembly — embargoes, resolutions, pressure | MEDIUM | ⚪ | FA-16 |
+**Replaces:** `CrisisEngine.cs` gets merged into `InterruptEngine.cs`. Same concept, better execution.
 
-**Exit criteria:** Building your second nuke pushes DEFCON to 3, tanking everyone's economy. Getting a nuclear sub makes AI shift from military to covert ops. 30-turn wars trigger anti-war protests and coup risks. Late game is dramatically different from early game.
+**Test:** Play for 2 minutes → interrupts fire → countdown visible → picking a choice applies effects → ignoring it applies the default → CRITICAL interrupts auto-pause the sim.
 
 ---
 
-## MILESTONE 7: POLISH & SHIP
-**Goal:** Feature-complete, polished, ready for wider release.
-**Tag:** `v1.0.0`
+### MILESTONE 3: The World Breathes
+**Goal:** AI nations act continuously. You see them moving, trading, fighting each other — not just reacting to you.
 
-| # | Task | Priority | Status | Notes |
-|---|------|----------|--------|-------|
-| 7.1 | Save & load game state | HIGH | ⚪ | FA-29. Critical for real play sessions |
-| 7.2 | Espionage agency bases — spies on the map | LOW | ⚪ | FA-26 |
-| 7.3 | True leader permadeath — nation collapse | LOW | ⚪ | FA-27 |
-| 7.4 | Procedural global objectives ("Oil Crisis", "Pandemic") | MEDIUM | ⚪ | FA-28 |
-| 7.5 | Black market trading — shadow arms deals | LOW | ⚪ | FA-15 |
-| 7.6 | Media warfare — propaganda campaigns | LOW | ⚪ | FA-20 |
-| 7.7 | Sound effects + music + animations | MEDIUM | ⚪ | FA-30 |
-| 7.8 | Tutorial hints — first 3 turns explain controls | MEDIUM | ⚪ | New players need onboarding |
-| 7.9 | Opening speech scene ("First Fire" narrative) | LOW | ⚪ | Dramatic intro from GAME_FLOW.md |
-| 7.10 | Final balance, difficulty levels, performance optimization | HIGH | ⚪ | |
+**What changes:**
+- `AIEngine.cs` — Expand to make AI nations do things every tick: move units, start wars with each other, form alliances, trade. The world is alive whether you interact or not.
+- `DiplomacyData` added to `Models.cs` — Relations matrix between all nations. Wars, alliances, trade agreements, embargoes.
+- `NewsEngine.cs` — Aggregates significant events from the last N ticks into a scrolling news feed. "Russia invades EU border province." "China-India trade agreement signed."
+- Map shows AI unit movement in real-time, trade convoys flowing, borders shifting.
 
-**Exit criteria:** Someone can play a full game (200 turns), save mid-game, come back, and have a satisfying experience start to finish.
+**New events:**
+- `WarDeclaredEvent(string AggressorId, string DefenderId)`
+- `AllianceFormedEvent(string NationA, string NationB)`
+- `TradeAgreementEvent(string NationA, string NationB, float Value)`
+- `TerritoryChangedEvent(string CityId, string OldOwnerId, string NewOwnerId)`
+
+**Test:** Launch game → don't touch anything → watch AI nations go to war with each other, sign deals, move units. The world plays itself. News feed reports what's happening.
 
 ---
 
-## Archived Plans
+### MILESTONE 4: Your Hands on the Wheel
+**Goal:** Player can actually DO things in real-time. Issue orders, manage budget, interact with the map.
 
-These documents are **historical only** — kept for reference but no longer active:
+**What changes:**
+- **Unit orders panel** — Select unit → right-click destination → unit moves in real-time. Order types: Move, Attack, Patrol, Hold.
+- **Budget panel** — Allocate spending: Military / Infrastructure / Intelligence / Diplomacy. Changes take effect over time, not instantly.
+- **Diplomacy panel** — Click a nation → Propose alliance, Declare war, Offer trade, Demand tribute. AI responds based on relations + authority.
+- **Power plays** — Bribe, Threaten, Investigate actions from the existing PoliticalEngine, now available anytime (not just on turn boundaries).
 
-| Document | What it was | Why archived |
-|----------|-------------|--------------|
-| `docs/PHASE_PLAN.md` | Original 30-phase plan (SNES pixel art, procedural map) | Superseded by FA plan + real-world map pivot |
-| `docs/FA_PHASE_PLAN.md` | Full Authority phase plan (FA-1 to FA-30 + M-1 to M-10) | Merged into this roadmap |
-
----
-
-## How to Use This Document
-
-1. **Each session:** Check which milestone you're on. Pick the highest-priority incomplete task.
-2. **After each session:** Update status columns. Add notes about what you learned.
-3. **Don't skip milestones.** Each one produces a testable build. Test it before moving on.
-4. **Add tasks freely** within a milestone if you discover work needed. Don't add new milestones without good reason.
+**Test:** Full gameplay loop — manage your nation in real-time, issue military orders, adjust budget, do diplomacy, respond to interrupts. You can play for 10 minutes and things happen.
 
 ---
 
-*One roadmap. Clear milestones. Ship early, ship often.*
+### MILESTONE 5: The Fog
+**Goal:** You don't know everything. Intelligence is unreliable. The map lies to you.
+
+**What changes:**
+- `IntelEngine.cs` — Manages what the player knows vs. reality. Three states for all foreign data: UNKNOWN (???), ESTIMATED (could be wrong), KNOWN (verified by spies).
+- `FogOfWar` layer on map — Your territory is clear. Spy networks reveal areas. Everything else is dark or estimated.
+- **Spy networks** — Deploy agents to nations. Over time they reveal: troop positions, treasury, alliances, intentions. But intel can be WRONG — counter-intelligence feeds you bad data.
+- **The DECEIVED state** — Enemy counter-intelligence can feed your spies false information. You see confident data that is completely fabricated. No UI indicator that you're being deceived.
+- Interrupt: "Intelligence report: Russia moving 50,000 troops to your border" — but is it real?
+
+**Test:** Start game → foreign nations show "???" for most stats → deploy spies → gradually see more data → some of it turns out wrong → get deceived at least once.
+
+---
+
+### MILESTONE 6: The Bomb
+**Goal:** Nuclear weapons. The ultimate trump card and the thing that makes your tiny nation matter.
+
+**What changes:**
+- `NuclearEngine.cs` — Manages warhead count, silo construction, launch authorization, fallout.
+- **Nuclear deterrence** — Having nukes prevents AI from attacking you directly (unless they think you won't use them, or they get nukes too).
+- **Launch sequence** — CRITICAL interrupt: "Authorize nuclear strike?" → Target selection → 3-tick countdown (can be aborted) → Devastation.
+- **Consequences** — Nuking a city: destroys it permanently, massive WA penalty globally, all nations condemn you, but the target nation's TA collapses. MAD if multiple nations have nukes.
+- **DEFCON meter** — Global tension indicator (5=peace, 1=imminent nuclear war). Rises with military buildups, wars, threats. At DEFCON 1, AI nations may launch preemptively.
+- **Arms race** — AI nations research nukes over time. Once 2+ nations have them, the game becomes a knife-edge balance of terror.
+
+**Test:** Play through to the point where you threaten nuclear strikes → AI backs down OR calls your bluff → launch a nuke → see the devastation and global reaction → other nations start building nukes → MAD scenario.
+
+---
+
+### MILESTONE 7: Save the World (or Load It)
+**Goal:** Save/load game state. Autosave. Multiple save slots.
+
+**What changes:**
+- `SaveSystem.cs` — Serializes entire WorldData (including SimulationClock state, interrupt queue, diplomacy matrix, fog state) to JSON via Newtonsoft.Json.
+- Autosave every N real-time minutes (configurable).
+- Save slots in the main menu. Load from title screen or in-game pause menu.
+- Save file includes RNG seed + tick count for deterministic replay capability.
+
+**Test:** Play 5 minutes → save → keep playing → load → game state is identical to save point. Autosave works. Multiple slots work.
+
+---
+
+### MILESTONE 8: Ship It
+**Goal:** Polish, balance, and package for playtest distribution.
+
+**What changes:**
+- **Balance pass** — Tune interrupt frequencies, timer durations, AI aggression, economy rates, authority gain/loss amounts. The game should feel tense but not overwhelming.
+- **Sound design** — Phone ring SFX for interrupts. Ambient music shifts with DEFCON level. UI click sounds. Explosion/battle audio.
+- **Visual polish** — Screen shake on explosions. Flash effects on battles. Smooth panel transitions. DEFCON color tinting on the whole screen.
+- **Tutorial interrupt** — First 2 minutes of gameplay: guided interrupts that teach the core mechanics. "This is your first crisis. You have 45 seconds to decide..."
+- **Settings** — Volume, game speed default, interrupt timer difficulty (longer timers = easier).
+- **Export** — Godot export for Windows/Mac/Linux. Playtest-ready build.
+
+**Test:** Hand the build to someone who's never seen it. They should be able to: start the game, understand the premise, play for 20 minutes, experience interrupts, manage their nation, and either win or lose. No crashes. No softlocks.
+
+---
+
+## What Got Cut (and Why)
+
+These features from the old FA plan are **deferred** — not cancelled, just not needed for a testable game:
+
+| Old Phase | Feature | Why Deferred |
+|-----------|---------|-------------|
+| FA-13 | Rebellions & Insurgency | Cool but not core. Add after M8 if game needs more internal threats. |
+| FA-14 | National Debt & Bailouts | Economy works fine without this layer. Add for depth later. |
+| FA-15 | Black Market Trading | Nice flavor. Not needed for core loop. |
+| FA-16 | United Nations Assembly | Complex UI for a system that can be simulated simpler. Post-launch. |
+| FA-18 | Border Checkpoints & Attrition | Terrain/movement detail. Post-launch. |
+| FA-19 | City Siege Mechanics | Cities already flip via combat. Siege adds realism but not fun yet. |
+| FA-20 | Media Warfare / Propaganda | Great thematic fit. Add after core is solid. |
+| FA-21 | Military Research | Unit upgrades. Post-launch depth. |
+| FA-25 | Leader Succession | Interesting edge case. Not core. |
+| FA-26 | Espionage Agency Bases | Physical spies on map. Fog system covers intel for now. |
+| FA-27 | True Leader Permadeath | Nation collapse mechanic. Post-launch. |
+| FA-28 | Procedural Global Objectives | "Oil Crisis" / "Pandemic" — great for replayability. Post-launch. |
+| M-8 | Map Mode Tabs UI | Keyboard shortcuts (F1/F2/G) work fine for now. |
+| M-9 | City Detail Overlays | Nice visual. Not blocking gameplay. |
+| M-10 | Frontline Rendering | Cool visual. Not blocking gameplay. |
+
+---
+
+## Architecture Notes
+
+### SimulationClock replaces TurnEngine
+The 13-phase pipeline concept stays. But instead of `EndTurnButton` → run all phases → wait, the `SimulationClock` runs phases on a timer:
+
+```
+Every tick (based on speed setting):
+  1. ResourceCollection
+  2. EconomicProcessing
+  3. DiplomacyProcessing
+  4. AIDecision
+  5. MilitaryMovement
+  6. CombatResolution
+  7. IntelligenceProcessing
+  8. InterruptEvaluation    ← NEW: checks conditions, fires interrupts
+  9. NewsAggregation
+  10. StateCommit
+```
+
+### InterruptEngine is the core innovation
+This is what makes Full Authority different from every other grand strategy game. The interrupt system creates **asymmetric time pressure** — you're a political operator, not an omniscient deity. Some decisions can't wait. Some information is wrong. The phone rings whether you're ready or not.
+
+### EventBus stays the backbone
+Nothing changes architecturally. New engines publish new events. UI subscribes. No engine calls another engine. WorldStateManager is the single source of truth.
+
+---
+
+## Priority Order
+
+```
+M1  The Clock Ticks       ← Real-time foundation. Everything else builds on this.
+M2  The Phone Rings       ← The unique mechanic. This IS the game.
+M3  The World Breathes    ← AI makes the world feel alive.
+M4  Your Hands on Wheel   ← Player agency. Now it's a game.
+M5  The Fog               ← Unreliable intel. Now it's a GOOD game.
+M6  The Bomb              ← Nuclear stakes. Now it's a TENSE game.
+M7  Save/Load             ← Quality of life.
+M8  Ship It               ← Polish and distribute.
+```
+
+---
+
+## Design Documents
+
+| Document | What it covers |
+|----------|---------------|
+| `docs/MILITARY_SYSTEM.md` | **30-part military warfare spec.** Resources, facilities, 16 unit types, production, orders, formations. Plus deep combat systems: unit stats/HP, combat formula, retreat/routing, ranged phases, air superiority zones, naval depth, strategic bombing, veterancy, morale, supply chains, city sieges, weather/seasons, combat doctrine, DEFCON, nuclear deterrence, convoy raiding, decoys/deception, generals, combined arms, war weariness, and system interaction web. |
+| `docs/GAME_FLOW.md` | Player experience spec — what you see and do each turn |
+
+Military systems integrate across milestones:
+- **M4 (Your Hands on Wheel):** Unit selection, orders, movement, basic combat with the new formula
+- **M5 (The Fog):** Intel depth, DECEIVED state, decoy units, recon planes
+- **M6 (The Bomb):** DEFCON system, nuclear deterrence AI, WMD strikes, war weariness
+- **M8 (Ship It):** Combat doctrine, combined arms, veterancy, weather, strategic bombing, naval depth
+
+---
+
+*This replaces PHASE_PLAN.md, FA_PHASE_PLAN.md, and the phase tracker in DEV_LOG.md.*
+*Last updated: 2026-03-26*

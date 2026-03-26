@@ -5,67 +5,67 @@ using Warship.Events;
 namespace Warship.UI.HUD;
 
 /// <summary>
-/// Top bar UI showing turn, date, and player stats.
-/// Constructed fully in code so we don't need a clunky .tscn file for it.
+/// Top Bar B — 32px tall bar showing turn counter, date, and player stats.
+/// Sits directly below the alert bar (Top Bar A).
 /// </summary>
 public partial class TopBar : Control
 {
     private Label _turnLabel;
     private Label _statsLabel;
-    
+
     public override void _Ready()
     {
-        // Setup Control node
         SetAnchorsAndOffsetsPreset(LayoutPreset.TopWide);
-        OffsetTop = 32; // Under News Ticker
-        OffsetBottom = 80; // 48px tall
+        OffsetTop = 32;  // Under alert bar (Top Bar A)
+        OffsetBottom = 64; // 32px tall (was 48px)
 
         // Background
-        var bg = new ColorRect 
-        { 
-            Color = new Color(0.08f, 0.08f, 0.12f, 0.95f), 
-            AnchorsPreset = (int)LayoutPreset.FullRect 
+        var bg = new ColorRect
+        {
+            Color = new Color(0.08f, 0.08f, 0.12f, 0.95f),
+            AnchorsPreset = (int)LayoutPreset.FullRect
         };
         AddChild(bg);
 
-        // Stylish bottom border
-        var border = new ColorRect 
-        { 
-            Color = new Color(0.2f, 0.4f, 0.8f, 1f), 
-            CustomMinimumSize = new Vector2(0, 4) 
+        // Bottom border
+        var border = new ColorRect
+        {
+            Color = new Color(0.2f, 0.4f, 0.8f, 1f),
+            CustomMinimumSize = new Vector2(0, 3)
         };
         border.SetAnchorsAndOffsetsPreset(LayoutPreset.BottomWide);
         AddChild(border);
 
         // Layout container
-        var hbox = new HBoxContainer 
-        { 
-            AnchorsPreset = (int)LayoutPreset.FullRect 
+        var hbox = new HBoxContainer
+        {
+            AnchorsPreset = (int)LayoutPreset.FullRect
         };
         AddChild(hbox);
 
-        // Margin to pad text nicely
+        // Left margin
         var leftMargin = new MarginContainer();
-        leftMargin.AddThemeConstantOverride("margin_left", 20);
-        
+        leftMargin.AddThemeConstantOverride("margin_left", 16);
+
+        // Right margin
         var rightMargin = new MarginContainer();
-        rightMargin.AddThemeConstantOverride("margin_right", 20);
+        rightMargin.AddThemeConstantOverride("margin_right", 16);
         rightMargin.SizeFlagsHorizontal = SizeFlags.Expand | SizeFlags.ShrinkEnd;
 
-        // Labels
-        _turnLabel = new Label 
-        { 
-            Text = " Turn 1 | Jan 1900 ", 
-            VerticalAlignment = VerticalAlignment.Center 
-        };
-        _turnLabel.AddThemeFontSizeOverride("font_size", 20);
-
-        _statsLabel = new Label 
-        { 
-            Text = " TA: ... WA: ... BSA: ... [FAI: ...] ", 
+        // Labels (smaller font to fit 32px height)
+        _turnLabel = new Label
+        {
+            Text = " Turn 1 | Jan 1900 ",
             VerticalAlignment = VerticalAlignment.Center
         };
-        _statsLabel.AddThemeFontSizeOverride("font_size", 20);
+        _turnLabel.AddThemeFontSizeOverride("font_size", 14);
+
+        _statsLabel = new Label
+        {
+            Text = " TA: ... WA: ... BSA: ... [FAI: ...] ",
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        _statsLabel.AddThemeFontSizeOverride("font_size", 14);
 
         leftMargin.AddChild(_turnLabel);
         rightMargin.AddChild(_statsLabel);
@@ -81,7 +81,6 @@ public partial class TopBar : Control
 
     public override void _Process(double delta)
     {
-        // Simple data binding
         var data = WorldStateManager.Instance?.Data;
         if (data != null && data.Characters.Count > 0)
         {
