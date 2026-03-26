@@ -1,5 +1,10 @@
-# WARSHIP — 30-Phase Plan
+# [ARCHIVED] WARSHIP — 30-Phase Plan
 ## Zero to Playable Test Game
+
+> **ARCHIVED 2026-03-24:** This plan is superseded by `docs/ROADMAP.md`.
+> Phases 1-14 were completed then replaced by the real-world map pivot.
+> Phases 15-30 were partially reimplemented under the Full Authority plan.
+> Kept for historical reference only.
 
 Each phase produces something VISIBLE or TESTABLE.
 If you can't see it or click it, it's not done.

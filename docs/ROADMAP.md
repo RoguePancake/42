@@ -45,6 +45,8 @@ The timer length IS the design:
 | Real-world map renderer (OSM tiles, dual style) | Working | `UI/Map/TileMapRenderer.cs` |
 | Government overlay (borders, cities, units) | Working | `UI/Map/WarshipMapBridge.cs` |
 | HUD (top bar, sidebars, news ticker, dossier) | Working | `UI/HUD/*.cs` |
+| HotZone minimaps (pinnable 24×24 tile views) | Working | `UI/HUD/HotZoneMap.cs`, `UI/HUD/HotZoneManager.cs` |
+| View switcher (Map/Intel/WarRoom/Economy tabs) | Working | `UI/HUD/MainViewSwitcher.cs` |
 | Main menu | Working | `UI/Menus/MainMenu.cs` |
 | Game events (typed event records) | Working | `Events/GameEvents.cs` |
 
