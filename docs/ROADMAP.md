@@ -261,5 +261,20 @@ M8  Ship It               ← Polish and distribute.
 
 ---
 
+## Design Documents
+
+| Document | What it covers |
+|----------|---------------|
+| `docs/MILITARY_SYSTEM.md` | **30-part military warfare spec.** Resources, facilities, 16 unit types, production, orders, formations. Plus deep combat systems: unit stats/HP, combat formula, retreat/routing, ranged phases, air superiority zones, naval depth, strategic bombing, veterancy, morale, supply chains, city sieges, weather/seasons, combat doctrine, DEFCON, nuclear deterrence, convoy raiding, decoys/deception, generals, combined arms, war weariness, and system interaction web. |
+| `docs/GAME_FLOW.md` | Player experience spec — what you see and do each turn |
+
+Military systems integrate across milestones:
+- **M4 (Your Hands on Wheel):** Unit selection, orders, movement, basic combat with the new formula
+- **M5 (The Fog):** Intel depth, DECEIVED state, decoy units, recon planes
+- **M6 (The Bomb):** DEFCON system, nuclear deterrence AI, WMD strikes, war weariness
+- **M8 (Ship It):** Combat doctrine, combined arms, veterancy, weather, strategic bombing, naval depth
+
+---
+
 *This replaces PHASE_PLAN.md, FA_PHASE_PLAN.md, and the phase tracker in DEV_LOG.md.*
 *Last updated: 2026-03-26*
