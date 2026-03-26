@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://main_scene"]
+[gd_scene load_steps=11 format=3 uid="uid://main_scene"]
 
 [ext_resource type="Script" path="res://src/Core/EventBus.cs" id="1"]
 [ext_resource type="Script" path="res://src/Core/WorldStateManager.cs" id="2"]
@@ -22,6 +22,8 @@
 [ext_resource type="Script" path="res://src/UI/HUD/RightSidebar.cs" id="20"]
 [ext_resource type="Script" path="res://src/UI/HUD/BottomPanel.cs" id="21"]
 [ext_resource type="Script" path="res://src/Core/RuntimeBridge.cs" id="22"]
+[ext_resource type="Script" path="res://src/UI/HUD/MainViewSwitcher.cs" id="24"]
+[ext_resource type="Script" path="res://src/UI/HUD/HotZoneManager.cs" id="25"]
 
 [node name="Main" type="Node2D"]
 
@@ -156,6 +158,17 @@ offset_top = -200.0
 grow_horizontal = 2
 grow_vertical = 0
 script = ExtResource("21")
+
+[node name="MainViewSwitcher" type="Control" parent="UILayer"]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("24")
+
+[node name="HotZoneManager" type="Control" parent="UILayer"]
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 2
+script = ExtResource("25")
 
 [node name="NewsTicker" type="Control" parent="UILayer"]
 layout_mode = 3
