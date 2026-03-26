@@ -99,62 +99,75 @@ All core systems work. This milestone is about making the existing game **stable
 
 ---
 
-## MILESTONE 4: UPKEEP, SUPPLY & MANPOWER
-**Goal:** Running a military has real costs. Player makes hard choices about army size vs economy.
+## MILESTONE 4: COMBAT DEPTH & SUPPLY
+**Goal:** Combat has real strategy. Units have HP, morale, experience. Supply lines matter. Cities don't fall instantly.
 **Tag:** `v0.11.5-alpha`
-**Design:** See `docs/MILITARY_SYSTEM.md` Parts 4-5
+**Design:** See `docs/MILITARY_SYSTEM.md` Parts 11-20
 
 | # | Task | Priority | Status | Notes |
 |---|------|----------|--------|-------|
-| 4.1 | Unit upkeep costs per turn (money + fuel) | HIGH | ⚪ | EconomyEngine update |
-| 4.2 | Supply lines — units >5 tiles from city lose strength | HIGH | ⚪ | Supply range calc, Fuel Depot extends +3 |
-| 4.3 | Manpower pool — finite, scales with population | MEDIUM | ⚪ | Can't spam infinite infantry |
-| 4.4 | Conscription mechanic (emergency boost, stability penalty) | MEDIUM | ⚪ | Desperate times button |
-| 4.5 | Bankruptcy consequences (units weaken, vehicles stop) | HIGH | ⚪ | Already partial in EconomyEngine |
-| 4.6 | Combat modifiers (terrain, fortification, encirclement, morale) | HIGH | ⚪ | Replace simple RNG combat |
-| 4.7 | City siege mechanics — cities have HP before flipping | MEDIUM | ⚪ | FA-19. No more instant capture |
-| 4.8 | Balance pass — income/upkeep/combat numbers feel right | MEDIUM | ⚪ | Playtest and tune |
+| 4.1 | Unit stats — HP, BaseAttack, BaseDefense, Speed, Range, Domain | HIGH | ⚪ | Part 11. Replace binary alive/dead |
+| 4.2 | Combat formula — damage calc with all modifiers | HIGH | ⚪ | Part 11. CombatResolver.cs (pure C#) |
+| 4.3 | Ranged combat phase — artillery/cruisers fire before melee | HIGH | ⚪ | Part 13. Two-phase combat |
+| 4.4 | Retreat & routing — units flee at low HP/morale | HIGH | ⚪ | Part 12. Shattered/Routed states |
+| 4.5 | Morale system — wins boost, losses crush, leader death = -30 all | HIGH | ⚪ | Part 18. Multiplies combat power |
+| 4.6 | Veterancy — Green/Regular/Veteran/Elite tiers from combat XP | MEDIUM | ⚪ | Part 17. Up to +30% stats |
+| 4.7 | Combined arms bonuses — mixed unit types get synergy | HIGH | ⚪ | Part 28. Inf+Tank+Arty = +25% |
+| 4.8 | Supply chain — BFS flood-fill, out-of-supply attrition | HIGH | ⚪ | Part 19. SupplyEngine.cs |
+| 4.9 | City siege system — cities have HP, multi-turn capture | HIGH | ⚪ | Part 20. Replace instant capture |
+| 4.10 | Unit upkeep costs per turn (money + fuel) | HIGH | ⚪ | Part 4. EconomyEngine update |
+| 4.11 | Manpower pool — finite, conscription mechanic | MEDIUM | ⚪ | Part 5. Can't spam infinite units |
+| 4.12 | Bankruptcy consequences (units weaken, vehicles stop) | MEDIUM | ⚪ | Already partial in EconomyEngine |
+| 4.13 | Balance pass — combat numbers feel right | MEDIUM | ⚪ | Playtest and tune |
 
-**Exit criteria:** Building 50 tanks feels powerful but drains treasury. Overextended armies wither. Lean forces with good supply beat bloated ones.
+**Exit criteria:** Tanks with veteran crews and artillery support crush green infantry in the open. But those same infantry fortified in a forest with good supply hold off twice their number. Overextended armies starve. City sieges take multiple turns. Combat feels strategic, not random.
 
 ---
 
-## MILESTONE 5: WAR ROOM & OPERATIONS
-**Goal:** Player can plan multi-phase invasions and see strategic targets at a glance.
+## MILESTONE 5: DOMAIN WARFARE & OPERATIONS
+**Goal:** Air, naval, and combined operations create rich strategic gameplay. Weather and doctrine matter.
 **Tag:** `v0.12.0-beta`
-**Design:** See `docs/MILITARY_SYSTEM.md` Parts 6-7
+**Design:** See `docs/MILITARY_SYSTEM.md` Parts 14-16, 21-22, 25, 27
 
 | # | Task | Priority | Status | Notes |
 |---|------|----------|--------|-------|
-| 5.1 | War Room panel — strategic targets, chokepoints, enemy capitals | HIGH | ⚪ | Click target → deploy forces |
-| 5.2 | Invasion Planner — multi-phase operations (blockade → air → land) | HIGH | ⚪ | OperationData model, auto-generate orders |
-| 5.3 | Bombardment orders (artillery + cruiser ranged attacks) | MEDIUM | ⚪ | Pre-combat softening |
-| 5.4 | Amphibious assault (transports → beach landing at -30%) | MEDIUM | ⚪ | D-Day style operations |
-| 5.5 | Airlift (mech infantry → distant airfield, needs air superiority) | LOW | ⚪ | Rapid deployment |
-| 5.6 | Alliance webs — defensive pacts, coalition warfare | HIGH | ⚪ | FA-17. Allies join wars |
-| 5.7 | Espionage grid — fog of war, DECEIVED state for fake intel | HIGH | ⚪ | FA-12. Intel integration with military |
-| 5.8 | Rebellions & insurgency (low TA → rebel swarms) | MEDIUM | ⚪ | FA-13 |
+| 5.1 | Air superiority zones — fighters control airspace, CAS bonus | HIGH | ⚪ | Part 14. Sortie fuel, carrier basing |
+| 5.2 | Naval engagement depth — sub stealth, destroyer detect, sea zones | HIGH | ⚪ | Part 15. Invisible subs, escort mechanics |
+| 5.3 | Strategic bombing — bombers disable enemy facilities | HIGH | ⚪ | Part 16. Target refineries/factories |
+| 5.4 | Convoy/trade raiding — subs disrupt trade routes | MEDIUM | ⚪ | Part 25. Battle of the Atlantic |
+| 5.5 | Weather & seasons — winter slows tanks, rain cuts attack | MEDIUM | ⚪ | Part 21. Deterministic by month |
+| 5.6 | Combat doctrine — Blitzkrieg/Fortress/Guerrilla/Combined Arms | HIGH | ⚪ | Part 22. Nation-level, 3-turn switch |
+| 5.7 | Generals — assign characters to formations, command bonuses | MEDIUM | ⚪ | Part 27. TA/5 bonus, death penalty |
+| 5.8 | War Room panel — strategic targets, chokepoints | HIGH | ⚪ | Click target → deploy forces |
+| 5.9 | Invasion Planner — multi-phase operations | HIGH | ⚪ | Blockade → air → land phases |
+| 5.10 | Amphibious assault — transports + beach landing | MEDIUM | ⚪ | D-Day style, -30% first turn |
+| 5.11 | Alliance webs — defensive pacts, coalition warfare | HIGH | ⚪ | FA-17. Allies join wars |
+| 5.12 | Espionage grid — fog of war, intel depth | HIGH | ⚪ | FA-12. Intel integration |
+| 5.13 | Rebellions & insurgency | MEDIUM | ⚪ | FA-13. Low TA → rebel swarms |
 
-**Exit criteria:** Player plans "Operation Iron Dawn" with naval blockade phase, air superiority phase, and ground assault phase. Executes it over 10 turns. Feels like a real commander.
+**Exit criteria:** Player establishes air superiority over the Channel, sends subs to raid Atlantic trade, times invasion for summer, and uses Blitzkrieg doctrine to blitz through France. Feels like commanding a real military campaign.
 
 ---
 
-## MILESTONE 6: ENDGAME & ESCALATION
-**Goal:** Nuclear weapons, upgrades, DEFCON, and leader succession create dramatic late-game tension.
+## MILESTONE 6: ENDGAME, NUKES & GEOPOLITICS
+**Goal:** Nuclear weapons, DEFCON, deterrence, deception, and war weariness create dramatic late-game tension.
 **Tag:** `v0.13.0-beta`
-**Design:** See `docs/MILITARY_SYSTEM.md` Part 9
+**Design:** See `docs/MILITARY_SYSTEM.md` Parts 9, 23-26, 29
 
 | # | Task | Priority | Status | Notes |
 |---|------|----------|--------|-------|
-| 6.1 | Facility upgrades (Elite Training, Advanced Armor, Stealth Hangar) | HIGH | ⚪ | Unlock advanced unit variants |
-| 6.2 | Nuclear escalation path (Uranium Mine → Lab → Silo → Warheads) | HIGH | ⚪ | FA-22. The game's signature mechanic |
-| 6.3 | Nuclear Sub Bay upgrade — mobile hidden launch platforms | HIGH | ⚪ | Late-game strategic terror |
-| 6.4 | DEFCON system — global panic meter, each nuke built raises it | MEDIUM | ⚪ | FA-23 |
-| 6.5 | WMD strikes — nuke a city, permanent consequences | HIGH | ⚪ | FA-24. Double-confirm, world reacts |
-| 6.6 | Leader succession — assassination creates vengeful successor | MEDIUM | ⚪ | FA-25 |
-| 6.7 | UN Assembly — embargoes, resolutions, diplomatic pressure | MEDIUM | ⚪ | FA-16 |
+| 6.1 | Facility upgrades (Elite Training, Advanced Armor, Stealth Hangar) | HIGH | ⚪ | Part 9. Unlock advanced variants |
+| 6.2 | Nuclear escalation path (Mine → Lab → Silo → Warheads) | HIGH | ⚪ | FA-22. Signature mechanic |
+| 6.3 | Nuclear Sub Bay — mobile hidden launch platforms | HIGH | ⚪ | Deterrence jumps to 250+ |
+| 6.4 | DEFCON system — 5-to-1 global panic, HUD gauge | HIGH | ⚪ | Part 23. Economy penalties, AI behavior |
+| 6.5 | Nuclear deterrence — AI evaluates threat score before attacking | HIGH | ⚪ | Part 24. Score 200+ = MAD |
+| 6.6 | WMD strikes — nuke a city, double-confirm, world reacts | HIGH | ⚪ | FA-24. Permanent consequences |
+| 6.7 | War weariness — long wars drain production, morale, TA | HIGH | ⚪ | Part 29. Anti-war protests, coup risk |
+| 6.8 | Decoy units & deception — fake armies, dummy facilities | MEDIUM | ⚪ | Part 26. Exploit DECEIVED state |
+| 6.9 | Leader succession — assassination creates vengeful successor | MEDIUM | ⚪ | FA-25 |
+| 6.10 | UN Assembly — embargoes, resolutions, pressure | MEDIUM | ⚪ | FA-16 |
 
-**Exit criteria:** Late game is dramatically different from early game. Building your second nuke makes the whole world panic. Nuclear subs prowl the oceans as hidden second-strike capability.
+**Exit criteria:** Building your second nuke pushes DEFCON to 3, tanking everyone's economy. Getting a nuclear sub makes AI shift from military to covert ops. 30-turn wars trigger anti-war protests and coup risks. Late game is dramatically different from early game.
 
 ---
 
