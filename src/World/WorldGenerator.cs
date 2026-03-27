@@ -7,32 +7,30 @@ using Warship.Data;
 namespace Warship.World;
 
 /// <summary>
-/// Procedural world generator. Creates a fantasy world where nations
-/// emerge from geography — no predefined blocs or archetypes.
-/// Geography determines national character: coastal nations trade,
-/// mountain nations fortify, plains nations expand, island nations scheme.
+/// Procedural world generator. Creates a 600x360 fantasy world where nations
+/// emerge from geography. Spawns armies (not individual units), assigns
+/// city-centric territory, and pre-computes border polylines.
 /// </summary>
 public static class WorldGenerator
 {
-    public const int NumNations = 6; // 5 AI + 1 player
-    public const int CitiesPerNation = 4; // Capital + 3 cities
-    public const int UnitsPerBase = 2;
+    public const int NumNations = 6;         // 5 AI + 1 player
+    public const int CitiesPerNation = 5;    // Capital + 4 cities
+    public const int ArmiesPerNation = 5;    // Starting armies
 
-    // Nation colors — distinct and readable on pixel map
-    private static readonly Color[] NationColors = new Color[]
+    // Nation colors — distinct and readable
+    private static readonly Color[] NationColors =
     {
-        new Color(0.25f, 0.50f, 0.85f), // Blue
-        new Color(0.85f, 0.25f, 0.20f), // Red
-        new Color(0.20f, 0.72f, 0.35f), // Green
-        new Color(0.80f, 0.65f, 0.15f), // Gold
-        new Color(0.65f, 0.30f, 0.75f), // Purple
-        new Color(0.90f, 0.55f, 0.15f), // Orange (player)
+        new(0.25f, 0.50f, 0.85f), // Blue
+        new(0.85f, 0.25f, 0.20f), // Red
+        new(0.20f, 0.72f, 0.35f), // Green
+        new(0.80f, 0.65f, 0.15f), // Gold
+        new(0.65f, 0.30f, 0.75f), // Purple
+        new(0.90f, 0.55f, 0.15f), // Orange (player)
     };
 
-    // Name pools for procedural nation naming
     private static readonly string[] NationPrefixes =
-        { "Republic of", "Kingdom of", "Federation of", "Dominion of", "Union of", "Free State of",
-          "Commonwealth of", "Empire of", "Principality of", "Confederacy of" };
+        { "Republic of", "Kingdom of", "Federation of", "Dominion of", "Union of",
+          "Free State of", "Commonwealth of", "Empire of", "Principality of", "Confederacy of" };
 
     private static readonly string[] NationRoots =
         { "Valdria", "Korenth", "Ashenmoor", "Thalassia", "Drakmere", "Ironveil",
@@ -40,48 +38,45 @@ public static class WorldGenerator
           "Frostgate", "Harrowfield", "Dunmere", "Silverbrook", "Thornwall", "Ravenport",
           "Highcross", "Deepwell" };
 
-    private static readonly string[] CityNames =
-        { "Haven", "Crossing", "Landing", "Falls", "Bridge", "Port", "Gate",
-          "Watch", "Hold", "Keep", "Ford", "Hollow", "Ridge", "Spire", "Crest",
-          "Basin", "Reach", "Bay", "Point", "Marsh", "Dell", "Bluff", "Harbor",
-          "Forge", "Mill", "Tower", "Hearth", "Glen", "Mound", "Quarry" };
-
     private static readonly string[] CityPrefixes =
         { "North", "South", "East", "West", "Old", "New", "Upper", "Lower",
           "Iron", "Storm", "Stone", "River", "Lake", "Sea", "Dark", "Bright",
           "White", "Black", "Red", "Green", "Silver", "Gold", "Frost", "Sun" };
 
+    private static readonly string[] CitySuffixes =
+        { "Haven", "Crossing", "Landing", "Falls", "Bridge", "Port", "Gate",
+          "Watch", "Hold", "Keep", "Ford", "Hollow", "Ridge", "Spire", "Crest",
+          "Bay", "Point", "Forge", "Mill", "Tower", "Hearth", "Glen", "Harbor" };
+
     private static readonly string[] FirstNames =
         { "James", "Eleanor", "Viktor", "Mei", "Aleksandr", "Sofia", "Henrik",
-          "Yara", "Nikolai", "Celeste", "Otto", "Ingrid", "Rajan", "Tomás",
+          "Yara", "Nikolai", "Celeste", "Otto", "Ingrid", "Rajan", "Tomas",
           "Freya", "Kazimir", "Lena", "Darius", "Maren", "Cyrus" };
 
     private static readonly string[] LastNames =
         { "Ashford", "Volkov", "Thornton", "Weiss", "Okafor", "Strand",
           "Reeves", "Kazakov", "Lindqvist", "Moreno", "Harker", "Dietrich",
-          "Kwan", "Novak", "Sterling", "Vasquez", "Crane", "Bergström",
-          "Nakamura", "Blackwell" };
+          "Kwan", "Novak", "Sterling", "Vasquez", "Crane", "Nakamura", "Blackwell" };
 
-    public static WorldData CreateWorld(int seed, string playerName = "J. Crawford", string playerRole = "Defense Minister", int focusIndex = 0)
+    private static readonly string[] ArmyNames =
+        { "1st Army", "2nd Army", "3rd Army", "Iron Guard", "Northern Command",
+          "Southern Command", "Eastern Front", "Western Front", "Royal Guard",
+          "Expeditionary Force", "Home Defense", "Strike Group", "Coastal Fleet",
+          "Deep Fleet", "Air Wing" };
+
+    public static WorldData CreateWorld(int seed, string playerName = "J. Crawford",
+        string playerRole = "Defense Minister", int focusIndex = 0)
     {
         var rng = new Random(seed);
-
         int mapW = TerrainGenerator.DefaultWidth;
         int mapH = TerrainGenerator.DefaultHeight;
 
         // ═══ Generate terrain + rivers ═══
         var (terrain, riverPaths) = TerrainGenerator.GenerateWorld(mapW, mapH, seed);
 
-        // ═══ Find good city locations ═══
-        int totalCities = NumNations * CitiesPerNation + 10; // Extra buffer
+        // ═══ Find city locations ═══
+        int totalCities = NumNations * CitiesPerNation + 15;
         var citySpots = TerrainGenerator.FindCityLocations(terrain, riverPaths, mapW, mapH, seed, totalCities);
-
-        // ═══ Assign cities to nations via flood-fill from capitals ═══
-        // First N spots become capitals (they're the highest quality)
-        if (citySpots.Count < NumNations)
-        {
-            GD.Print("[WorldGen] Warning: Not enough city locations, reducing nations");
-        }
 
         var world = new WorldData
         {
@@ -90,20 +85,22 @@ public static class WorldGenerator
             MapHeight = mapH,
             TerrainMap = terrain,
             OwnershipMap = new int[mapW, mapH],
+            CityOwnershipMap = new int[mapW, mapH],
         };
 
-        // Init ownership to unclaimed
+        // Init maps to unclaimed
         for (int x = 0; x < mapW; x++)
             for (int y = 0; y < mapH; y++)
+            {
                 world.OwnershipMap[x, y] = -1;
+                world.CityOwnershipMap[x, y] = -1;
+            }
 
-        // ═══ Create nations at best city spots ═══
+        // ═══ Create nations ═══
         int nationCount = Math.Min(NumNations, citySpots.Count);
         var capitalSpots = citySpots.Take(nationCount).ToList();
         var remainingSpots = citySpots.Skip(nationCount).ToList();
-
-        // Player is the last nation (smallest/most isolated — the underdog)
-        int playerIndex = nationCount - 1;
+        int playerIndex = nationCount - 1; // Player = last (underdog)
 
         int nameIdx = rng.Next(NationRoots.Length);
         for (int n = 0; n < nationCount; n++)
@@ -111,53 +108,56 @@ public static class WorldGenerator
             bool isPlayer = (n == playerIndex);
             string root = NationRoots[(nameIdx + n) % NationRoots.Length];
             string prefix = NationPrefixes[rng.Next(NationPrefixes.Length)];
-            string nationName = isPlayer ? $"Free State of {root}" : $"{prefix} {root}";
 
-            var nation = new NationData
+            world.Nations.Add(new NationData
             {
                 Id = $"N_{n}",
-                Name = nationName,
-                Archetype = NationArchetype.FreeState, // Will be overwritten by geography analysis
+                Name = isPlayer ? $"Free State of {root}" : $"{prefix} {root}",
+                Archetype = NationArchetype.FreeState,
                 NationColor = NationColors[n % NationColors.Length],
                 IsPlayer = isPlayer,
                 CapitalX = capitalSpots[n].x,
                 CapitalY = capitalSpots[n].y,
-                // No lon/lat — this is a fantasy world, tile coords are primary
-                CapitalLon = 0, CapitalLat = 0,
                 Treasury = isPlayer ? 800f : 1500f + rng.Next(2000),
                 Prestige = isPlayer ? 30f : 40f + rng.Next(50),
-            };
-
-            world.Nations.Add(nation);
-
-            // Capital city
-            world.Cities.Add(new CityData
-            {
-                Id = $"C_{world.Cities.Count}",
-                NationId = nation.Id,
-                Name = root, // Capital shares nation name
-                TileX = capitalSpots[n].x,
-                TileY = capitalSpots[n].y,
-                IsCapital = true,
-                Size = 3,
             });
         }
 
         if (nationCount > 0)
             world.PlayerNationId = $"N_{playerIndex}";
 
-        // ═══ Assign remaining cities to nearest nation ═══
-        int citiesAssigned = 0;
-        var citiesPerNation = new int[nationCount]; // Track how many each nation has
+        // ═══ Create cities (capital + secondary) ═══
+        int cityIdx = 0;
+        for (int n = 0; n < nationCount; n++)
+        {
+            var nation = world.Nations[n];
+            string root = NationRoots[(nameIdx + n) % NationRoots.Length];
 
+            // Capital
+            world.Cities.Add(new CityData
+            {
+                Id = $"C_{cityIdx}",
+                NationId = nation.Id,
+                Name = root,
+                TileX = capitalSpots[n].x,
+                TileY = capitalSpots[n].y,
+                IsCapital = true,
+                Size = 3,
+                HP = 400,
+                CityIndex = cityIdx,
+            });
+            cityIdx++;
+        }
+
+        // Assign remaining cities to nearest nation
+        var citiesPerNation = new int[nationCount];
         foreach (var spot in remainingSpots)
         {
-            // Find nearest nation capital
             int nearestNation = -1;
             float nearestDist = float.MaxValue;
             for (int n = 0; n < nationCount; n++)
             {
-                if (citiesPerNation[n] >= CitiesPerNation - 1) continue; // Cap secondary cities
+                if (citiesPerNation[n] >= CitiesPerNation - 1) continue;
                 float dx = spot.x - capitalSpots[n].x;
                 float dy = spot.y - capitalSpots[n].y;
                 float dist = dx * dx + dy * dy;
@@ -169,34 +169,40 @@ public static class WorldGenerator
             }
             if (nearestNation < 0) continue;
 
-            string cityName = $"{CityPrefixes[rng.Next(CityPrefixes.Length)]} {CityNames[rng.Next(CityNames.Length)]}";
+            string cityName = $"{CityPrefixes[rng.Next(CityPrefixes.Length)]} {CitySuffixes[rng.Next(CitySuffixes.Length)]}";
+            int size = spot.quality > 5f ? 2 : 1;
             world.Cities.Add(new CityData
             {
-                Id = $"C_{world.Cities.Count}",
+                Id = $"C_{cityIdx}",
                 NationId = $"N_{nearestNation}",
                 Name = cityName,
                 TileX = spot.x,
                 TileY = spot.y,
                 IsCapital = false,
-                Size = spot.quality > 5f ? 2 : 1,
+                Size = size,
+                HP = size == 2 ? 200 : 100,
+                CityIndex = cityIdx,
             });
-
             citiesPerNation[nearestNation]++;
-            citiesAssigned++;
+            cityIdx++;
         }
 
-        // ═══ Territory assignment via flood-fill from all cities ═══
-        AssignTerritory(world, terrain, mapW, mapH);
+        // ═══ City-centric territory assignment ═══
+        AssignCityTerritory(world, terrain, mapW, mapH);
 
-        // ═══ Analyze geography to set nation traits ═══
+        // ═══ Derive nation ownership from city ownership ═══
+        DeriveNationOwnership(world, mapW, mapH);
+
+        // ═══ Pre-compute border polylines ═══
+        ComputeNationBorders(world, mapW, mapH);
+
+        // ═══ Analyze geography for nation traits ═══
         for (int n = 0; n < nationCount; n++)
         {
             var nation = world.Nations[n];
-            var profile = AnalyzeGeography(world, terrain, riverPaths, n, mapW, mapH);
+            var profile = AnalyzeGeography(world, terrain, n, mapW, mapH);
             nation.Archetype = profile.archetype;
             nation.ProvinceCount = profile.tileCount;
-
-            // Adjust starting stats based on geography
             if (!nation.IsPlayer)
             {
                 nation.Treasury = profile.baseTreasury;
@@ -204,7 +210,7 @@ public static class WorldGenerator
             }
         }
 
-        // ═══ Build river Vector2 paths for rendering ═══
+        // ═══ Build river paths for rendering ═══
         world.RiverPaths = new List<Vector2[]>();
         foreach (var rp in riverPaths)
         {
@@ -215,35 +221,73 @@ public static class WorldGenerator
                 world.RiverPaths.Add(points.ToArray());
         }
 
-        // ═══ Spawn military units at cities ═══
-        foreach (var city in world.Cities)
+        // ═══ Spawn armies ═══
+        for (int n = 0; n < nationCount; n++)
         {
-            int unitCount = city.IsCapital ? 3 : UnitsPerBase;
-            for (int u = 0; u < unitCount; u++)
+            var nation = world.Nations[n];
+            var nationCities = world.Cities.Where(c => c.NationId == nation.Id).ToList();
+            bool isPlayer = nation.IsPlayer;
+            int armyCount = isPlayer ? 3 : ArmiesPerNation;
+
+            for (int a = 0; a < armyCount && a < nationCities.Count; a++)
             {
-                float ox = (float)(rng.NextDouble() - 0.5) * 3f;
-                float oy = (float)(rng.NextDouble() - 0.5) * 3f;
-                float px = city.TileX * MapManagerConstants.TileSize + MapManagerConstants.TileSize / 2f + ox * MapManagerConstants.TileSize * 0.3f;
-                float py = city.TileY * MapManagerConstants.TileSize + MapManagerConstants.TileSize / 2f + oy * MapManagerConstants.TileSize * 0.3f;
-
+                var city = nationCities[a % nationCities.Count];
                 bool isCoastal = IsNearWater(terrain, city.TileX, city.TileY, mapW, mapH);
-                var unitType = (isCoastal && u == unitCount - 1) ? UnitType.Ship : UnitType.Tank;
+                string armyName = a < ArmyNames.Length ? ArmyNames[a] : $"Army {a + 1}";
 
-                world.Units.Add(new UnitData
+                var army = new ArmyData
                 {
-                    Id = $"{city.NationId}_U_{world.Units.Count}",
-                    NationId = city.NationId,
-                    Type = unitType,
-                    TileX = city.TileX + (int)ox,
-                    TileY = city.TileY + (int)oy,
-                    PixelX = px, PixelY = py,
-                    TargetPixelX = px, TargetPixelY = py,
+                    Id = $"{nation.Id}_A_{world.Armies.Count}",
+                    NationId = nation.Id,
+                    Name = armyName,
+                    TileX = city.TileX,
+                    TileY = city.TileY,
+                    TargetTileX = city.TileX,
+                    TargetTileY = city.TileY,
+                    PixelX = city.TileX * MapManagerConstants.TileSize + MapManagerConstants.TileSize / 2f,
+                    PixelY = city.TileY * MapManagerConstants.TileSize + MapManagerConstants.TileSize / 2f,
                     CurrentOrder = city.IsCapital ? MilitaryOrder.BorderWatch : MilitaryOrder.Standby,
-                });
+                    Formation = city.IsCapital ? FormationType.Circle : FormationType.Spread,
+                };
+                army.TargetPixelX = army.PixelX;
+                army.TargetPixelY = army.PixelY;
+
+                // Composition varies by nation strength and position
+                if (isPlayer)
+                {
+                    // Player starts small
+                    army.Composition[UnitType.Infantry] = 200 + rng.Next(100);
+                    army.Composition[UnitType.Tank] = 20 + rng.Next(20);
+                    army.Composition[UnitType.Artillery] = 10 + rng.Next(10);
+                    if (a == 0) army.Composition[UnitType.AntiAir] = 10;
+                }
+                else
+                {
+                    // AI nations are bigger
+                    army.Composition[UnitType.Infantry] = 500 + rng.Next(500);
+                    army.Composition[UnitType.Tank] = 50 + rng.Next(80);
+                    army.Composition[UnitType.Artillery] = 20 + rng.Next(30);
+                    army.Composition[UnitType.AntiAir] = 10 + rng.Next(20);
+                    if (a == 0) army.Composition[UnitType.Fighter] = 24 + rng.Next(24);
+                }
+
+                // Coastal cities get naval units
+                if (isCoastal && a > 0)
+                {
+                    army.Composition[UnitType.Destroyer] = 4 + rng.Next(8);
+                    if (!isPlayer) army.Composition[UnitType.Carrier] = rng.Next(2);
+                    army.Composition[UnitType.Submarine] = 2 + rng.Next(4);
+                }
+
+                // One army per nation gets a garrison assignment
+                if (a == 0)
+                    army.GarrisonCityId = city.Id;
+
+                world.Armies.Add(army);
             }
         }
 
-        // ═══ Spawn characters (VIPs) ═══
+        // ═══ Spawn characters ═══
         string[] roles = { "Head of State", "Defense Minister", "Foreign Minister",
                            "Director of Intelligence", "Chief of Staff",
                            "Finance Minister", "Interior Minister", "Opposition Leader" };
@@ -287,8 +331,8 @@ public static class WorldGenerator
                     Name = cName,
                     Role = role,
                     IsPlayer = isPlayer,
-                    TileX = capital.TileX + (i % 2),
-                    TileY = capital.TileY + (i / 2),
+                    TileX = capital.TileX + (i % 3),
+                    TileY = capital.TileY + (i / 3),
                     PixelX = px, PixelY = py,
                     TargetPixelX = px, TargetPixelY = py,
                     TerritoryAuthority = ta,
@@ -298,26 +342,24 @@ public static class WorldGenerator
             }
         }
 
-        GD.Print($"[WorldGen] Created world: {nationCount} nations, {world.Cities.Count} cities, {world.Units.Count} units, {world.RiverPaths.Count} rivers");
+        GD.Print($"[WorldGen] {nationCount} nations, {world.Cities.Count} cities, {world.Armies.Count} armies, {world.RiverPaths.Count} rivers");
         return world;
     }
 
-    // ═══ Territory flood-fill from cities ═══
-    private static void AssignTerritory(WorldData world, int[,] terrain, int w, int h)
+    // ═══ City-centric territory — each city controls a radius ═══
+    private static void AssignCityTerritory(WorldData world, int[,] terrain, int w, int h)
     {
-        // BFS from each city simultaneously — each tile goes to the nearest city's nation
         var dist = new float[w, h];
         for (int x = 0; x < w; x++)
             for (int y = 0; y < h; y++)
                 dist[x, y] = float.MaxValue;
 
-        var queue = new Queue<(int x, int y, int nationIdx)>();
+        var queue = new Queue<(int x, int y, int cityIdx)>();
         foreach (var city in world.Cities)
         {
-            int nIdx = int.Parse(city.NationId.Split('_')[1]);
-            queue.Enqueue((city.TileX, city.TileY, nIdx));
+            queue.Enqueue((city.TileX, city.TileY, city.CityIndex));
             dist[city.TileX, city.TileY] = 0;
-            world.OwnershipMap[city.TileX, city.TileY] = nIdx;
+            world.CityOwnershipMap![city.TileX, city.TileY] = city.CityIndex;
         }
 
         int[] dxs = { -1, 1, 0, 0 };
@@ -325,8 +367,12 @@ public static class WorldGenerator
 
         while (queue.Count > 0)
         {
-            var (cx, cy, nIdx) = queue.Dequeue();
+            var (cx, cy, cidx) = queue.Dequeue();
             float cd = dist[cx, cy];
+            var city = world.Cities[cidx];
+
+            // Don't expand beyond city's control radius
+            if (cd >= city.ControlRadius) continue;
 
             for (int d = 0; d < 4; d++)
             {
@@ -334,14 +380,14 @@ public static class WorldGenerator
                 if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
 
                 int t = terrain[nx, ny];
-                if (t <= (int)TerrainGenerator.Terrain.Water) continue; // Don't claim water
+                if (t <= (int)TerrainGenerator.Terrain.Water) continue;
 
-                // Movement cost varies by terrain
                 float cost = t switch
                 {
                     (int)TerrainGenerator.Terrain.Mountain => 4f,
                     (int)TerrainGenerator.Terrain.Hills => 2f,
                     (int)TerrainGenerator.Terrain.Forest => 1.5f,
+                    (int)TerrainGenerator.Terrain.Snow => 2.5f,
                     _ => 1f
                 };
 
@@ -349,30 +395,90 @@ public static class WorldGenerator
                 if (nd < dist[nx, ny])
                 {
                     dist[nx, ny] = nd;
-                    world.OwnershipMap[nx, ny] = nIdx;
-                    queue.Enqueue((nx, ny, nIdx));
+                    world.CityOwnershipMap![nx, ny] = cidx;
+                    queue.Enqueue((nx, ny, cidx));
                 }
             }
         }
     }
 
-    // ═══ Geography analysis — determines nation character ═══
-    private static (NationArchetype archetype, int tileCount, float baseTreasury, float basePrestige)
-        AnalyzeGeography(WorldData world, int[,] terrain, List<int[]> rivers, int nationIdx, int w, int h)
+    // ═══ Nation ownership derived from city ownership ═══
+    private static void DeriveNationOwnership(WorldData world, int w, int h)
     {
-        int tileCount = 0;
-        int coastalTiles = 0;
-        int mountainTiles = 0;
-        int forestTiles = 0;
-        int grassTiles = 0;
-        int riverTiles = 0;
-
-        // Count territory composition
         for (int x = 0; x < w; x++)
         {
             for (int y = 0; y < h; y++)
             {
-                if (world.OwnershipMap[x, y] != nationIdx) continue;
+                int cidx = world.CityOwnershipMap![x, y];
+                if (cidx < 0 || cidx >= world.Cities.Count)
+                {
+                    world.OwnershipMap![x, y] = -1;
+                    continue;
+                }
+                var city = world.Cities[cidx];
+                int nIdx = int.Parse(city.NationId.Split('_')[1]);
+                world.OwnershipMap![x, y] = nIdx;
+            }
+        }
+
+        // Update province counts
+        foreach (var nation in world.Nations)
+        {
+            int nIdx = int.Parse(nation.Id.Split('_')[1]);
+            int count = 0;
+            for (int x = 0; x < w; x++)
+                for (int y = 0; y < h; y++)
+                    if (world.OwnershipMap![x, y] == nIdx) count++;
+            nation.ProvinceCount = count;
+        }
+    }
+
+    // ═══ Pre-compute nation border segments as polylines ═══
+    public static void ComputeNationBorders(WorldData world, int w, int h)
+    {
+        world.NationBorderLines.Clear();
+
+        for (int nIdx = 0; nIdx < world.Nations.Count; nIdx++)
+        {
+            var segments = new List<Vector2[]>();
+
+            for (int x = 0; x < w; x++)
+            {
+                for (int y = 0; y < h; y++)
+                {
+                    if (world.OwnershipMap![x, y] != nIdx) continue;
+
+                    float px = x * MapManagerConstants.TileSize;
+                    float py = y * MapManagerConstants.TileSize;
+                    int ts = MapManagerConstants.TileSize;
+
+                    // Check each edge — if neighbor is different, record border segment
+                    if (y == 0 || world.OwnershipMap[x, y - 1] != nIdx)
+                        segments.Add(new[] { new Vector2(px, py), new Vector2(px + ts, py) });
+                    if (y == h - 1 || world.OwnershipMap[x, y + 1] != nIdx)
+                        segments.Add(new[] { new Vector2(px, py + ts), new Vector2(px + ts, py + ts) });
+                    if (x == 0 || world.OwnershipMap[x - 1, y] != nIdx)
+                        segments.Add(new[] { new Vector2(px, py), new Vector2(px, py + ts) });
+                    if (x == w - 1 || world.OwnershipMap[x + 1, y] != nIdx)
+                        segments.Add(new[] { new Vector2(px + ts, py), new Vector2(px + ts, py + ts) });
+                }
+            }
+
+            world.NationBorderLines[nIdx] = segments;
+        }
+    }
+
+    // ═══ Geography analysis ═══
+    private static (NationArchetype archetype, int tileCount, float baseTreasury, float basePrestige)
+        AnalyzeGeography(WorldData world, int[,] terrain, int nationIdx, int w, int h)
+    {
+        int tileCount = 0, coastalTiles = 0, mountainTiles = 0, forestTiles = 0, grassTiles = 0;
+
+        for (int x = 0; x < w; x++)
+        {
+            for (int y = 0; y < h; y++)
+            {
+                if (world.OwnershipMap![x, y] != nationIdx) continue;
                 tileCount++;
 
                 int t = terrain[x, y];
@@ -380,28 +486,14 @@ public static class WorldGenerator
                 if (t == (int)TerrainGenerator.Terrain.Forest) forestTiles++;
                 if (t == (int)TerrainGenerator.Terrain.Grass) grassTiles++;
 
-                // Check coastal
-                bool nearWater = false;
-                if (x > 0 && terrain[x - 1, y] <= 1) nearWater = true;
-                if (x < w - 1 && terrain[x + 1, y] <= 1) nearWater = true;
-                if (y > 0 && terrain[x, y - 1] <= 1) nearWater = true;
-                if (y < h - 1 && terrain[x, y + 1] <= 1) nearWater = true;
-                if (nearWater) coastalTiles++;
+                if (x > 0 && terrain[x - 1, y] <= 1 ||
+                    x < w - 1 && terrain[x + 1, y] <= 1 ||
+                    y > 0 && terrain[x, y - 1] <= 1 ||
+                    y < h - 1 && terrain[x, y + 1] <= 1)
+                    coastalTiles++;
             }
         }
 
-        // River influence
-        var riverSet = new HashSet<long>();
-        foreach (var rp in rivers)
-            for (int i = 0; i < rp.Length - 1; i += 2)
-                riverSet.Add((long)rp[i] * h + rp[i + 1]);
-
-        for (int x = 0; x < w; x++)
-            for (int y = 0; y < h; y++)
-                if (world.OwnershipMap[x, y] == nationIdx && riverSet.Contains((long)x * h + y))
-                    riverTiles++;
-
-        // Determine archetype from geography ratios
         if (tileCount == 0) tileCount = 1;
         float coastRatio = coastalTiles / (float)tileCount;
         float mountRatio = mountainTiles / (float)tileCount;
@@ -410,34 +502,34 @@ public static class WorldGenerator
         NationArchetype archetype;
         float treasury, prestige;
 
-        if (coastRatio > 0.15f && riverTiles > 3)
+        if (coastRatio > 0.12f)
         {
-            archetype = NationArchetype.Commercial; // Trade power
-            treasury = 3500f + coastalTiles * 30f;
+            archetype = NationArchetype.Commercial;
+            treasury = 3500f + coastalTiles * 10f;
             prestige = 60f;
         }
-        else if (mountRatio > 0.12f)
+        else if (mountRatio > 0.10f)
         {
-            archetype = NationArchetype.Traditionalist; // Fortress nation
+            archetype = NationArchetype.Traditionalist;
             treasury = 2500f;
-            prestige = 50f + mountainTiles * 5f;
+            prestige = 50f + mountainTiles * 2f;
         }
-        else if (grassRatio > 0.4f && tileCount > 300)
+        else if (grassRatio > 0.35f && tileCount > 2000)
         {
-            archetype = NationArchetype.Hegemon; // Wide open, expansionist
-            treasury = 4000f + tileCount * 5f;
+            archetype = NationArchetype.Hegemon;
+            treasury = 4000f + tileCount;
             prestige = 80f;
         }
-        else if (tileCount < 200)
+        else if (tileCount < 1500)
         {
-            archetype = NationArchetype.Survival; // Small, desperate
+            archetype = NationArchetype.Survival;
             treasury = 1200f;
             prestige = 25f;
         }
         else
         {
-            archetype = NationArchetype.Revolutionary; // Ideologically driven
-            treasury = 2000f + forestTiles * 10f;
+            archetype = NationArchetype.Revolutionary;
+            treasury = 2000f + forestTiles * 3f;
             prestige = 40f;
         }
 
@@ -446,8 +538,8 @@ public static class WorldGenerator
 
     private static bool IsNearWater(int[,] terrain, int x, int y, int w, int h)
     {
-        for (int dx = -3; dx <= 3; dx++)
-            for (int dy = -3; dy <= 3; dy++)
+        for (int dx = -4; dx <= 4; dx++)
+            for (int dy = -4; dy <= 4; dy++)
             {
                 int nx = x + dx, ny = y + dy;
                 if (nx >= 0 && nx < w && ny >= 0 && ny < h && terrain[nx, ny] <= 1)
@@ -457,10 +549,8 @@ public static class WorldGenerator
     }
 }
 
-/// <summary>
-/// Shared constants for the tile-based map system.
-/// </summary>
+/// <summary>Shared tile size constant.</summary>
 public static class MapManagerConstants
 {
-    public const int TileSize = 64;
+    public const int TileSize = 32; // 32px tiles for the 600x360 world
 }

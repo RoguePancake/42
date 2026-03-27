@@ -11,7 +11,7 @@ public partial class MapCamera : Camera2D
 {
     // Zoom settings
     private float _targetZoom = 1.0f;
-    private const float ZoomMin = 0.15f;
+    private const float ZoomMin = 0.06f;
     private const float ZoomMax = 4.0f;
     private const float ZoomSpeed = 0.15f;
     private const float ZoomSmoothing = 8.0f;
@@ -43,8 +43,8 @@ public partial class MapCamera : Camera2D
         // Center camera on map
         Position = new Vector2(_mapWidth / 2f, _mapHeight / 2f);
         
-        // Start completely zoomed out so the player sees the full map
-        _targetZoom = 0.25f; 
+        // Start zoomed out to see the full 600x360 world
+        _targetZoom = 0.12f;
         Zoom = new Vector2(_targetZoom, _targetZoom);
 
         GD.Print("[MapCamera] Ready — WASD/arrows to pan, scroll to zoom, middle-click drag");

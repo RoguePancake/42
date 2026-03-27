@@ -5,7 +5,7 @@ namespace Warship.World;
 
 /// <summary>
 /// Generates a procedural fantasy world with continents, oceans, mountain ranges,
-/// rivers, and biomes. Minecraft-minimap aesthetic but with strategic depth.
+/// rivers, and biomes. 600x360 tile world — massive scale for real army movement.
 /// Pure C# — no Godot dependency.
 /// </summary>
 public static class TerrainGenerator
@@ -22,9 +22,9 @@ public static class TerrainGenerator
         Snow = 7
     }
 
-    // Default world size — big enough for interesting geography
-    public const int DefaultWidth = 200;
-    public const int DefaultHeight = 120;
+    // 600x360 tiles at 32px = 19,200 x 11,520 pixel world
+    public const int DefaultWidth = 600;
+    public const int DefaultHeight = 360;
 
     /// <summary>
     /// Generate a full world: terrain grid + river paths.
@@ -48,17 +48,14 @@ public static class TerrainGenerator
         var temperature = new float[width, height];
 
         // ═══ Step 1: Base elevation with continent blobs ═══
-        // Use multiple noise octaves + continent seeds for landmass shaping
-        int continentSeed = seed;
-        int numContinents = 4 + HashInt(seed, 0) % 3; // 4-6 continents
+        int numContinents = 5 + HashInt(seed, 0) % 3; // 5-7 continents for the bigger map
 
-        // Pre-compute continent centers
         var continentCenters = new (float cx, float cy, float radius)[numContinents];
         for (int i = 0; i < numContinents; i++)
         {
             float cx = HashFloat(seed, i * 3 + 100) * (width * 0.7f) + width * 0.15f;
             float cy = HashFloat(seed, i * 3 + 101) * (height * 0.6f) + height * 0.2f;
-            float radius = 18f + HashFloat(seed, i * 3 + 102) * 28f; // 18-46 tile radius
+            float radius = 50f + HashFloat(seed, i * 3 + 102) * 90f; // 50-140 tile radius (3x scale)
             continentCenters[i] = (cx, cy, radius);
         }
 
@@ -66,63 +63,61 @@ public static class TerrainGenerator
         {
             for (int y = 0; y < height; y++)
             {
-                // Base noise elevation
-                float elev = FBM(x * 0.025f, y * 0.025f, seed, 6);
+                // Base noise elevation — frequency scaled for 3x map
+                float elev = FBM(x * 0.008f, y * 0.008f, seed, 6);
 
-                // Continent influence — raise land near continent centers
+                // Continent influence
                 float continentBoost = 0f;
                 for (int c = 0; c < numContinents; c++)
                 {
-                    var (cx, cy, radius) = continentCenters[c];
-                    float dx = x - cx;
-                    float dy = y - cy;
+                    var (ccx, ccy, radius) = continentCenters[c];
+                    float dx = x - ccx;
+                    float dy = y - ccy;
 
                     // Warped distance for organic shapes
-                    float warp = FBM(x * 0.06f + c * 50, y * 0.06f + c * 50, seed + 10 + c, 3) * 12f;
+                    float warp = FBM(x * 0.02f + c * 50, y * 0.02f + c * 50, seed + 10 + c, 3) * 35f;
                     float dist = MathF.Sqrt(dx * dx + dy * dy) + warp;
                     float influence = Math.Clamp(1f - dist / radius, 0f, 1f);
-                    influence = influence * influence; // Sharper falloff
+                    influence = influence * influence;
                     continentBoost = Math.Max(continentBoost, influence * 0.55f);
                 }
 
                 elev = elev * 0.45f + continentBoost;
 
                 // Edge falloff — ocean at map borders
-                float edgeX = Math.Min(x, width - 1 - x) / (width * 0.08f);
-                float edgeY = Math.Min(y, height - 1 - y) / (height * 0.08f);
+                float edgeX = Math.Min(x, width - 1 - x) / (width * 0.06f);
+                float edgeY = Math.Min(y, height - 1 - y) / (height * 0.06f);
                 float edge = Math.Clamp(Math.Min(edgeX, edgeY), 0f, 1f);
                 elev *= edge;
 
                 elevation[x, y] = elev;
 
-                // ═══ Step 2: Moisture (rain shadow from mountains, distance from coast) ═══
-                float moist = FBM(x * 0.035f + 200f, y * 0.035f + 200f, seed + 1, 4);
+                // ═══ Step 2: Moisture ═══
+                float moist = FBM(x * 0.012f + 200f, y * 0.012f + 200f, seed + 1, 4);
                 moisture[x, y] = moist;
 
-                // ═══ Step 3: Temperature (latitude + elevation based) ═══
-                float latFactor = 1f - Math.Abs(y - height / 2f) / (height / 2f); // 1 at equator, 0 at poles
+                // ═══ Step 3: Temperature (latitude based) ═══
+                float latFactor = 1f - Math.Abs(y - height / 2f) / (height / 2f);
                 temperature[x, y] = latFactor;
             }
         }
 
         // ═══ Step 4: Mountain spine generation ═══
-        // Create mountain ranges along tectonic-like lines
-        int numRanges = 3 + HashInt(seed, 50) % 3;
+        int numRanges = 5 + HashInt(seed, 50) % 4; // 5-8 mountain ranges
         for (int r = 0; r < numRanges; r++)
         {
             float startX = HashFloat(seed, r * 5 + 200) * width;
             float startY = HashFloat(seed, r * 5 + 201) * height;
             float angle = HashFloat(seed, r * 5 + 202) * MathF.PI * 2f;
-            int length = 30 + (int)(HashFloat(seed, r * 5 + 203) * 60f);
-            float rangeWidth = 3f + HashFloat(seed, r * 5 + 204) * 5f;
+            int length = 80 + (int)(HashFloat(seed, r * 5 + 203) * 160f); // 3x longer
+            float rangeWidth = 4f + HashFloat(seed, r * 5 + 204) * 8f;   // Wider ranges
 
             float px = startX, py = startY;
             for (int step = 0; step < length; step++)
             {
-                // Wander the angle slightly each step
-                angle += (FBM(px * 0.1f, py * 0.1f, seed + 100 + r, 2) - 0.5f) * 0.6f;
-                px += MathF.Cos(angle) * 2f;
-                py += MathF.Sin(angle) * 2f;
+                angle += (FBM(px * 0.03f, py * 0.03f, seed + 100 + r, 2) - 0.5f) * 0.5f;
+                px += MathF.Cos(angle) * 2.5f;
+                py += MathF.Sin(angle) * 2.5f;
 
                 int ix = (int)px, iy = (int)py;
                 int rangeW = (int)rangeWidth;
@@ -141,7 +136,7 @@ public static class TerrainGenerator
             }
         }
 
-        // ═══ Step 5: Classify terrain from elevation + moisture + temperature ═══
+        // ═══ Step 5: Classify terrain ═══
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
@@ -159,9 +154,8 @@ public static class TerrainGenerator
                     t = Terrain.Sand;
                 else if (elev < 0.55f)
                 {
-                    // Biome selection: temp + moisture
                     if (temp < 0.2f)
-                        t = moist > 0.45f ? Terrain.Snow : Terrain.Hills; // Cold
+                        t = moist > 0.45f ? Terrain.Snow : Terrain.Hills;
                     else if (moist > 0.55f)
                         t = Terrain.Forest;
                     else if (moist < 0.35f && temp > 0.6f)
@@ -180,7 +174,7 @@ public static class TerrainGenerator
             }
         }
 
-        // ═══ Step 6: Polish — add coastal sand strips ═══
+        // ═══ Step 6: Polish — coastal sand strips ═══
         var copy = (int[,])map.Clone();
         for (int x = 1; x < width - 1; x++)
         {
@@ -201,20 +195,18 @@ public static class TerrainGenerator
 
     /// <summary>
     /// Generate rivers that flow from mountains/hills downhill to the sea.
-    /// Returns list of paths, each path is an array of [x, y] pairs.
     /// </summary>
     public static List<int[]> GenerateRivers(int[,] terrain, int width, int height, int seed)
     {
         var rivers = new List<int[]>();
-        int numRivers = 6 + HashInt(seed, 300) % 6; // 6-11 rivers
+        int numRivers = 15 + HashInt(seed, 300) % 10; // 15-24 rivers for bigger map
 
         for (int r = 0; r < numRivers; r++)
         {
-            // Find a mountain or hill tile to start from
             int attempts = 0;
             int sx = 0, sy = 0;
             bool found = false;
-            while (attempts < 200)
+            while (attempts < 400)
             {
                 sx = (int)(HashFloat(seed, r * 100 + attempts + 400) * width);
                 sy = (int)(HashFloat(seed, r * 100 + attempts + 401) * height);
@@ -230,11 +222,10 @@ public static class TerrainGenerator
             }
             if (!found) continue;
 
-            // Flow downhill toward water
             var path = new List<int>();
             int cx = sx, cy = sy;
             var visited = new HashSet<long>();
-            int maxSteps = 150;
+            int maxSteps = 400; // Longer rivers for bigger map
 
             for (int step = 0; step < maxSteps; step++)
             {
@@ -245,10 +236,8 @@ public static class TerrainGenerator
                 if (visited.Contains(key)) break;
                 visited.Add(key);
 
-                // Reached water — done
                 if (terrain[cx, cy] <= (int)Terrain.Water && step > 2) break;
 
-                // Find lowest neighbor (with some randomness for meandering)
                 int bestX = cx, bestY = cy;
                 int bestElev = TerrainElevationRank(terrain[cx, cy]);
 
@@ -259,7 +248,6 @@ public static class TerrainGenerator
                     int nx = cx + dxs[d], ny = cy + dys[d];
                     if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
                     int nElev = TerrainElevationRank(terrain[nx, ny]);
-                    // Add slight randomness for meandering
                     float jitter = (HashFloat(seed, step * 100 + d + r * 1000) - 0.5f) * 2f;
                     if (nElev + jitter < bestElev)
                     {
@@ -269,12 +257,12 @@ public static class TerrainGenerator
                     }
                 }
 
-                if (bestX == cx && bestY == cy) break; // Stuck in local minimum
+                if (bestX == cx && bestY == cy) break;
                 cx = bestX;
                 cy = bestY;
             }
 
-            if (path.Count >= 8) // At least 4 points
+            if (path.Count >= 12) // At least 6 points
                 rivers.Add(path.ToArray());
         }
 
@@ -282,16 +270,14 @@ public static class TerrainGenerator
     }
 
     /// <summary>
-    /// Find valid locations for cities. Returns list of (x, y, quality) tuples.
-    /// Quality is higher for river-adjacent, coastal, or fertile land.
+    /// Find valid locations for cities with minimum spacing.
     /// </summary>
     public static List<(int x, int y, float quality)> FindCityLocations(
         int[,] terrain, List<int[]> rivers, int width, int height, int seed, int count)
     {
-        // Build a desirability map
         var desirability = new float[width, height];
 
-        // River adjacency bonus
+        // River tile set for adjacency bonus
         var riverTiles = new HashSet<long>();
         foreach (var river in rivers)
         {
@@ -302,37 +288,36 @@ public static class TerrainGenerator
             }
         }
 
-        for (int x = 2; x < width - 2; x++)
+        for (int x = 3; x < width - 3; x++)
         {
-            for (int y = 2; y < height - 2; y++)
+            for (int y = 3; y < height - 3; y++)
             {
                 int t = terrain[x, y];
                 if (t <= (int)Terrain.Water || t >= (int)Terrain.Mountain)
-                    continue; // Can't build on water or mountains
+                    continue;
 
                 float score = 0f;
 
-                // Land type bonus
                 if (t == (int)Terrain.Grass) score += 3f;
                 else if (t == (int)Terrain.Forest) score += 1.5f;
                 else if (t == (int)Terrain.Hills) score += 1f;
                 else if (t == (int)Terrain.Sand) score += 0.5f;
 
-                // River adjacency — huge bonus
-                for (int dx = -2; dx <= 2; dx++)
+                // River adjacency
+                for (int dx = -3; dx <= 3; dx++)
                 {
-                    for (int dy = -2; dy <= 2; dy++)
+                    for (int dy = -3; dy <= 3; dy++)
                     {
                         if (riverTiles.Contains((long)(x + dx) * height + (y + dy)))
-                            score += 2f;
+                            score += 1.5f;
                     }
                 }
 
-                // Coastal bonus (near water but on land)
+                // Coastal bonus
                 bool coastal = false;
-                for (int dx = -2; dx <= 2; dx++)
+                for (int dx = -3; dx <= 3; dx++)
                 {
-                    for (int dy = -2; dy <= 2; dy++)
+                    for (int dy = -3; dy <= 3; dy++)
                     {
                         int nx = x + dx, ny = y + dy;
                         if (nx >= 0 && nx < width && ny >= 0 && ny < height &&
@@ -346,26 +331,22 @@ public static class TerrainGenerator
                 }
                 if (coastal) score += 2.5f;
 
-                // Slight randomness
                 score += HashFloat(seed, x * 1000 + y + 5000) * 1.5f;
-
                 desirability[x, y] = score;
             }
         }
 
-        // Pick top locations with minimum spacing
         var locations = new List<(int x, int y, float quality)>();
-        int minSpacing = 12; // Minimum tiles between cities
+        int minSpacing = 30; // Much wider spacing for big map
 
-        for (int i = 0; i < count * 3 && locations.Count < count; i++)
+        for (int i = 0; i < count * 4 && locations.Count < count; i++)
         {
-            // Find the highest unoccupied desirability
             float bestScore = 0f;
             int bestX = -1, bestY = -1;
 
-            for (int x = 2; x < width - 2; x++)
+            for (int x = 3; x < width - 3; x++)
             {
-                for (int y = 2; y < height - 2; y++)
+                for (int y = 3; y < height - 3; y++)
                 {
                     if (desirability[x, y] > bestScore)
                     {
@@ -377,10 +358,8 @@ public static class TerrainGenerator
             }
 
             if (bestX < 0) break;
-
             locations.Add((bestX, bestY, bestScore));
 
-            // Zero out area around this city so next pick is spaced out
             for (int dx = -minSpacing; dx <= minSpacing; dx++)
             {
                 for (int dy = -minSpacing; dy <= minSpacing; dy++)
@@ -398,26 +377,14 @@ public static class TerrainGenerator
     // ═══ Elevation ranking for river flow ═══
     private static int TerrainElevationRank(int terrain) => terrain switch
     {
-        0 => 0,  // DeepWater
-        1 => 1,  // Water
-        2 => 2,  // Sand
-        3 => 3,  // Grass
-        4 => 4,  // Forest
-        5 => 5,  // Hills
-        6 => 7,  // Mountain
-        7 => 8,  // Snow
-        _ => 3
+        0 => 0, 1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5, 6 => 7, 7 => 8, _ => 3
     };
 
     // ═══ Noise Functions ═══
 
     private static float FBM(float x, float y, int seed, int octaves)
     {
-        float total = 0f;
-        float amplitude = 1f;
-        float frequency = 1f;
-        float maxValue = 0f;
-
+        float total = 0f, amplitude = 1f, frequency = 1f, maxValue = 0f;
         for (int i = 0; i < octaves; i++)
         {
             total += ValueNoise(x * frequency, y * frequency, seed + i) * amplitude;
@@ -425,17 +392,13 @@ public static class TerrainGenerator
             amplitude *= 0.5f;
             frequency *= 2f;
         }
-
         return total / maxValue;
     }
 
     private static float ValueNoise(float x, float y, int seed)
     {
-        int ix = (int)MathF.Floor(x);
-        int iy = (int)MathF.Floor(y);
-        float fx = x - ix;
-        float fy = y - iy;
-
+        int ix = (int)MathF.Floor(x), iy = (int)MathF.Floor(y);
+        float fx = x - ix, fy = y - iy;
         fx = fx * fx * (3f - 2f * fx);
         fy = fy * fy * (3f - 2f * fy);
 
@@ -459,15 +422,14 @@ public static class TerrainGenerator
         return (h & 0x7FFFFFFF) / (float)0x7FFFFFFF;
     }
 
-    // Deterministic hash helpers
-    private static int HashInt(int seed, int index)
+    public static int HashInt(int seed, int index)
     {
         int h = seed ^ (index * 374761393);
         h = (h ^ (h >> 13)) * 1274126177;
         return Math.Abs(h ^ (h >> 16));
     }
 
-    private static float HashFloat(int seed, int index)
+    public static float HashFloat(int seed, int index)
     {
         return (HashInt(seed, index) & 0x7FFFFFFF) / (float)0x7FFFFFFF;
     }

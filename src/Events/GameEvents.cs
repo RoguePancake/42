@@ -37,4 +37,16 @@ public record HotZonePinEvent(int SlotIndex, int CenterTileX, int CenterTileY, s
 public record HotZoneClearEvent(int SlotIndex) : IGameEvent; // Clear a hot zone slot
 
 // Player Actions (UI -> Engines)
-public record PlayerActionEvent(string Category, string Action) : IGameEvent; // "diplomatic/propose_alliance", "military/attack", etc.
+public record PlayerActionEvent(string Category, string Action) : IGameEvent;
+
+// Army System
+public record ArmyMoveRequested(string ArmyId, int TargetX, int TargetY) : IGameEvent;
+public record ArmyMovedEvent(string ArmyId, int FromX, int FromY, int ToX, int ToY) : IGameEvent;
+public record ArmyCreatedEvent(string ArmyId, string NationId) : IGameEvent;
+public record ArmyDestroyedEvent(string ArmyId, string NationId) : IGameEvent;
+
+// Territory / City Capture
+public record CityCapturedEvent(string CityId, string OldNationId, string NewNationId) : IGameEvent;
+public record TerritoryChangedEvent(string CityId, string OldNationId, string NewNationId) : IGameEvent;
+public record BattleResolvedEvent(string AttackerArmyId, string DefenderArmyId, bool AttackerWon,
+    int AttackerLosses, int DefenderLosses) : IGameEvent;
