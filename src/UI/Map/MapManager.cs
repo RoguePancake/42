@@ -15,10 +15,9 @@ namespace Warship.UI.Map;
 /// </summary>
 public partial class MapManager : Node2D
 {
-    public const int TileSize = 64;  // Doubled from 32 for HD feel
-    public const int MapWidth = 80;
-    public const int MapHeight = 50;
-    public const int Seed = 42;
+    public const int TileSize = MapManagerConstants.TileSize;
+    public int MapWidth => _world?.MapWidth ?? TerrainGenerator.DefaultWidth;
+    public int MapHeight => _world?.MapHeight ?? TerrainGenerator.DefaultHeight;
 
     private WorldData? _world;
     private Texture2D[] _terrainTextures = new Texture2D[8];
@@ -176,12 +175,13 @@ public partial class MapManager : Node2D
     /// </summary>
     private void GenerateHDTextures()
     {
+        int seed = _world?.Seed ?? 42;
         var noise = new FastNoiseLite();
-        noise.Seed = Seed;
+        noise.Seed = seed;
         noise.NoiseType = FastNoiseLite.NoiseTypeEnum.Perlin;
-        
+
         var detailsNoise = new FastNoiseLite();
-        detailsNoise.Seed = Seed + 1;
+        detailsNoise.Seed = seed + 1;
         detailsNoise.NoiseType = FastNoiseLite.NoiseTypeEnum.Cellular;
         detailsNoise.CellularDistanceFunction = FastNoiseLite.CellularDistanceFunctionEnum.Euclidean;
 
@@ -403,7 +403,7 @@ public partial class MapManager : Node2D
         var playerNation = _world.Nations[pIdx];
         if (playerNation.CommandTargetX >= 0)
         {
-            Vector2 markerPos = new Vector2(playerNation.CommandTargetX * 64 + 32, playerNation.CommandTargetY * 64 + 32);
+            Vector2 markerPos = new Vector2(playerNation.CommandTargetX * TileSize + TileSize / 2, playerNation.CommandTargetY * TileSize + TileSize / 2);
             if (playerNation.GlobalMilitaryOrder == MilitaryOrder.Attack)
             {
                 // Red crosshair
@@ -452,7 +452,7 @@ public partial class MapManager : Node2D
     /// <summary>Get terrain type at a tile coordinate.</summary>
     public int GetTerrain(int x, int y)
     {
-        if (_world == null || _world.TerrainMap == null || x < 0 || x >= MapWidth || y < 0 || y >= MapHeight)
+        if (_world == null || _world.TerrainMap == null || x < 0 || x >= _world.MapWidth || y < 0 || y >= _world.MapHeight)
             return 0;
         return _world.TerrainMap[x, y];
     }

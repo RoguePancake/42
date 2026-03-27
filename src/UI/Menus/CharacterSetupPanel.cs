@@ -6,14 +6,11 @@ namespace Warship.UI.Menus;
 
 public partial class CharacterSetupPanel : Control
 {
-    private OptionButton _nationDropdown = null!;
     private OptionButton _roleDropdown = null!;
     private LineEdit _nameInput = null!;
     private OptionButton _focusDropdown = null!;
     private Button _startButton = null!;
 
-    private string[] _nations = { "United States", "China", "Russia", "European Union", "India", "United Kingdom" };
-    
     private string[] _roles = {
         "Head of State",
         "Defense Minister",
@@ -77,14 +74,6 @@ public partial class CharacterSetupPanel : Control
 
         vbox.AddChild(new HSeparator());
 
-        // Target Nation
-        vbox.AddChild(new Label { Text = "Select Nation:" });
-        _nationDropdown = new OptionButton();
-        foreach (var n in _nations) _nationDropdown.AddItem(n);
-        // Default to UK (FreeState)
-        _nationDropdown.Selected = 5;
-        vbox.AddChild(_nationDropdown);
-
         // Role
         vbox.AddChild(new Label { Text = "Select Role:" });
         _roleDropdown = new OptionButton();
@@ -116,13 +105,12 @@ public partial class CharacterSetupPanel : Control
 
     private void OnStartPressed()
     {
-        string selectedNation = _nations[_nationDropdown.Selected];
         string selectedRole = _roles[_roleDropdown.Selected];
         string playerName = string.IsNullOrWhiteSpace(_nameInput.Text) ? "Unknown Official" : _nameInput.Text;
         int focusIndex = _focusDropdown.Selected;
 
-        // Pass this config to WorldStateManager
-        WorldStateManager.Instance?.InitializeWorld(selectedNation, selectedRole, playerName, focusIndex);
+        // Pass this config to WorldStateManager — nation is procedurally generated
+        WorldStateManager.Instance?.InitializeWorld(selectedRole, playerName, focusIndex);
         
         // Hide self
         QueueFree();

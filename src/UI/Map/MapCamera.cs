@@ -1,4 +1,5 @@
 using Godot;
+using Warship.World;
 
 namespace Warship.UI.Map;
 
@@ -36,8 +37,8 @@ public partial class MapCamera : Camera2D
 
     public override void _Ready()
     {
-        _mapWidth = MapManager.MapWidth * MapManager.TileSize;
-        _mapHeight = MapManager.MapHeight * MapManager.TileSize;
+        _mapWidth = TerrainGenerator.DefaultWidth * MapManagerConstants.TileSize;
+        _mapHeight = TerrainGenerator.DefaultHeight * MapManagerConstants.TileSize;
 
         // Center camera on map
         Position = new Vector2(_mapWidth / 2f, _mapHeight / 2f);

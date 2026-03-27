@@ -33,10 +33,10 @@ public partial class WorldStateManager : Node
         EventBus.Instance!.Subscribe<UnitMoveRequested>(OnUnitMoveRequested);
     }
 
-    public void InitializeWorld(string playerNationName, string playerRole, string playerName, int focusIndex)
+    public void InitializeWorld(string playerRole, string playerName, int focusIndex)
     {
-        GD.Print($"[WorldStateManager] Creating the Universe for {playerName} ({playerRole} of {playerNationName})...");
-        Data = WorldGenerator.CreateWorld(42, playerNationName, playerRole, playerName, focusIndex);
+        GD.Print($"[WorldStateManager] Generating world for {playerName} ({playerRole})...");
+        Data = WorldGenerator.CreateWorld(42, playerName, playerRole, focusIndex);
         
         // Notify the rest of the game that the world is ready
         EventBus.Instance!.Publish(new WorldReadyEvent(42, Data.PlayerNationId ?? ""));
