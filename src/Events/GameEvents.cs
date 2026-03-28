@@ -55,6 +55,10 @@ public record BattleResolvedEvent(string AttackerArmyId, string DefenderArmyId, 
 public record SimSpeedChangedEvent(float Speed) : IGameEvent;
 public record SimPausedEvent(bool IsPaused) : IGameEvent;
 
+// Custom Nation Placement
+public record CustomNationPlacementModeEvent(bool Active) : IGameEvent; // UI enters/exits capital placement mode
+public record CustomNationCapitalPlacedEvent(int TileX, int TileY) : IGameEvent; // Player clicked map to place capital
+
 // Interrupt System ("The Phone Rings")
 public record InterruptTriggeredEvent(string Id, string Title, string Description,
     float TimerSeconds, Warship.Data.InterruptChoice[] Choices, int DefaultChoiceIndex,
