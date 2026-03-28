@@ -347,6 +347,34 @@ public class UnitData
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  INTERRUPTS — "The Phone Rings" timed decision system
+// ═══════════════════════════════════════════════════════════════
+
+public enum InterruptPriority
+{
+    Routine,    // Blue border, no pause, 60-90s
+    Urgent,     // Orange border, no pause, 30-45s
+    Critical    // Red border, auto-pauses sim, 10-20s
+}
+
+public class InterruptChoice
+{
+    public string Label = "";
+    public string EffectDescription = "";
+}
+
+public class InterruptData
+{
+    public string Id = "";
+    public string Title = "";
+    public string Description = "";
+    public InterruptPriority Priority;
+    public float TimerSeconds;
+    public InterruptChoice[] Choices = System.Array.Empty<InterruptChoice>();
+    public int DefaultChoiceIndex;  // applied on timeout
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  CHARACTERS — VIPs on the map
 // ═══════════════════════════════════════════════════════════════
 

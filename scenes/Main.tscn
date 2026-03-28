@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://main_scene"]
+[gd_scene load_steps=12 format=3 uid="uid://main_scene"]
 
 [ext_resource type="Script" path="res://src/Core/EventBus.cs" id="1"]
 [ext_resource type="Script" path="res://src/Core/WorldStateManager.cs" id="2"]
@@ -7,13 +7,14 @@
 [ext_resource type="Script" path="res://src/UI/Map/WarshipMapBridge.cs" id="4"]
 [ext_resource type="Script" path="res://src/UI/HUD/TopBar.cs" id="5"]
 [ext_resource type="Script" path="res://src/UI/HUD/DossierPanel.cs" id="6"]
-[ext_resource type="Script" path="res://src/UI/HUD/EndTurnButton.cs" id="7"]
+[ext_resource type="Script" path="res://src/UI/HUD/SpeedControlBar.cs" id="7"]
+[ext_resource type="Script" path="res://src/Core/SimulationClock.cs" id="27"]
 [ext_resource type="Script" path="res://src/UI/HUD/NotificationManager.cs" id="9"]
 [ext_resource type="Script" path="res://src/Engines/AIEngine.cs" id="10"]
 [ext_resource type="Script" path="res://src/Engines/MilitaryEngine.cs" id="11"]
 [ext_resource type="Script" path="res://src/UI/HUD/MilitaryCommandPanel.cs" id="12"]
-[ext_resource type="Script" path="res://src/Engines/CrisisEngine.cs" id="13"]
-[ext_resource type="Script" path="res://src/UI/HUD/CrisisPanel.cs" id="14"]
+[ext_resource type="Script" path="res://src/Engines/InterruptEngine.cs" id="13"]
+[ext_resource type="Script" path="res://src/UI/Panels/InterruptPanel.cs" id="14"]
 [ext_resource type="Script" path="res://src/Engines/VictoryEngine.cs" id="15"]
 [ext_resource type="Script" path="res://src/UI/HUD/VictoryPanel.cs" id="16"]
 [ext_resource type="Script" path="res://src/UI/HUD/NewsTicker.cs" id="17"]
@@ -36,6 +37,9 @@ script = ExtResource("2")
 [node name="RuntimeBridge" type="Node" parent="."]
 script = ExtResource("22")
 
+[node name="SimulationClock" type="Node" parent="."]
+script = ExtResource("27")
+
 [node name="PoliticalEngine" type="Node" parent="."]
 script = ExtResource("8")
 
@@ -45,7 +49,7 @@ script = ExtResource("10")
 [node name="MilitaryEngine" type="Node" parent="."]
 script = ExtResource("11")
 
-[node name="CrisisEngine" type="Node" parent="."]
+[node name="InterruptEngine" type="Node" parent="."]
 script = ExtResource("13")
 
 [node name="VictoryEngine" type="Node" parent="."]
@@ -82,7 +86,7 @@ layout_mode = 3
 anchors_preset = 0
 script = ExtResource("6")
 
-[node name="EndTurnButton" type="Control" parent="UILayer"]
+[node name="SpeedControlBar" type="Control" parent="UILayer"]
 layout_mode = 3
 anchors_preset = 3
 anchor_left = 1.0
@@ -109,14 +113,14 @@ layout_mode = 3
 anchors_preset = 0
 script = ExtResource("12")
 
-[node name="CrisisPanel" type="Control" parent="UILayer"]
+[node name="InterruptPanel" type="Control" parent="UILayer"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 0
+mouse_filter = 2
 script = ExtResource("14")
 
 [node name="VictoryPanel" type="Control" parent="UILayer"]

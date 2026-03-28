@@ -75,7 +75,13 @@ public partial class TopBar : Control
 
         // Subscribe to events
         EventBus.Instance?.Subscribe<TurnAdvancedEvent>(ev => {
-            _turnLabel.Text = $" Turn {ev.Turn} | M{ev.Month} Y{ev.Year} ";
+            string speed = SimulationClock.Instance != null ? $"{SimulationClock.Instance.SpeedMultiplier}x" : "";
+            _turnLabel.Text = $" {speed} | Tick {ev.Turn} | M{ev.Month} Y{ev.Year} ";
+        });
+        EventBus.Instance?.Subscribe<SimPausedEvent>(ev => {
+            var data = WorldStateManager.Instance?.Data;
+            if (ev.IsPaused && data != null)
+                _turnLabel.Text = $" PAUSED | Tick {data.TurnNumber} | M{data.Month} Y{data.Year} ";
         });
     }
 
