@@ -1,76 +1,85 @@
-# FULL AUTHORITY — Dev Log
+# WARSHIP: Leaders of the Warship — Dev Log
 ## Update After Every Session
 
-> **🚨 MAJOR VISION PIVOT — MAP OVERHAUL 🚨**
-> The game map has been rebuilt from a procedural 80×50 SNES tile grid to a 
-> **real-world Earth map** using OpenStreetMap tiles at zoom 0-10 (~15 GB).
-> Nations now sit at real coordinates (Washington D.C., Moscow, Beijing, etc.)
-> with actual borders, real city names, and geographic trade routes.
-> Development follows **`docs/FA_PHASE_PLAN.md`** — see ACT I.5 for map phases.
+> **Current Direction:** Fictional procedural world, 13 nations (6 large + 7 small),
+> real-time gameplay, concrete systems (no authority meters), SNES pixel art.
+> All planning lives in **`docs/ROADMAP.md`** — the ONE master document.
 
 ---
 
 ## Current Status
 
-**Active Milestone:** 1 — First Playable Build (see `docs/ROADMAP.md`)
-**Branch:** main
-**Last Session:** 2026-03-24
+**Active Milestone:** Pre-M1 (Roadmap complete, code has procedural world + rendering)
+**Branch:** claude/pixel-map-research-VA7J1
+**Last Session:** 2026-03-28
 
 ---
 
 ## Session Log
 
+### Session 5 — 2026-03-28 (Master Roadmap & Architecture Consolidation)
+**Goal:** Write ONE master roadmap reconciling all docs, archive old plans
+**Done:**
+- Read and audited ALL planning docs (MILITARY_SYSTEM.md 30 parts, ROADMAP.md, GAME_FLOW.md, GAME_CHARACTERS.md, FULL_AUTHORITY_DESIGN.md, PHASE_PLAN.md, FA_PHASE_PLAN.md)
+- Identified contradictions across 7+ documents
+- Got 6 directional decisions from user:
+  1. Fictional world first (real world later)
+  2. 13 nations: 6 large + 7 small (including "United States Alliance")
+  3. Real-time gameplay
+  4. Concrete systems (no authority meters/FAI)
+  5. Both sandbox AND campaign scenarios
+  6. Phone-rings interrupt mechanic
+- Wrote complete master ROADMAP.md (~1000 lines) incorporating ALL 30 military system parts
+- Moved obsolete docs to `docs/Obsolete Ideas/` (PHASE_PLAN.md, FA_PHASE_PLAN.md, FULL_AUTHORITY_DESIGN.md, GAME_FLOW.md, GAME_CHARACTERS.md, DATA_MODELS.md)
+**Next:** Milestone 1 — SimulationClock (real-time conversion)
+
+### Session 4 — 2026-03-27 (Procedural World & Army System)
+**Goal:** Build fictional procedural world with army swarm rendering
+**Done:**
+- Rewrote TerrainGenerator.cs for 600x360 tile world (19,200 x 11,520 px)
+- Built TerrainChunkRenderer.cs — chunk-baked terrain with pixel detail
+- Built ArmySwarmRenderer.cs — pixel-dot armies (1 dot = 10 troops), LOD, formations
+- Built TerritoryBorderRenderer.cs — city icons, territory tints, border lines, frustum culling
+- Rewrote MapManager.cs as orchestrator for 3 rendering layers
+- Rewrote WorldGenerator.cs — procedural nations, city-centric territory (BFS flood-fill)
+- Added ArmyData model (composition dictionaries replacing individual UnitData)
+- Updated MapCamera.cs zoom for 3x larger map
+- Updated WorldStateManager.cs for new world gen signature
+- Fixed 15+ compilation errors from UnitData → ArmyData transition
+**Issues:** Nation count hardcoded at 6 (needs updating to 13 per roadmap)
+**Next:** Master roadmap consolidation
+
 ### Session 3 — 2026-03-23 (Real-World Map Integration)
 **Goal:** Replace procedural map with real-world OSM tiles
 **Done:**
-- Created `GeoData.cs` — 6 nations with real borders (US, China, Russia, EU, India, UK), 80+ real cities, military bases, trade routes
-- Created `TileMapRenderer.cs` — Dual-style renderer (OSM vibrant + TopoMap), 2048-tile LRU cache, smooth zoom, WASD/scroll/drag
-- Created `WarshipMapBridge.cs` — Government overlay (territories, borders, city labels, units, routes) toggleable with G key. EventBus connected.
-- Added lon/lat fields to `Models.cs` (NationData, CityData, UnitData, CharacterData)
-- Added map events to `GameEvents.cs` (NationSelectedEvent, MapStyleChangedEvent, UnitMoveToCoordRequested)
-- Rewrote `WorldGenerator.cs` — Nations at real coordinates, named leaders/generals, units at real military bases
-- Updated `Main.tscn` — Swapped MapManager/MapCamera → TileMapRenderer/WarshipMapBridge
-- Updated `WorldStateManager.cs` — CreateWorld(42) single-param call
-- Updated `MilitaryCommandPanel.cs` — Removed old MapManager reference
-- Updated `.gitignore` — Excluded tile directories (15+ GB)
-- Started OSM tile download (1.4M tiles, zoom 0-10, ~15 GB) — running in background
-**Issues:** `dotnet build` fails outside Godot editor (Godot SDK not resolvable from terminal — normal for Godot C# projects)
-**Next:** Complete tile download, start topo download, restyle HUD
+- Created GeoData.cs, TileMapRenderer.cs, WarshipMapBridge.cs
+- Real-world nation data (US, China, Russia, EU, India, UK)
+- Dual-style renderer (OSM vibrant + TopoMap)
+**Note:** Real-world map approach superseded by Session 4's fictional world pivot
 
 ### Session 2 — 2026-03-22 (Map Graphics / Economy / News)
-**Goal:** Visual overhaul + Economy Engine + News Ticker
-**Done:**
-- Cyberpunk grid effects (added then reverted to original style)
-- Darker terrain palette (Plague Inc. inspired)
-- News ticker implementation (BottomPanel, NewsTicker)
-- Economy Engine (FA-10) — national treasuries, income per turn
-- Fixed display settings (aspect ratio "keep")
-- Left/Right sidebar implementations
-**Issues:** None
-**Next:** Map idea integration
+**Done:** News ticker, Economy Engine, darker terrain palette
 
 ### Session 1 — 2026-03-21 (Project Bootstrap)
-**Goal:** Phase 1-2 (project skeleton + empty scene)
-**Done:**
-- Created `~/Desktop/42/` project
-- `project.godot` — C# enabled, 1280×720
-- All `src/` and `assets/` directories
-- `scenes/Main.tscn` — Node2D + dark bg + Camera2D
-- Git initialized
-**Issues:** None
-**Next:** Terrain generation
+**Done:** Project skeleton, Main.tscn, git initialized
 
 ---
 
 ## Roadmap
 
-All milestone tracking and future work lives in **`docs/ROADMAP.md`** — single source of truth.
-
-### Completed Phases (Historical)
-- Phases 1-14 (original Warship plan) — all done, then superseded by real-world map
-- FA-1 to FA-11 (Full Authority foundation) — all done
-- M-1 to M-5 (real-world map overhaul) — all done
-- M-6 (tile download) — in progress
+All planning lives in **`docs/ROADMAP.md`**. 10 milestones:
+```
+M1  The Clock Ticks       — Real-time foundation
+M2  The Phone Rings       — Interrupt system (signature mechanic)
+M3  13 Nations Live       — Full fictional world
+M4  The World Breathes    — AI nations act continuously
+M5  Your Hands on Wheel   — Full player interaction
+M6  The Fog               — Unreliable intelligence
+M7  Full Combat           — All 30 military system parts
+M8  Campaigns             — 5 scenarios + sandbox mode
+M9  Save/Load             — Persistence
+M10 Ship It               — Polish, balance, export
+```
 
 ---
 
@@ -78,54 +87,49 @@ All milestone tracking and future work lives in **`docs/ROADMAP.md`** — single
 
 | # | Decision | Why |
 |---|----------|-----|
-| 1 | Fresh project at ~/Desktop/42/ | Clean start, no legacy baggage |
-| 2 | Godot.NET.Sdk 4.3.0 with .NET 8 | Matches locally cached SDK |
-| 3 | OSM Standard tiles, not dark theme | User wants vibrant green/blue Earth map |
-| 4 | Government overlay as toggleable code layer, not separate tile set | Saves ~65 GB disk space |
-| 5 | Zoom 0-10 OSM (~15 GB) + Zoom 0-9 Topo (~4 GB) = ~19 GB | User set 20 GB budget |
-| 6 | Keep TerrainGenerator + legacy tile coords for backward compat | Don't break existing engines |
-| 7 | Player starts as UK Defense Minister | FreeState archetype, small but strategic |
+| 1 | Fresh project at ~/42/ | Clean start |
+| 2 | Godot 4 + C# (.NET 8) | Best fit for complex sim |
+| 3 | Fictional world first | User directive — real world deferred to post-launch |
+| 4 | 13 nations (6 large + 7 small) | User directive — includes "United States Alliance" |
+| 5 | Real-time, not turn-based | User directive — SimulationClock replaces TurnEngine |
+| 6 | Concrete systems, no FAI | User directive — territory/treasury/armies, not authority meters |
+| 7 | Sandbox + Campaign modes | User directive — both available |
+| 8 | Phone-rings interrupt mechanic | User directive — signature mechanic with countdown timers |
+| 9 | 600x360 tile map at 32px | 3x scale for large troop movements |
+| 10 | Army swarm rendering (1 dot = 10 troops) | Pixel art style + handles large armies |
+| 11 | City-centric territory (BFS flood-fill) | Capture cities to conquer nations |
 
 ---
 
 ## Known Bugs
 
-| # | Bug | Phase | Fixed? |
-|---|-----|-------|--------|
-| 1 | `dotnet build` fails outside Godot editor (SDK resolver) | — | N/A (expected) |
-| | | | |
+| # | Bug | Fixed? |
+|---|-----|--------|
+| 1 | `dotnet build` fails outside Godot editor (SDK resolver) | N/A (expected) |
+| 2 | Nation count hardcoded at 6 (should be 13) | Pending M3 |
 
 ---
 
-## Architecture Notes (Post-Map Overhaul)
+## Key Files
 
-### Key Files
 ```
+docs/
+├── ROADMAP.md              ← THE plan (one document)
+├── MILITARY_SYSTEM.md      ← Detailed military reference (30 parts)
+├── DEV_LOG.md              ← This file
+└── Obsolete Ideas/         ← Archived old plans
+    ├── PHASE_PLAN.md
+    ├── FA_PHASE_PLAN.md
+    ├── FULL_AUTHORITY_DESIGN.md
+    ├── GAME_FLOW.md
+    ├── GAME_CHARACTERS.md
+    └── DATA_MODELS.md
+
 src/
-├── Core/
-│   ├── EventBus.cs          ← Rule 1: ALL communication
-│   ├── WorldStateManager.cs ← Rule 2: ALL state mutations
-│   └── RuntimeBridge.cs
-├── Data/
-│   ├── Models.cs            ← Now includes lon/lat fields
-│   └── GeoData.cs           ← NEW: Real-world nation geography
-├── Engines/                 ← Rule 3: Pure C# engines (unchanged)
-│   ├── PoliticalEngine.cs
-│   ├── AIEngine.cs
-│   ├── MilitaryEngine.cs
-│   ├── CrisisEngine.cs
-│   ├── VictoryEngine.cs
-│   └── EconomyEngine.cs
-├── Events/
-│   └── GameEvents.cs        ← Added NationSelectedEvent, MapStyleChangedEvent
-├── UI/
-│   ├── Map/
-│   │   ├── TileMapRenderer.cs    ← NEW: Real-world map renderer
-│   │   ├── WarshipMapBridge.cs   ← NEW: Game ↔ Map glue
-│   │   ├── MapManager.cs         ← OLD: No longer in scene (kept for reference)
-│   │   └── MapCamera.cs          ← OLD: No longer in scene (kept for reference)
-│   └── HUD/ (all HUD panels — unchanged, need restyling)
-└── World/
-    ├── WorldGenerator.cs     ← REWRITTEN: Real-world coordinates
-    └── TerrainGenerator.cs   ← Kept for backward compat
+├── Core/                   ← EventBus, WorldStateManager, TurnEngine, SimRng
+├── Data/Models.cs          ← All data models (NationData, ArmyData, CityData...)
+├── Engines/                ← Pure C# sim engines
+├── Events/GameEvents.cs    ← All event types
+├── World/                  ← WorldGenerator, TerrainGenerator
+└── UI/Map/                 ← MapManager, TerrainChunkRenderer, ArmySwarmRenderer, TerritoryBorderRenderer
 ```
