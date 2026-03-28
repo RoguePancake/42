@@ -10,8 +10,8 @@ namespace Warship.UI.HUD;
 /// </summary>
 public partial class TopBar : Control
 {
-    private Label _turnLabel;
-    private Label _statsLabel;
+    private Label _turnLabel = null!;
+    private Label _statsLabel = null!;
 
     public override void _Ready()
     {
