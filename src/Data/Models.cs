@@ -201,6 +201,13 @@ public class NationData
     public MilitaryOrder GlobalMilitaryOrder = MilitaryOrder.BorderWatch;
     public int CommandTargetX = -1;
     public int CommandTargetY = -1;
+
+    // Geographic coordinates for map bridge (lon/lat)
+    public float CommandTargetLon = float.NaN;
+    public float CommandTargetLat = float.NaN;
+
+    // Border polygon for territory rendering (lon/lat pairs)
+    public float[][]? BorderPolygon;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -213,6 +220,7 @@ public class CityData
     public string NationId = "";
     public string Name = "City";
     public int TileX, TileY;
+    public float Longitude, Latitude;  // Geographic coords for map bridge
     public bool IsCapital;
     public int Size = 1;  // 1=town, 2=city, 3=capital
 
