@@ -9,9 +9,9 @@ namespace Warship.UI.Map;
 /// </summary>
 public partial class MapCamera : Camera2D
 {
-    // Zoom settings — 0.02x sees entire 2000x1200 map, 4.0x sees individual soldiers
+    // Zoom settings — 0.007x sees entire 6000x3600 map, 4.0x sees individual soldiers
     private float _targetZoom = 1.0f;
-    private const float ZoomMin = 0.02f;
+    private const float ZoomMin = 0.007f;
     private const float ZoomMax = 4.0f;
     private const float ZoomSpeed = 0.15f;
     private const float ZoomSmoothing = 8.0f;
@@ -43,8 +43,8 @@ public partial class MapCamera : Camera2D
         // Center camera on map
         Position = new Vector2(_mapWidth / 2f, _mapHeight / 2f);
         
-        // Start zoomed out to see the full 2000x1200 world
-        _targetZoom = 0.04f;
+        // Start zoomed out to see the full 6000x3600 world
+        _targetZoom = 0.015f;
         Zoom = new Vector2(_targetZoom, _targetZoom);
 
         GD.Print("[MapCamera] Ready — WASD/arrows to pan, scroll to zoom, middle-click drag");
