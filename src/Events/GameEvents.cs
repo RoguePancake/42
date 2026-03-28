@@ -54,3 +54,9 @@ public record BattleResolvedEvent(string AttackerArmyId, string DefenderArmyId, 
 // Simulation Clock
 public record SimSpeedChangedEvent(float Speed) : IGameEvent;
 public record SimPausedEvent(bool IsPaused) : IGameEvent;
+
+// Interrupt System ("The Phone Rings")
+public record InterruptTriggeredEvent(string Id, string Title, string Description,
+    float TimerSeconds, Warship.Data.InterruptChoice[] Choices, int DefaultChoiceIndex,
+    Warship.Data.InterruptPriority Priority) : IGameEvent;
+public record InterruptResolvedEvent(string Id, int ChoiceIndex, bool WasTimeout) : IGameEvent;
