@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://main_scene"]
+[gd_scene load_steps=12 format=3 uid="uid://main_scene"]
 
 [ext_resource type="Script" path="res://src/Core/EventBus.cs" id="1"]
 [ext_resource type="Script" path="res://src/Core/WorldStateManager.cs" id="2"]
@@ -7,7 +7,8 @@
 [ext_resource type="Script" path="res://src/UI/Map/WarshipMapBridge.cs" id="4"]
 [ext_resource type="Script" path="res://src/UI/HUD/TopBar.cs" id="5"]
 [ext_resource type="Script" path="res://src/UI/HUD/DossierPanel.cs" id="6"]
-[ext_resource type="Script" path="res://src/UI/HUD/EndTurnButton.cs" id="7"]
+[ext_resource type="Script" path="res://src/UI/HUD/SpeedControlBar.cs" id="7"]
+[ext_resource type="Script" path="res://src/Core/SimulationClock.cs" id="27"]
 [ext_resource type="Script" path="res://src/UI/HUD/NotificationManager.cs" id="9"]
 [ext_resource type="Script" path="res://src/Engines/AIEngine.cs" id="10"]
 [ext_resource type="Script" path="res://src/Engines/MilitaryEngine.cs" id="11"]
@@ -35,6 +36,9 @@ script = ExtResource("2")
 
 [node name="RuntimeBridge" type="Node" parent="."]
 script = ExtResource("22")
+
+[node name="SimulationClock" type="Node" parent="."]
+script = ExtResource("27")
 
 [node name="PoliticalEngine" type="Node" parent="."]
 script = ExtResource("8")
@@ -82,7 +86,7 @@ layout_mode = 3
 anchors_preset = 0
 script = ExtResource("6")
 
-[node name="EndTurnButton" type="Control" parent="UILayer"]
+[node name="SpeedControlBar" type="Control" parent="UILayer"]
 layout_mode = 3
 anchors_preset = 3
 anchor_left = 1.0

@@ -50,3 +50,7 @@ public record CityCapturedEvent(string CityId, string OldNationId, string NewNat
 public record TerritoryChangedEvent(string CityId, string OldNationId, string NewNationId) : IGameEvent;
 public record BattleResolvedEvent(string AttackerArmyId, string DefenderArmyId, bool AttackerWon,
     int AttackerLosses, int DefenderLosses) : IGameEvent;
+
+// Simulation Clock
+public record SimSpeedChangedEvent(float Speed) : IGameEvent;
+public record SimPausedEvent(bool IsPaused) : IGameEvent;
