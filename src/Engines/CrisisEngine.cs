@@ -1,5 +1,4 @@
 using Godot;
-using System;
 using System.Linq;
 using Warship.Core;
 using Warship.Events;
@@ -12,8 +11,6 @@ namespace Warship.Engines;
 /// </summary>
 public partial class CrisisEngine : Node
 {
-    private Random _rng = new(420);
-
     public override void _Ready()
     {
         EventBus.Instance!.Subscribe<TurnAdvancedEvent>(OnTurnAdvanced);
@@ -24,7 +21,7 @@ public partial class CrisisEngine : Node
     private void OnTurnAdvanced(TurnAdvancedEvent ev)
     {
         // 20% chance of a crisis each turn, but not on turn 1
-        if (ev.Turn > 1 && _rng.NextDouble() < 0.20)
+        if (ev.Turn > 1 && SimRng.NextDouble() < 0.20)
         {
             TriggerRandomCrisis();
         }
@@ -32,7 +29,7 @@ public partial class CrisisEngine : Node
 
     private void TriggerRandomCrisis()
     {
-        int roll = _rng.Next(3);
+        int roll = SimRng.Next(3);
         
         switch(roll)
         {
