@@ -5,7 +5,7 @@ using Warship.World;
 namespace Warship.UI.Map;
 
 /// <summary>
-/// Bakes the 600x360 terrain into chunk textures using Minecraft map-style rendering.
+/// Bakes the 2000x1200 terrain into chunk textures using Minecraft map-style rendering.
 ///
 /// KEY TECHNIQUES (matching Minecraft's cartography table output):
 ///   1. Height-based relief shading — compare each tile's elevation to its
@@ -18,7 +18,7 @@ namespace Warship.UI.Map;
 ///      deep ocean further out is darker.
 ///   4. Seamless chunk boundaries — no visible grid lines between chunks.
 ///
-/// 600/32 = ~19 chunks wide, 360/32 = ~12 chunks tall = ~228 chunks total.
+/// 2000/32 = ~63 chunks wide, 1200/32 = ~38 chunks tall = ~2394 chunks total.
 /// Each chunk = 32*32px * 32 tiles = 1024x1024 pixel texture.
 /// </summary>
 public partial class TerrainChunkRenderer : Node2D

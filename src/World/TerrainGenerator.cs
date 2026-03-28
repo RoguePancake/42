@@ -5,7 +5,7 @@ namespace Warship.World;
 
 /// <summary>
 /// Generates a procedural fantasy world with continents, oceans, mountain ranges,
-/// rivers, and biomes. 600x360 tile world — massive scale for real army movement.
+/// rivers, and biomes. 2000x1200 tile world — massive scale for large battles.
 /// Pure C# — no Godot dependency.
 /// </summary>
 public static class TerrainGenerator
@@ -22,9 +22,9 @@ public static class TerrainGenerator
         Snow = 7
     }
 
-    // 600x360 tiles at 32px = 19,200 x 11,520 pixel world
-    public const int DefaultWidth = 600;
-    public const int DefaultHeight = 360;
+    // 2000x1200 tiles at 32px = 64,000 x 38,400 pixel world
+    public const int DefaultWidth = 2000;
+    public const int DefaultHeight = 1200;
 
     /// <summary>
     /// Generate a full world: terrain grid + river paths.

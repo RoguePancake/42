@@ -9,7 +9,7 @@ using Warship.UI.HUD;
 namespace Warship.UI.Map;
 
 /// <summary>
-/// Map orchestrator — manages layered renderers for the 600x360 pixel world.
+/// Map orchestrator — manages layered renderers for the 2000x1200 pixel world.
 ///
 /// Layer stack (bottom to top):
 ///   1. TerrainChunkRenderer — baked terrain textures (static)
