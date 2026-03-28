@@ -1,14 +1,17 @@
 using Godot;
 using Warship.Core;
 using Warship.Data;
+using Warship.World;
 
 namespace Warship.UI.Menus;
 
 public partial class CharacterSetupPanel : Control
 {
+    private OptionButton _nationDropdown = null!;
     private OptionButton _roleDropdown = null!;
     private LineEdit _nameInput = null!;
     private OptionButton _focusDropdown = null!;
+    private Label _nationDesc = null!;
     private Button _startButton = null!;
 
     private string[] _roles = {
@@ -32,7 +35,7 @@ public partial class CharacterSetupPanel : Control
     public override void _Ready()
     {
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        
+
         // Full screen dark overlay
         var bg = new ColorRect {
             Color = new Color(0.02f, 0.02f, 0.05f, 0.98f),
@@ -48,7 +51,7 @@ public partial class CharacterSetupPanel : Control
         var panel = new PanelContainer();
         var style = new StyleBoxFlat {
             BgColor = new Color(0.1f, 0.12f, 0.16f, 1f),
-            BorderColor = new Color(0.83f, 0.66f, 0.29f, 1f), // Gold #D4A84B
+            BorderColor = new Color(0.83f, 0.66f, 0.29f, 1f),
             BorderWidthTop = 2, BorderWidthBottom = 2, BorderWidthLeft = 2, BorderWidthRight = 2,
             CornerRadiusTopLeft = 8, CornerRadiusBottomRight = 8, CornerRadiusTopRight = 8, CornerRadiusBottomLeft = 8
         };
@@ -63,7 +66,7 @@ public partial class CharacterSetupPanel : Control
         panel.AddChild(margin);
 
         var vbox = new VBoxContainer();
-        vbox.AddThemeConstantOverride("separation", 15);
+        vbox.AddThemeConstantOverride("separation", 12);
         margin.AddChild(vbox);
 
         var title = new Label { Text = "EXECUTIVE CLEARANCE REQUIRED" };
@@ -74,11 +77,36 @@ public partial class CharacterSetupPanel : Control
 
         vbox.AddChild(new HSeparator());
 
+        // ── Nation picker ──
+        vbox.AddChild(new Label { Text = "Select Nation:" });
+        _nationDropdown = new OptionButton();
+        for (int i = 0; i < WorldGenerator.Templates.Length; i++)
+        {
+            var t = WorldGenerator.Templates[i];
+            string tier = t.Tier == NationTier.Large ? "Major" : "Minor";
+            _nationDropdown.AddItem($"{t.Name}  [{tier} — {t.Archetype}]");
+        }
+        _nationDropdown.Selected = 6; // Default: Selvara
+        _nationDropdown.ItemSelected += OnNationChanged;
+        vbox.AddChild(_nationDropdown);
+
+        // Nation description label
+        _nationDesc = new Label {
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            CustomMinimumSize = new Vector2(420, 0),
+        };
+        _nationDesc.AddThemeFontSizeOverride("font_size", 13);
+        _nationDesc.AddThemeColorOverride("font_color", new Color(0.7f, 0.7f, 0.8f, 1f));
+        vbox.AddChild(_nationDesc);
+        UpdateNationDescription(6);
+
+        vbox.AddChild(new HSeparator());
+
         // Role
         vbox.AddChild(new Label { Text = "Select Role:" });
         _roleDropdown = new OptionButton();
         foreach (var r in _roles) _roleDropdown.AddItem(r);
-        _roleDropdown.Selected = 1; // Default to Defense Minister
+        _roleDropdown.Selected = 1;
         vbox.AddChild(_roleDropdown);
 
         // Name
@@ -92,7 +120,7 @@ public partial class CharacterSetupPanel : Control
         foreach (var f in _focuses) _focusDropdown.AddItem(f);
         vbox.AddChild(_focusDropdown);
 
-        vbox.AddChild(new Control { CustomMinimumSize = new Vector2(0, 10) });
+        vbox.AddChild(new Control { CustomMinimumSize = new Vector2(0, 8) });
 
         _startButton = new Button { Text = "INITIALIZE CLEARANCE" };
         _startButton.AddThemeFontSizeOverride("font_size", 18);
@@ -103,16 +131,28 @@ public partial class CharacterSetupPanel : Control
         vbox.AddChild(_startButton);
     }
 
+    private void OnNationChanged(long index)
+    {
+        UpdateNationDescription((int)index);
+    }
+
+    private void UpdateNationDescription(int index)
+    {
+        if (index < 0 || index >= WorldGenerator.Templates.Length) return;
+        var t = WorldGenerator.Templates[index];
+        _nationDesc.Text = $"{t.Description}\n" +
+            $"Cities: {t.CityCount}  |  Armies: {t.ArmyCount}  |  Treasury: {t.StartingTreasury:F0}";
+    }
+
     private void OnStartPressed()
     {
         string selectedRole = _roles[_roleDropdown.Selected];
         string playerName = string.IsNullOrWhiteSpace(_nameInput.Text) ? "Unknown Official" : _nameInput.Text;
         int focusIndex = _focusDropdown.Selected;
+        int nationIndex = _nationDropdown.Selected;
 
-        // Pass this config to WorldStateManager — nation is procedurally generated
-        WorldStateManager.Instance?.InitializeWorld(selectedRole, playerName, focusIndex);
-        
-        // Hide self
+        WorldStateManager.Instance?.InitializeWorld(selectedRole, playerName, focusIndex, nationIndex);
+
         QueueFree();
     }
 }

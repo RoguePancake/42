@@ -86,7 +86,26 @@ public static class TerrainRules
 
 public enum NationArchetype
 {
-    Hegemon, Commercial, Revolutionary, Traditionalist, Survival, FreeState
+    Hegemon,          // USA Alliance — military dominant, global projection
+    Commercial,       // Meridian Confederation — trade-focused, tech-rich
+    Revolutionary,    // Republic of Valdria — ideological, mass manpower
+    Traditionalist,   // Kingdom of Ashenmoor — resource-rich, conservative, defensive
+    Industrial,       // Volkren Collective — production powerhouse, steel & tanks
+    Naval,            // Thalassian Dominion — island/coastal, navy controls sea lanes
+    FreeState,        // Selvara (player default) — tiny, 1 nuke, intelligence-focused
+    Survival,         // Generic desperate coalition / minor
+    TradeCity,        // Free City of Orinth — rich city-state, no army
+    Guerrilla,        // Kaelith Tribes — desert fighters, hard to conquer
+    Intelligence,     // Duskhollow Pact — spy networks, neutral facade
+    Remnant,          // Ironmarch Remnant — former empire, declining
+    IslandNaval,      // Port Serin — island base, submarines
+    ResourceCursed,   // Ashfall Compact — uranium-rich, unstable
+}
+
+public enum NationTier
+{
+    Large,  // 6 major powers: 8-12 cities, 5-8 armies
+    Small,  // 7 minor nations: 2-5 cities, 1-3 armies
 }
 
 public class NationData
@@ -94,6 +113,7 @@ public class NationData
     public string Id = "";
     public string Name = "";
     public NationArchetype Archetype;
+    public NationTier Tier = NationTier.Large;
     public Color NationColor;
     public bool IsPlayer = false;
 
@@ -105,6 +125,18 @@ public class NationData
     public float Treasury = 1000f;
     public float Prestige = 30f;
     public bool IsAlive = true;
+
+    // Resource stockpiles (0-100 scale, replenished by territory each tick)
+    public float Iron;
+    public float Oil;
+    public float Uranium;
+    public float Electronics;
+    public float Manpower;
+    public float Food;
+
+    // Stability & war weariness
+    public float Stability = 80f;      // 0-100, below 20 = rebellion risk
+    public float WarWeariness;         // 0-100, accumulates during wars
 
     // Military Command
     public MilitaryOrder GlobalMilitaryOrder = MilitaryOrder.BorderWatch;

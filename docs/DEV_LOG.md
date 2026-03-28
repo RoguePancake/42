@@ -9,13 +9,43 @@
 
 ## Current Status
 
-**Active Milestone:** Pre-M1 (Roadmap complete, code has procedural world + rendering)
-**Branch:** claude/pixel-map-research-VA7J1
+**Active Milestone:** M3 — 13 Nations Live (IN PROGRESS)
+**Branch:** claude/start-m3-Are3l
 **Last Session:** 2026-03-28
 
 ---
 
 ## Session Log
+
+### Session 6 — 2026-03-28 (M3: 13 Nations Live)
+**Goal:** Replace 6 hardcoded nations with 13 named fictional nations
+**Done:**
+- Created `docs/NATION_RESEARCH.md` — real-world data grounding all 13 nations
+  - Military data from GlobalFirepower 2026, GDP from IMF, resources from EIA
+  - Each nation mapped to real-world inspiration (USA→Hegemon, Russia→Revolutionary, etc.)
+  - Small nation special mechanics (guerrilla, trade city, intel, island, resource curse)
+  - Comparative balance matrix and power ratios
+- Updated `Models.cs`:
+  - Added `NationTier` enum (Large, Small)
+  - Expanded `NationArchetype` with 8 new archetypes (Industrial, Naval, TradeCity, Guerrilla, Intelligence, Remnant, IslandNaval, ResourceCursed)
+  - Added resource stockpiles (Iron, Oil, Uranium, Electronics, Manpower, Food)
+  - Added Stability and WarWeariness fields
+- Rewrote `WorldGenerator.cs`:
+  - Defined `NationTemplate` record with all 13 nations' identity, resources, military profiles
+  - Terrain-driven capital placement (scores candidate spots by nation's preferred terrain)
+  - Per-nation city counts (8-12 large, 2-5 small) and army counts (5-8 large, 1-3 small)
+  - 12 archetype-driven military composition profiles (CombinedArms, MassInfantry, TankHeavy, NavalDominant, NuclearSmall, etc.)
+  - `AnalyzeGeographyForResources()` for future custom nation feature
+  - 13 distinct nation colors
+- Updated `CharacterSetupPanel.cs`:
+  - Added nation picker dropdown with all 13 nations + tier/archetype labels
+  - Description updates on selection (shows cities, armies, treasury)
+  - Default: Selvara (#6)
+- Updated `WorldStateManager.cs`:
+  - `InitializeWorld` now accepts `nationIndex` parameter
+**Pending:** Chunk F — Custom Nation option with map-click capital placement
+**Issues:** Cannot verify build (Godot SDK required). Need in-editor test.
+**Next:** Custom nation feature, then M4
 
 ### Session 5 — 2026-03-28 (Master Roadmap & Architecture Consolidation)
 **Goal:** Write ONE master roadmap reconciling all docs, archive old plans
@@ -106,7 +136,7 @@ M10 Ship It               — Polish, balance, export
 | # | Bug | Fixed? |
 |---|-----|--------|
 | 1 | `dotnet build` fails outside Godot editor (SDK resolver) | N/A (expected) |
-| 2 | Nation count hardcoded at 6 (should be 13) | Pending M3 |
+| 2 | Nation count hardcoded at 6 (should be 13) | FIXED (Session 6) |
 
 ---
 

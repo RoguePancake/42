@@ -13,30 +13,171 @@ namespace Warship.World;
 /// </summary>
 public static class WorldGenerator
 {
-    public const int NumNations = 6;         // 5 AI + 1 player
-    public const int CitiesPerNation = 5;    // Capital + 4 cities
-    public const int ArmiesPerNation = 5;    // Starting armies
+    public const int NumNations = 13;
 
-    // Nation colors — distinct and readable
-    private static readonly Color[] NationColors =
+    // ═══════════════════════════════════════════════════════════════
+    //  NATION TEMPLATES — The 13 named nations of the world
+    //  Real-world inspirations in comments. See docs/NATION_RESEARCH.md
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>Preferred terrain for capital placement scoring.</summary>
+    public enum TerrainPreference { Plains, Coastal, Mountain, Desert, Forest, Island, Mixed }
+
+    /// <summary>Military composition style for army spawning.</summary>
+    public enum MilitaryProfile
     {
-        new(0.25f, 0.50f, 0.85f), // Blue
-        new(0.85f, 0.25f, 0.20f), // Red
-        new(0.20f, 0.72f, 0.35f), // Green
-        new(0.80f, 0.65f, 0.15f), // Gold
-        new(0.65f, 0.30f, 0.75f), // Purple
-        new(0.90f, 0.55f, 0.15f), // Orange (player)
+        CombinedArms,   // Hegemon — balanced with carriers
+        MassInfantry,   // Revolutionary — quantity over quality
+        TechDefense,    // Commercial — small but advanced
+        Fortified,      // Traditionalist — artillery + anti-air
+        TankHeavy,      // Industrial — armored blitzkrieg
+        NavalDominant,  // Naval — destroyers, carriers, subs
+        NuclearSmall,   // FreeState — small army + 1 nuke
+        TokenForce,     // TradeCity — barely any military
+        GuerrillaLight, // Guerrilla — pure infantry, rough terrain
+        BalancedSmall,  // Intelligence/Remnant — small balanced
+        SubmarineFleet, // IslandNaval — subs + shore defense
+        Minimal,        // ResourceCursed — weakest military
+    }
+
+    public record NationTemplate(
+        string Name,
+        NationArchetype Archetype,
+        NationTier Tier,
+        int CityCount,          // Capital + secondaries
+        int ArmyCount,
+        float StartingTreasury,
+        Color NationColor,
+        TerrainPreference PreferredTerrain,
+        MilitaryProfile MilProfile,
+        // Starting resources (0-100 scale)
+        float Iron, float Oil, float Uranium,
+        float Electronics, float Manpower, float Food,
+        float Stability,
+        string Description
+    );
+
+    public static readonly NationTemplate[] Templates =
+    {
+        // ── 6 LARGE NATIONS ──────────────────────────────────────
+        new("United States Alliance",    // #0 — USA/NATO
+            NationArchetype.Hegemon, NationTier.Large,
+            CityCount: 12, ArmyCount: 8, StartingTreasury: 5000f,
+            new Color(0.20f, 0.40f, 0.80f), // Deep Blue
+            TerrainPreference.Plains, MilitaryProfile.CombinedArms,
+            Iron: 40, Oil: 50, Uranium: 30, Electronics: 60, Manpower: 50, Food: 70,
+            Stability: 85,
+            "Military superpower. Largest army, highest GDP, 2 carriers, global projection."),
+
+        new("Republic of Valdria",       // #1 — Russia/USSR
+            NationArchetype.Revolutionary, NationTier.Large,
+            CityCount: 10, ArmyCount: 7, StartingTreasury: 3000f,
+            new Color(0.80f, 0.20f, 0.20f), // Deep Red
+            TerrainPreference.Forest, MilitaryProfile.MassInfantry,
+            Iron: 35, Oil: 40, Uranium: 20, Electronics: 15, Manpower: 80, Food: 60,
+            Stability: 70,
+            "Ideological aggressors. Mass infantry, heavy artillery, high manpower."),
+
+        new("Meridian Confederation",    // #2 — EU/Japan/Singapore
+            NationArchetype.Commercial, NationTier.Large,
+            CityCount: 9, ArmyCount: 5, StartingTreasury: 6000f,
+            new Color(0.20f, 0.72f, 0.35f), // Green
+            TerrainPreference.Coastal, MilitaryProfile.TechDefense,
+            Iron: 30, Oil: 10, Uranium: 10, Electronics: 90, Manpower: 30, Food: 20,
+            Stability: 90,
+            "Trade empire. Richest treasury, electronics monopoly, but weak military."),
+
+        new("Kingdom of Ashenmoor",      // #3 — Saudi/GCC/Turkey
+            NationArchetype.Traditionalist, NationTier.Large,
+            CityCount: 8, ArmyCount: 6, StartingTreasury: 4500f,
+            new Color(0.80f, 0.65f, 0.15f), // Gold
+            TerrainPreference.Mountain, MilitaryProfile.Fortified,
+            Iron: 20, Oil: 80, Uranium: 15, Electronics: 10, Manpower: 40, Food: 15,
+            Stability: 75,
+            "Oil-rich mountain fortress. Defensive, artillery-heavy, controls chokepoints."),
+
+        new("Volkren Collective",        // #4 — China/Imperial Germany
+            NationArchetype.Industrial, NationTier.Large,
+            CityCount: 10, ArmyCount: 7, StartingTreasury: 4000f,
+            new Color(0.65f, 0.30f, 0.75f), // Purple
+            TerrainPreference.Plains, MilitaryProfile.TankHeavy,
+            Iron: 80, Oil: 25, Uranium: 15, Electronics: 40, Manpower: 70, Food: 50,
+            Stability: 80,
+            "Industrial juggernaut. Highest steel output, tank-heavy armies, rare earth monopoly."),
+
+        new("Thalassian Dominion",       // #5 — British Empire/Imperial Japan
+            NationArchetype.Naval, NationTier.Large,
+            CityCount: 8, ArmyCount: 6, StartingTreasury: 3500f,
+            new Color(0.15f, 0.60f, 0.70f), // Teal
+            TerrainPreference.Island, MilitaryProfile.NavalDominant,
+            Iron: 25, Oil: 15, Uranium: 5, Electronics: 30, Manpower: 25, Food: 30,
+            Stability: 85,
+            "Island naval empire. Strongest navy, controls sea lanes, intelligence network."),
+
+        // ── 7 SMALL NATIONS ──────────────────────────────────────
+        new("Selvara",                   // #6 — Israel (PLAYER DEFAULT)
+            NationArchetype.FreeState, NationTier.Small,
+            CityCount: 4, ArmyCount: 2, StartingTreasury: 800f,
+            new Color(0.90f, 0.55f, 0.15f), // Orange
+            TerrainPreference.Mixed, MilitaryProfile.NuclearSmall,
+            Iron: 10, Oil: 5, Uranium: 20, Electronics: 15, Manpower: 15, Food: 10,
+            Stability: 75,
+            "Tiny free state with the world's first nuclear weapon. Surrounded but dangerous."),
+
+        new("Free City of Orinth",       // #7 — Singapore/Dubai
+            NationArchetype.TradeCity, NationTier.Small,
+            CityCount: 3, ArmyCount: 1, StartingTreasury: 2000f,
+            new Color(0.90f, 0.75f, 0.30f), // Bright Gold
+            TerrainPreference.Coastal, MilitaryProfile.TokenForce,
+            Iron: 5, Oil: 5, Uranium: 0, Electronics: 20, Manpower: 5, Food: 5,
+            Stability: 90,
+            "Wealthy trade hub. No real military. Depends on diplomacy and commerce."),
+
+        new("Kaelith Tribes",            // #8 — Afghanistan/Kurds
+            NationArchetype.Guerrilla, NationTier.Small,
+            CityCount: 5, ArmyCount: 2, StartingTreasury: 400f,
+            new Color(0.75f, 0.60f, 0.40f), // Sandy Brown
+            TerrainPreference.Desert, MilitaryProfile.GuerrillaLight,
+            Iron: 10, Oil: 15, Uranium: 5, Electronics: 0, Manpower: 25, Food: 10,
+            Stability: 50,
+            "Desert guerrilla fighters. Spread thin, impossible to conquer. Dirt poor."),
+
+        new("Duskhollow Pact",           // #9 — Switzerland/Mossad
+            NationArchetype.Intelligence, NationTier.Small,
+            CityCount: 4, ArmyCount: 2, StartingTreasury: 1500f,
+            new Color(0.35f, 0.45f, 0.35f), // Dark Forest Green
+            TerrainPreference.Forest, MilitaryProfile.BalancedSmall,
+            Iron: 15, Oil: 5, Uranium: 5, Electronics: 10, Manpower: 20, Food: 20,
+            Stability: 95,
+            "Intelligence specialists. Spy network depth +2. Neutral info brokers."),
+
+        new("Ironmarch Remnant",         // #10 — Ottoman remnant/Austria
+            NationArchetype.Remnant, NationTier.Small,
+            CityCount: 3, ArmyCount: 2, StartingTreasury: 1000f,
+            new Color(0.55f, 0.35f, 0.25f), // Brown
+            TerrainPreference.Mountain, MilitaryProfile.BalancedSmall,
+            Iron: 30, Oil: 10, Uranium: 10, Electronics: 5, Manpower: 10, Food: 10,
+            Stability: 60,
+            "Former empire fragment. Good defenses, aging military, low manpower."),
+
+        new("Port Serin",                // #11 — Cuba/Taiwan
+            NationArchetype.IslandNaval, NationTier.Small,
+            CityCount: 3, ArmyCount: 2, StartingTreasury: 1200f,
+            new Color(0.30f, 0.70f, 0.85f), // Light Blue
+            TerrainPreference.Island, MilitaryProfile.SubmarineFleet,
+            Iron: 10, Oil: 10, Uranium: 0, Electronics: 15, Manpower: 10, Food: 15,
+            Stability: 80,
+            "Island naval base. Submarine advantage, strategic position, isolated."),
+
+        new("Ashfall Compact",           // #12 — Kazakhstan/Niger
+            NationArchetype.ResourceCursed, NationTier.Small,
+            CityCount: 3, ArmyCount: 1, StartingTreasury: 500f,
+            new Color(0.60f, 0.40f, 0.50f), // Dusty Mauve
+            TerrainPreference.Desert, MilitaryProfile.Minimal,
+            Iron: 15, Oil: 5, Uranium: 80, Electronics: 0, Manpower: 10, Food: 5,
+            Stability: 35,
+            "Uranium-rich wasteland. Everyone wants what they have. Coup every Tuesday."),
     };
-
-    private static readonly string[] NationPrefixes =
-        { "Republic of", "Kingdom of", "Federation of", "Dominion of", "Union of",
-          "Free State of", "Commonwealth of", "Empire of", "Principality of", "Confederacy of" };
-
-    private static readonly string[] NationRoots =
-        { "Valdria", "Korenth", "Ashenmoor", "Thalassia", "Drakmere", "Ironveil",
-          "Solheim", "Blackhollow", "Windreach", "Stormvane", "Graymarch", "Cedarfall",
-          "Frostgate", "Harrowfield", "Dunmere", "Silverbrook", "Thornwall", "Ravenport",
-          "Highcross", "Deepwell" };
 
     private static readonly string[] CityPrefixes =
         { "North", "South", "East", "West", "Old", "New", "Upper", "Lower",
@@ -65,7 +206,7 @@ public static class WorldGenerator
           "Deep Fleet", "Air Wing" };
 
     public static WorldData CreateWorld(int seed, string playerName = "J. Crawford",
-        string playerRole = "Defense Minister", int focusIndex = 0)
+        string playerRole = "Defense Minister", int focusIndex = 0, int playerNationIndex = 6)
     {
         var rng = new Random(seed);
         int mapW = TerrainGenerator.DefaultWidth;
@@ -74,9 +215,9 @@ public static class WorldGenerator
         // ═══ Generate terrain + rivers ═══
         var (terrain, riverPaths) = TerrainGenerator.GenerateWorld(mapW, mapH, seed);
 
-        // ═══ Find city locations ═══
-        int totalCities = NumNations * CitiesPerNation + 15;
-        var citySpots = TerrainGenerator.FindCityLocations(terrain, riverPaths, mapW, mapH, seed, totalCities);
+        // ═══ Find city locations — need enough for all nations ═══
+        int totalCitiesNeeded = Templates.Sum(t => t.CityCount) + 20; // extra buffer
+        var citySpots = TerrainGenerator.FindCityLocations(terrain, riverPaths, mapW, mapH, seed, totalCitiesNeeded);
 
         var world = new WorldData
         {
@@ -96,51 +237,59 @@ public static class WorldGenerator
                 world.CityOwnershipMap[x, y] = -1;
             }
 
-        // ═══ Create nations ═══
         int nationCount = Math.Min(NumNations, citySpots.Count);
-        var capitalSpots = citySpots.Take(nationCount).ToList();
-        var remainingSpots = citySpots.Skip(nationCount).ToList();
-        int playerIndex = nationCount - 1; // Player = last (underdog)
+        playerNationIndex = Math.Clamp(playerNationIndex, 0, nationCount - 1);
 
-        int nameIdx = rng.Next(NationRoots.Length);
+        // ═══ Terrain-driven capital placement ═══
+        // Score each candidate spot for each nation's preferred terrain, then greedily assign
+        var capitalSpots = AssignCapitals(terrain, citySpots, nationCount, mapW, mapH, rng);
+        var usedSpots = new HashSet<int>(capitalSpots.Values.Select(s => citySpots.IndexOf(s)));
+        var remainingSpots = citySpots.Where((_, i) => !usedSpots.Contains(i)).ToList();
+
+        // ═══ Create nations from templates ═══
         for (int n = 0; n < nationCount; n++)
         {
-            bool isPlayer = (n == playerIndex);
-            string root = NationRoots[(nameIdx + n) % NationRoots.Length];
-            string prefix = NationPrefixes[rng.Next(NationPrefixes.Length)];
+            var t = Templates[n];
+            bool isPlayer = (n == playerNationIndex);
+            var spot = capitalSpots[n];
 
             world.Nations.Add(new NationData
             {
                 Id = $"N_{n}",
-                Name = isPlayer ? $"Free State of {root}" : $"{prefix} {root}",
-                Archetype = NationArchetype.FreeState,
-                NationColor = NationColors[n % NationColors.Length],
+                Name = t.Name,
+                Archetype = t.Archetype,
+                Tier = t.Tier,
+                NationColor = t.NationColor,
                 IsPlayer = isPlayer,
-                CapitalX = capitalSpots[n].x,
-                CapitalY = capitalSpots[n].y,
-                Treasury = isPlayer ? 800f : 1500f + rng.Next(2000),
-                Prestige = isPlayer ? 30f : 40f + rng.Next(50),
+                CapitalX = spot.x,
+                CapitalY = spot.y,
+                Treasury = t.StartingTreasury,
+                Prestige = t.Tier == NationTier.Large ? 50f + rng.Next(30) : 20f + rng.Next(20),
+                Iron = t.Iron, Oil = t.Oil, Uranium = t.Uranium,
+                Electronics = t.Electronics, Manpower = t.Manpower, Food = t.Food,
+                Stability = t.Stability,
             });
         }
 
-        if (nationCount > 0)
-            world.PlayerNationId = $"N_{playerIndex}";
+        world.PlayerNationId = $"N_{playerNationIndex}";
 
-        // ═══ Create cities (capital + secondary) ═══
+        // ═══ Create cities (capital + secondary per nation template) ═══
         int cityIdx = 0;
         for (int n = 0; n < nationCount; n++)
         {
             var nation = world.Nations[n];
-            string root = NationRoots[(nameIdx + n) % NationRoots.Length];
+            var spot = capitalSpots[n];
 
-            // Capital
+            // Capital city — named after the nation or its root
+            string capitalName = Templates[n].Name.Split(' ').Last(); // e.g. "Alliance" → use last word
+            if (capitalName.Length < 4) capitalName = Templates[n].Name; // fallback for short names
             world.Cities.Add(new CityData
             {
                 Id = $"C_{cityIdx}",
                 NationId = nation.Id,
-                Name = root,
-                TileX = capitalSpots[n].x,
-                TileY = capitalSpots[n].y,
+                Name = capitalName,
+                TileX = spot.x,
+                TileY = spot.y,
                 IsCapital = true,
                 Size = 3,
                 HP = 400,
@@ -149,15 +298,16 @@ public static class WorldGenerator
             cityIdx++;
         }
 
-        // Assign remaining cities to nearest nation
-        var citiesPerNation = new int[nationCount];
+        // Assign remaining cities to nearest nation, respecting per-nation limits
+        var citiesPerNation = new int[nationCount]; // tracks secondary cities (capital already placed)
         foreach (var spot in remainingSpots)
         {
             int nearestNation = -1;
             float nearestDist = float.MaxValue;
             for (int n = 0; n < nationCount; n++)
             {
-                if (citiesPerNation[n] >= CitiesPerNation - 1) continue;
+                int maxSecondary = Templates[n].CityCount - 1; // minus capital
+                if (citiesPerNation[n] >= maxSecondary) continue;
                 float dx = spot.x - capitalSpots[n].x;
                 float dy = spot.y - capitalSpots[n].y;
                 float dist = dx * dx + dy * dy;
@@ -196,18 +346,11 @@ public static class WorldGenerator
         // ═══ Pre-compute border polylines ═══
         ComputeNationBorders(world, mapW, mapH);
 
-        // ═══ Analyze geography for nation traits ═══
+        // ═══ Count provinces (archetype is already set from template) ═══
         for (int n = 0; n < nationCount; n++)
         {
             var nation = world.Nations[n];
-            var profile = AnalyzeGeography(world, terrain, n, mapW, mapH);
-            nation.Archetype = profile.archetype;
-            nation.ProvinceCount = profile.tileCount;
-            if (!nation.IsPlayer)
-            {
-                nation.Treasury = profile.baseTreasury;
-                nation.Prestige = profile.basePrestige;
-            }
+            nation.ProvinceCount = CountTilesOwned(world, n, mapW, mapH);
         }
 
         // ═══ Build river paths for rendering ═══
@@ -221,15 +364,14 @@ public static class WorldGenerator
                 world.RiverPaths.Add(points.ToArray());
         }
 
-        // ═══ Spawn armies ═══
+        // ═══ Spawn armies per nation template ═══
         for (int n = 0; n < nationCount; n++)
         {
             var nation = world.Nations[n];
+            var template = Templates[n];
             var nationCities = world.Cities.Where(c => c.NationId == nation.Id).ToList();
-            bool isPlayer = nation.IsPlayer;
-            int armyCount = isPlayer ? 3 : ArmiesPerNation;
 
-            for (int a = 0; a < armyCount && a < nationCities.Count; a++)
+            for (int a = 0; a < template.ArmyCount && a < nationCities.Count; a++)
             {
                 var city = nationCities[a % nationCities.Count];
                 bool isCoastal = IsNearWater(terrain, city.TileX, city.TileY, mapW, mapH);
@@ -252,34 +394,9 @@ public static class WorldGenerator
                 army.TargetPixelX = army.PixelX;
                 army.TargetPixelY = army.PixelY;
 
-                // Composition varies by nation strength and position
-                if (isPlayer)
-                {
-                    // Player starts small
-                    army.Composition[UnitType.Infantry] = 200 + rng.Next(100);
-                    army.Composition[UnitType.Tank] = 20 + rng.Next(20);
-                    army.Composition[UnitType.Artillery] = 10 + rng.Next(10);
-                    if (a == 0) army.Composition[UnitType.AntiAir] = 10;
-                }
-                else
-                {
-                    // AI nations are bigger
-                    army.Composition[UnitType.Infantry] = 500 + rng.Next(500);
-                    army.Composition[UnitType.Tank] = 50 + rng.Next(80);
-                    army.Composition[UnitType.Artillery] = 20 + rng.Next(30);
-                    army.Composition[UnitType.AntiAir] = 10 + rng.Next(20);
-                    if (a == 0) army.Composition[UnitType.Fighter] = 24 + rng.Next(24);
-                }
+                // ═══ Archetype-driven military composition ═══
+                PopulateArmyByProfile(army, template.MilProfile, a, isCoastal, rng);
 
-                // Coastal cities get naval units
-                if (isCoastal && a > 0)
-                {
-                    army.Composition[UnitType.Destroyer] = 4 + rng.Next(8);
-                    if (!isPlayer) army.Composition[UnitType.Carrier] = rng.Next(2);
-                    army.Composition[UnitType.Submarine] = 2 + rng.Next(4);
-                }
-
-                // One army per nation gets a garrison assignment
                 if (a == 0)
                     army.GarrisonCityId = city.Id;
 
@@ -468,72 +585,295 @@ public static class WorldGenerator
         }
     }
 
-    // ═══ Geography analysis ═══
-    private static (NationArchetype archetype, int tileCount, float baseTreasury, float basePrestige)
-        AnalyzeGeography(WorldData world, int[,] terrain, int nationIdx, int w, int h)
+    // ═══ Terrain-driven capital placement ═══
+    // Score each candidate city spot per nation's terrain preference, then greedily assign
+    private static Dictionary<int, (int x, int y, float quality)> AssignCapitals(
+        int[,] terrain, List<(int x, int y, float quality)> spots, int nationCount, int w, int h, Random rng)
     {
-        int tileCount = 0, coastalTiles = 0, mountainTiles = 0, forestTiles = 0, grassTiles = 0;
+        var assigned = new Dictionary<int, (int x, int y, float quality)>();
+        var usedSpots = new HashSet<int>();
+        const int minCapitalSpacing = 40; // tiles between capitals
 
-        for (int x = 0; x < w; x++)
+        // Large nations first (indices 0-5), then small (6-12)
+        // Within each tier, randomize order slightly to avoid same placement every seed
+        var order = Enumerable.Range(0, nationCount).ToList();
+        // Shuffle within tiers
+        for (int i = order.Count - 1; i > 0; i--)
         {
-            for (int y = 0; y < h; y++)
+            // Keep large (0-5) and small (6+) tiers grouped but shuffled internally
+            int tierStart = Templates[i].Tier == NationTier.Large ? 0 : 6;
+            int tierEnd = Templates[i].Tier == NationTier.Large ? Math.Min(6, nationCount) : nationCount;
+            int j = tierStart + rng.Next(tierEnd - tierStart);
+            if (i >= tierStart && i < tierEnd && j >= tierStart && j < tierEnd)
+                (order[i], order[j]) = (order[j], order[i]);
+        }
+
+        foreach (int n in order)
+        {
+            var pref = Templates[n].PreferredTerrain;
+            float bestScore = float.MinValue;
+            int bestIdx = -1;
+
+            for (int s = 0; s < spots.Count; s++)
             {
-                if (world.OwnershipMap![x, y] != nationIdx) continue;
-                tileCount++;
+                if (usedSpots.Contains(s)) continue;
 
-                int t = terrain[x, y];
-                if (t == (int)TerrainGenerator.Terrain.Mountain) mountainTiles++;
-                if (t == (int)TerrainGenerator.Terrain.Forest) forestTiles++;
-                if (t == (int)TerrainGenerator.Terrain.Grass) grassTiles++;
+                // Check minimum spacing from already-assigned capitals
+                bool tooClose = false;
+                foreach (var (_, cap) in assigned)
+                {
+                    float dx = spots[s].x - cap.x;
+                    float dy = spots[s].y - cap.y;
+                    if (dx * dx + dy * dy < minCapitalSpacing * minCapitalSpacing)
+                    { tooClose = true; break; }
+                }
+                if (tooClose) continue;
 
-                if (x > 0 && terrain[x - 1, y] <= 1 ||
-                    x < w - 1 && terrain[x + 1, y] <= 1 ||
-                    y > 0 && terrain[x, y - 1] <= 1 ||
-                    y < h - 1 && terrain[x, y + 1] <= 1)
-                    coastalTiles++;
+                float score = ScoreSpotForTerrain(terrain, spots[s].x, spots[s].y, pref, w, h);
+                score += spots[s].quality * 0.5f; // factor in base desirability
+                score += rng.Next(100) * 0.02f;   // small randomness
+
+                if (score > bestScore) { bestScore = score; bestIdx = s; }
+            }
+
+            if (bestIdx < 0)
+            {
+                // Fallback: take any unused spot
+                for (int s = 0; s < spots.Count; s++)
+                    if (!usedSpots.Contains(s)) { bestIdx = s; break; }
+            }
+
+            if (bestIdx >= 0)
+            {
+                assigned[n] = spots[bestIdx];
+                usedSpots.Add(bestIdx);
             }
         }
 
-        if (tileCount == 0) tileCount = 1;
-        float coastRatio = coastalTiles / (float)tileCount;
-        float mountRatio = mountainTiles / (float)tileCount;
-        float grassRatio = grassTiles / (float)tileCount;
+        return assigned;
+    }
 
-        NationArchetype archetype;
-        float treasury, prestige;
+    /// <summary>Score a tile location for a nation's terrain preference. Scans a 25-tile radius.</summary>
+    private static float ScoreSpotForTerrain(int[,] terrain, int cx, int cy, TerrainPreference pref, int w, int h)
+    {
+        int coastal = 0, mountain = 0, forest = 0, grass = 0, sand = 0, hills = 0, water = 0;
+        int total = 0;
+        const int radius = 25;
 
-        if (coastRatio > 0.12f)
+        for (int dx = -radius; dx <= radius; dx++)
         {
-            archetype = NationArchetype.Commercial;
-            treasury = 3500f + coastalTiles * 10f;
-            prestige = 60f;
-        }
-        else if (mountRatio > 0.10f)
-        {
-            archetype = NationArchetype.Traditionalist;
-            treasury = 2500f;
-            prestige = 50f + mountainTiles * 2f;
-        }
-        else if (grassRatio > 0.35f && tileCount > 2000)
-        {
-            archetype = NationArchetype.Hegemon;
-            treasury = 4000f + tileCount;
-            prestige = 80f;
-        }
-        else if (tileCount < 1500)
-        {
-            archetype = NationArchetype.Survival;
-            treasury = 1200f;
-            prestige = 25f;
-        }
-        else
-        {
-            archetype = NationArchetype.Revolutionary;
-            treasury = 2000f + forestTiles * 3f;
-            prestige = 40f;
+            for (int dy = -radius; dy <= radius; dy++)
+            {
+                if (dx * dx + dy * dy > radius * radius) continue;
+                int nx = cx + dx, ny = cy + dy;
+                if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+                total++;
+
+                int t = terrain[nx, ny];
+                if (t == (int)TerrainGenerator.Terrain.Mountain) mountain++;
+                else if (t == (int)TerrainGenerator.Terrain.Forest) forest++;
+                else if (t == (int)TerrainGenerator.Terrain.Grass) grass++;
+                else if (t == (int)TerrainGenerator.Terrain.Sand) sand++;
+                else if (t == (int)TerrainGenerator.Terrain.Hills) hills++;
+                else if (t <= (int)TerrainGenerator.Terrain.Water) water++;
+
+                // Check adjacency for coastal
+                if (t > (int)TerrainGenerator.Terrain.Water)
+                {
+                    if ((nx > 0 && terrain[nx - 1, ny] <= 1) ||
+                        (nx < w - 1 && terrain[nx + 1, ny] <= 1) ||
+                        (ny > 0 && terrain[nx, ny - 1] <= 1) ||
+                        (ny < h - 1 && terrain[nx, ny + 1] <= 1))
+                        coastal++;
+                }
+            }
         }
 
-        return (archetype, tileCount, treasury, prestige);
+        if (total == 0) return 0f;
+        float coastR = coastal / (float)total;
+        float mountR = mountain / (float)total;
+        float forestR = forest / (float)total;
+        float grassR = grass / (float)total;
+        float sandR = sand / (float)total;
+        float waterR = water / (float)total;
+
+        return pref switch
+        {
+            TerrainPreference.Plains   => grassR * 10f + hills * 0.02f - mountR * 3f,
+            TerrainPreference.Coastal  => coastR * 12f + grassR * 3f - mountR * 2f,
+            TerrainPreference.Mountain => mountR * 10f + hills * 0.05f - waterR * 5f,
+            TerrainPreference.Desert   => sandR * 10f + grassR * 1f - waterR * 3f - forestR * 2f,
+            TerrainPreference.Forest   => forestR * 10f + grassR * 2f - sandR * 3f,
+            TerrainPreference.Island   => waterR * 6f + coastR * 8f - grassR * 2f,
+            TerrainPreference.Mixed    => grassR * 3f + forestR * 2f + mountR * 2f + coastR * 2f,
+            _ => 0f
+        };
+    }
+
+    /// <summary>Count tiles owned by a nation.</summary>
+    private static int CountTilesOwned(WorldData world, int nationIdx, int w, int h)
+    {
+        int count = 0;
+        for (int x = 0; x < w; x++)
+            for (int y = 0; y < h; y++)
+                if (world.OwnershipMap![x, y] == nationIdx) count++;
+        return count;
+    }
+
+    // ═══ Archetype-driven army composition ═══
+    private static void PopulateArmyByProfile(ArmyData army, MilitaryProfile profile, int armyIndex, bool isCoastal, Random rng)
+    {
+        switch (profile)
+        {
+            case MilitaryProfile.CombinedArms: // Hegemon — USA-style balanced + carriers
+                army.Composition[UnitType.Infantry] = 800 + rng.Next(200);
+                army.Composition[UnitType.Tank] = 100 + rng.Next(40);
+                army.Composition[UnitType.Artillery] = 50 + rng.Next(20);
+                army.Composition[UnitType.AntiAir] = 30 + rng.Next(15);
+                army.Composition[UnitType.Fighter] = 36 + rng.Next(24);
+                if (armyIndex == 0) army.Composition[UnitType.Bomber] = 12 + rng.Next(12);
+                if (isCoastal) { army.Composition[UnitType.Destroyer] = 8 + rng.Next(6); army.Composition[UnitType.Carrier] = armyIndex < 2 ? 1 : 0; army.Composition[UnitType.Submarine] = 4 + rng.Next(4); }
+                break;
+
+            case MilitaryProfile.MassInfantry: // Revolutionary — Russia/USSR-style quantity
+                army.Composition[UnitType.Infantry] = 1200 + rng.Next(400);
+                army.Composition[UnitType.Tank] = 60 + rng.Next(40);
+                army.Composition[UnitType.Artillery] = 80 + rng.Next(30);
+                army.Composition[UnitType.AntiAir] = 20 + rng.Next(15);
+                if (armyIndex == 0) army.Composition[UnitType.Fighter] = 24 + rng.Next(12);
+                if (isCoastal) { army.Composition[UnitType.Submarine] = 6 + rng.Next(4); army.Composition[UnitType.Destroyer] = 4 + rng.Next(4); }
+                break;
+
+            case MilitaryProfile.TechDefense: // Commercial — EU-style small but advanced
+                army.Composition[UnitType.Infantry] = 300 + rng.Next(100);
+                army.Composition[UnitType.Tank] = 30 + rng.Next(20);
+                army.Composition[UnitType.Artillery] = 15 + rng.Next(10);
+                army.Composition[UnitType.AntiAir] = 25 + rng.Next(10);
+                army.Composition[UnitType.Fighter] = 24 + rng.Next(18);
+                if (isCoastal) { army.Composition[UnitType.Destroyer] = 6 + rng.Next(4); army.Composition[UnitType.Submarine] = 3 + rng.Next(3); }
+                break;
+
+            case MilitaryProfile.Fortified: // Traditionalist — Saudi/Gulf defensive
+                army.Composition[UnitType.Infantry] = 600 + rng.Next(200);
+                army.Composition[UnitType.Tank] = 50 + rng.Next(20);
+                army.Composition[UnitType.Artillery] = 70 + rng.Next(30);
+                army.Composition[UnitType.AntiAir] = 40 + rng.Next(20);
+                army.Composition[UnitType.Fighter] = 24 + rng.Next(18);
+                if (armyIndex == 0) army.Composition[UnitType.Bomber] = 8 + rng.Next(8);
+                break;
+
+            case MilitaryProfile.TankHeavy: // Industrial — China-style armor blitz
+                army.Composition[UnitType.Infantry] = 700 + rng.Next(200);
+                army.Composition[UnitType.Tank] = 180 + rng.Next(60);
+                army.Composition[UnitType.Artillery] = 50 + rng.Next(20);
+                army.Composition[UnitType.AntiAir] = 20 + rng.Next(15);
+                if (armyIndex == 0) army.Composition[UnitType.Fighter] = 20 + rng.Next(12);
+                if (isCoastal) { army.Composition[UnitType.Destroyer] = 6 + rng.Next(4); }
+                break;
+
+            case MilitaryProfile.NavalDominant: // Naval Empire — British-style sea power
+                army.Composition[UnitType.Infantry] = 400 + rng.Next(100);
+                army.Composition[UnitType.Tank] = 30 + rng.Next(20);
+                army.Composition[UnitType.AntiAir] = 15 + rng.Next(10);
+                army.Composition[UnitType.Fighter] = 18 + rng.Next(12);
+                army.Composition[UnitType.Destroyer] = 12 + rng.Next(8);
+                army.Composition[UnitType.Submarine] = 8 + rng.Next(6);
+                if (armyIndex < 2) army.Composition[UnitType.Carrier] = 1;
+                army.Composition[UnitType.LandingCraft] = 4 + rng.Next(4);
+                break;
+
+            case MilitaryProfile.NuclearSmall: // FreeState — Israel-style tiny + nuke
+                army.Composition[UnitType.Infantry] = 200 + rng.Next(80);
+                army.Composition[UnitType.Tank] = 25 + rng.Next(15);
+                army.Composition[UnitType.Artillery] = 10 + rng.Next(8);
+                army.Composition[UnitType.AntiAir] = 12 + rng.Next(8);
+                army.Composition[UnitType.Fighter] = 10 + rng.Next(6);
+                if (armyIndex == 0) army.Composition[UnitType.NuclearMissile] = 1; // THE bomb
+                break;
+
+            case MilitaryProfile.TokenForce: // Trade City — Singapore-style minimal
+                army.Composition[UnitType.Infantry] = 80 + rng.Next(40);
+                army.Composition[UnitType.AntiAir] = 15 + rng.Next(10);
+                if (isCoastal) army.Composition[UnitType.Destroyer] = 2 + rng.Next(3);
+                break;
+
+            case MilitaryProfile.GuerrillaLight: // Guerrilla — Afghan-style pure infantry
+                army.Composition[UnitType.Infantry] = 400 + rng.Next(200);
+                army.Composition[UnitType.Artillery] = 5 + rng.Next(8);
+                break;
+
+            case MilitaryProfile.BalancedSmall: // Intelligence/Remnant — small balanced
+                army.Composition[UnitType.Infantry] = 200 + rng.Next(100);
+                army.Composition[UnitType.Tank] = 15 + rng.Next(15);
+                army.Composition[UnitType.Artillery] = 10 + rng.Next(10);
+                army.Composition[UnitType.AntiAir] = 8 + rng.Next(8);
+                if (armyIndex == 0) army.Composition[UnitType.Fighter] = 6 + rng.Next(6);
+                if (isCoastal) army.Composition[UnitType.Submarine] = 2 + rng.Next(3);
+                break;
+
+            case MilitaryProfile.SubmarineFleet: // Island Naval — Taiwan/Cuba-style
+                army.Composition[UnitType.Infantry] = 150 + rng.Next(80);
+                army.Composition[UnitType.AntiAir] = 12 + rng.Next(8);
+                army.Composition[UnitType.Submarine] = 6 + rng.Next(4);
+                army.Composition[UnitType.Destroyer] = 4 + rng.Next(3);
+                if (armyIndex == 0) army.Composition[UnitType.Missile] = 4 + rng.Next(4); // anti-ship missiles
+                break;
+
+            case MilitaryProfile.Minimal: // Resource Cursed — weakest
+                army.Composition[UnitType.Infantry] = 100 + rng.Next(80);
+                army.Composition[UnitType.Tank] = 5 + rng.Next(8);
+                break;
+        }
+    }
+
+    /// <summary>Analyze geography around a point for the custom nation feature.
+    /// Returns resource values derived from terrain composition.</summary>
+    public static (float Iron, float Oil, float Uranium, float Electronics, float Manpower, float Food, float Treasury)
+        AnalyzeGeographyForResources(int[,] terrain, int cx, int cy, int w, int h)
+    {
+        int coastal = 0, mountain = 0, forest = 0, grass = 0, sand = 0, hills = 0;
+        int total = 0;
+        const int radius = 50;
+
+        for (int dx = -radius; dx <= radius; dx++)
+        {
+            for (int dy = -radius; dy <= radius; dy++)
+            {
+                if (dx * dx + dy * dy > radius * radius) continue;
+                int nx = cx + dx, ny = cy + dy;
+                if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+                total++;
+
+                int t = terrain[nx, ny];
+                if (t == (int)TerrainGenerator.Terrain.Mountain) mountain++;
+                else if (t == (int)TerrainGenerator.Terrain.Forest) forest++;
+                else if (t == (int)TerrainGenerator.Terrain.Grass) grass++;
+                else if (t == (int)TerrainGenerator.Terrain.Sand) sand++;
+                else if (t == (int)TerrainGenerator.Terrain.Hills) hills++;
+                if (t > (int)TerrainGenerator.Terrain.Water &&
+                    ((nx > 0 && terrain[nx - 1, ny] <= 1) || (nx < w - 1 && terrain[nx + 1, ny] <= 1) ||
+                     (ny > 0 && terrain[nx, ny - 1] <= 1) || (ny < h - 1 && terrain[nx, ny + 1] <= 1)))
+                    coastal++;
+            }
+        }
+
+        if (total == 0) total = 1;
+        float cR = coastal / (float)total;
+        float mR = mountain / (float)total;
+        float fR = forest / (float)total;
+        float gR = grass / (float)total;
+        float sR = sand / (float)total;
+        float hR = hills / (float)total;
+
+        return (
+            Iron:        Math.Clamp(10f + mR * 60f + hR * 40f, 0, 100),
+            Oil:         Math.Clamp(5f + sR * 50f + cR * 30f, 0, 100),
+            Uranium:     Math.Clamp(5f + mR * 30f + sR * 20f, 0, 100),
+            Electronics: Math.Clamp(10f + gR * 20f, 0, 100),
+            Manpower:    Math.Clamp(10f + gR * 40f + fR * 30f, 0, 100),
+            Food:        Math.Clamp(10f + gR * 50f + fR * 20f + cR * 15f, 0, 100),
+            Treasury:    800f + cR * 500f + gR * 300f
+        );
     }
 
     private static bool IsNearWater(int[,] terrain, int x, int y, int w, int h)
