@@ -83,8 +83,7 @@ public partial class MilitaryCommandPanel : Control
                 _statusLabel.Text = $"Current: {order}";
                 _statusLabel.AddThemeColorOverride("font_color", highlight);
 
-                // Need to redraw map if we have target markers
-                // Map overlay refresh is handled automatically by WarshipMapBridge
+                // Map overlay refresh is handled by TerritoryBorderRenderer
             }
         };
         parent.AddChild(btn);

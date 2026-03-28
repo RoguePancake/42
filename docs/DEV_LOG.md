@@ -10,12 +10,23 @@
 ## Current Status
 
 **Active Milestone:** M3 — 13 Nations Live (IN PROGRESS)
-**Branch:** claude/start-m3-Are3l
+**Branch:** claude/overhaul-map-ui-dHnki
 **Last Session:** 2026-03-28
 
 ---
 
 ## Session Log
+
+### Session 7 — 2026-03-28 (Map UI Overhaul)
+**Goal:** Fix map not rendering — root cause was dead OSM system in scene, procedural map never wired up
+**Done:**
+- Diagnosed root cause: Main.tscn had TileMapRenderer (OSM real-world tiles) + WarshipMapBridge instead of MapManager + MapCamera. The procedural map system was never in the scene tree.
+- Rewrote `scenes/Main.tscn`: removed TileMapRenderer + WarshipMapBridge nodes, added MapManager (Node2D) + MapCamera (Camera2D)
+- Deleted `src/UI/Map/TileMapRenderer.cs` (631 lines of dead OSM tile loading code)
+- Deleted `src/UI/Map/WarshipMapBridge.cs` (266 lines of dead OSM bridge code)
+- Added explicit `MakeCurrent()` to MapCamera._Ready() for reliable camera activation
+- Cleaned up stale WarshipMapBridge comment in MilitaryCommandPanel.cs
+**Result:** MapManager now in scene tree, creates TerrainChunkRenderer + TerritoryBorderRenderer + ArmySwarmRenderer layers. MapCamera provides WASD/scroll/edge-scroll navigation. World generation → WorldReadyEvent → MapManager.OnWorldReady() → terrain baking pipeline is now properly connected.
 
 ### Session 6 — 2026-03-28 (M3: 13 Nations Live)
 **Goal:** Replace 6 hardcoded nations with 13 named fictional nations
