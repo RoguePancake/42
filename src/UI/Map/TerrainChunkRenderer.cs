@@ -17,17 +17,17 @@ public partial class TerrainChunkRenderer : Node2D
     public const int ChunkTiles = 32;  // 32x32 tiles per chunk
     public const int TileSize = MapManagerConstants.TileSize; // 32px
 
-    // SNES-style terrain colors
+    // Minecraft-style terrain colors (top-down map palette)
     private static readonly Color[] TerrainColors =
     {
-        new(0.08f, 0.16f, 0.32f),  // 0: Deep Water
-        new(0.12f, 0.32f, 0.58f),  // 1: Water
-        new(0.85f, 0.76f, 0.50f),  // 2: Sand
-        new(0.32f, 0.62f, 0.30f),  // 3: Grass
-        new(0.18f, 0.40f, 0.20f),  // 4: Forest
-        new(0.48f, 0.56f, 0.38f),  // 5: Hills
-        new(0.55f, 0.48f, 0.42f),  // 6: Mountain
-        new(0.92f, 0.94f, 0.96f),  // 7: Snow
+        new(0.15f, 0.21f, 0.43f),  // 0: Deep Water — dark ocean blue
+        new(0.25f, 0.25f, 1.00f),  // 1: Water — bright Minecraft blue
+        new(0.87f, 0.83f, 0.57f),  // 2: Sand — warm tan
+        new(0.50f, 0.70f, 0.22f),  // 3: Grass — iconic Minecraft green
+        new(0.00f, 0.49f, 0.00f),  // 4: Forest — dark green
+        new(0.44f, 0.44f, 0.44f),  // 5: Hills — stone grey
+        new(0.50f, 0.50f, 0.50f),  // 6: Mountain — lighter grey
+        new(1.00f, 1.00f, 1.00f),  // 7: Snow — pure white
     };
 
     private bool _baked = false;
@@ -81,43 +81,22 @@ public partial class TerrainChunkRenderer : Node2D
                         int pxStart = tx * TileSize;
                         int pyStart = ty * TileSize;
 
+                        // Minecraft-style: one flat color per tile with subtle per-tile shade variation
+                        float tileShade = TerrainGenerator.HashFloat(seed, worldTX * 7919 + worldTY * 6271);
+                        Color tileColor;
+                        if (tileShade < 0.33f)
+                            tileColor = shadow;
+                        else if (tileShade > 0.66f)
+                            tileColor = highlight;
+                        else
+                            tileColor = baseColor;
+
+                        // Fill entire tile with one solid color (blocky Minecraft look)
                         for (int px = 0; px < TileSize; px++)
                         {
                             for (int py = 0; py < TileSize; py++)
                             {
-                                // Deterministic pixel-level detail using hash
-                                float n = TerrainGenerator.HashFloat(seed, worldTX * 10000 + worldTY * 100 + px * 37 + py);
-                                Color c = baseColor;
-
-                                switch (terrain)
-                                {
-                                    case 0: // Deep Water — dark waves
-                                    case 1: // Water — lighter waves
-                                        c = n > 0.7f ? highlight : (n < 0.15f ? shadow : baseColor);
-                                        break;
-                                    case 2: // Sand — speckles
-                                        c = n > 0.85f ? shadow : (n < 0.1f ? highlight : baseColor);
-                                        break;
-                                    case 3: // Grass — tufts and flowers
-                                        c = n > 0.8f ? highlight : baseColor;
-                                        if (n > 0.95f) c = new Color(0.9f, 0.85f, 0.2f); // Flower
-                                        break;
-                                    case 4: // Forest — canopy
-                                        c = n > 0.5f ? highlight : shadow;
-                                        break;
-                                    case 5: // Hills — rolling
-                                        c = n > 0.5f ? highlight : shadow;
-                                        break;
-                                    case 6: // Mountain — crags + snow caps
-                                        c = n > 0.6f ? shadow : baseColor;
-                                        if (py < TileSize / 3 && n > 0.4f) c = Colors.White;
-                                        break;
-                                    case 7: // Snow — sparkle
-                                        c = n > 0.8f ? highlight : baseColor;
-                                        break;
-                                }
-
-                                img.SetPixel(pxStart + px, pyStart + py, c);
+                                img.SetPixel(pxStart + px, pyStart + py, tileColor);
                             }
                         }
                     }
@@ -174,13 +153,11 @@ public partial class RiverDrawLayer : Node2D
 
     public override void _Draw()
     {
-        var riverColor = new Color(0.15f, 0.35f, 0.65f);
+        var riverColor = new Color(0.25f, 0.25f, 1.0f); // Minecraft blue
         foreach (var path in _riverPixelPaths)
         {
             if (path.Length < 2) continue;
-            DrawPolyline(path, new Color(0, 0, 0, 0.3f), 5, true);
             DrawPolyline(path, riverColor, 3, true);
-            DrawPolyline(path, Colors.White * new Color(1, 1, 1, 0.3f), 1, true);
         }
     }
 }
