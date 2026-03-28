@@ -27,6 +27,52 @@ military compositions, and balance ratios. Every fictional nation maps to a real
 
 ---
 
+## Detailed Major Power Profiles (Real-World Data, 2024-2026 sources)
+
+### 1. USA → United States Alliance (Hegemon)
+- **GDP**: $30.6T (#1). Defense budget: $895B (3x next competitor)
+- **Military**: 1.4M active. 11 nuclear carriers (next best: China with 3). 70 nuclear subs. 13,000+ aircraft. 5,177 nuclear warheads.
+- **Resources**: #1 oil producer (13.6 mb/d), #1 natural gas. Self-sufficient in energy. Top 3 agriculture. Weak in rare earths (depends on China for refining).
+- **Signature**: Unmatched power projection — 750+ bases in 80 countries. Two-ocean moat makes homeland virtually uninvadable. Dollar as world reserve currency = economic warfare tool.
+- **Weakness**: $39T national debt (122% GDP). $901B trade deficit. Overextended globally.
+
+### 2. Russia → Republic of Valdria (Revolutionary)
+- **GDP**: $2.5T nominal (#9), but $5.8T PPP (#4). Defense: $126B (7% of GDP — wartime footing)
+- **Military**: 1.3-1.5M active, 2M reserves. World's largest tank fleet (5,750 active). 5,459 nuclear warheads (#1). 63 subs. Massive artillery (8,505 towed + 5,168 SP + 3,005 MLRS). Hypersonic missiles (Kinzhal, Zircon, Avangard).
+- **Resources**: #2 oil (9.9 mb/d), world's largest gas reserves, #1 enriched uranium (40% global supply), #5 iron ore, top wheat exporter, largest forest area on earth.
+- **Signature**: Nuclear parity with USA. Attrition warfare doctrine — absorbs massive casualties. Energy weapon (gas leverage over Europe). Strategic depth (unconquerable heartland spanning 11 time zones).
+- **Weakness**: Small economy relative to military. Sanctions isolation. Limited naval projection (bottlenecked at Baltic, Black Sea). Demographic decline.
+
+### 3. Modern China → Volkren Collective (Industrial)
+- **GDP**: $19.4T (#2). Defense: $330-450B (real, exceeds official figures). Trade surplus: $1.19T (record).
+- **Military**: 2M active (world's largest). World's largest navy by hull count (370+ vessels). 3 carriers (aiming for 9 by 2035). 70+ subs. J-20 stealth fleet (~200+). 600 nuclear warheads (growing ~100/year).
+- **Resources**: 54% of world steel. 70% of rare earth mining, 90% of rare earth processing. 30% of global manufacturing. But #1 oil IMPORTER and net food importer.
+- **Signature**: Shipbuilding capacity 232x greater than USA. Can outproduce any rival in conventional weapons. Rare earth monopoly = chokehold on global electronics. Belt and Road economic network.
+- **Weakness**: Energy import dependency (80% of oil through Malacca Strait — blockade-vulnerable). Food import dependency. Island chain containment. Aging population.
+
+### 4. British Empire → Thalassian Dominion (Naval)
+- **GDP**: $4.0T (#6). Defense: $75-80B. London = top global financial center.
+- **Military**: 147K active (small but elite). 2 Queen Elizabeth-class carriers (65K tons). 9 nuclear subs (4 Trident SSBNs). 225 nuclear warheads. SAS/SBS special forces. GCHQ + MI6 intelligence.
+- **Resources**: North Sea oil declining. ~60% food self-sufficient. Strong in aerospace (Rolls-Royce, BAE), pharmaceuticals, financial services.
+- **Signature**: Island fortress — unconquered since 1066. Blue-water navy with nuclear deterrent. Five Eyes intelligence alliance. Global basing network (Gibraltar, Cyprus, Falklands, Diego Garcia). Quality over quantity.
+- **Weakness**: Tiny army (82K). Declining industrial base. Resource-poor. Food import dependency.
+
+### 5. EU/Germany → Meridian Confederation (Commercial)
+- **GDP**: Germany $5.0T (#3), EU combined ~$18-19T (#2 bloc). Germany trade surplus: $226B. EU defense spending: $446B (exceeds China, 3x Russia).
+- **Military (EU combined)**: 1.5M active. France: 290-370 nukes + 1 carrier. Germany: 313 tanks + massive rearmament program (€355B through 2041). Eurofighter fleet. No unified command (biggest weakness).
+- **Resources**: World's largest food exporter (EU). Manufacturing powerhouse (automotive, aerospace, chemicals, machinery). Energy-poor — former Russian gas dependency. Imports virtually all metals.
+- **Signature**: Economic mass ($18-19T GDP). Industrial depth. Automotive dominance (16.3% of German exports). Rules-based order. Massive combined manpower.
+- **Weakness**: No single military command. Slow consensus decision-making. Energy import vulnerability. Germany alone is indefensible (flat North European Plain).
+
+### 6. Saudi/GCC → Kingdom of Ashenmoor (Traditionalist)
+- **GDP**: Saudi $1.3T, GCC combined $2.4T. Sovereign wealth funds: $5T (projected $7T by 2030).
+- **Military**: Saudi 410K (including National Guard). 840 tanks (M1A2S Abrams). 198 fighters (F-15SA, Typhoon, F-35 incoming). THAAD + Patriot air defense network. 0 nuclear warheads (but Pakistan defense pact signed 2025).
+- **Resources**: GCC produces 17 mb/d oil (controls Strait of Hormuz — 20% of world oil). Qatar = #1 LNG exporter. World's 2nd largest proven oil reserves. But almost zero food production and extreme water scarcity.
+- **Signature**: Oil weapon (can crash or spike global prices). $5T sovereign wealth = economic staying power. Controls two critical chokepoints (Hormuz + Bab el-Mandeb). Religious soft power (Mecca/Medina over 1.8B Muslims).
+- **Weakness**: No domestic arms industry (19% localization). Existential food/water import dependency. 0 nukes. Internal GCC divisions (Saudi-UAE rivalry). Vulnerable to drone/missile attacks (demonstrated by Houthi strikes).
+
+---
+
 ## Real-World Military Data (Source of Game Balance)
 
 ### Active Military Personnel (real)
