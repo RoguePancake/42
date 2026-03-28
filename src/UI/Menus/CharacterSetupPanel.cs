@@ -8,12 +8,20 @@ namespace Warship.UI.Menus;
 
 public partial class CharacterSetupPanel : Control
 {
+    private const int CustomNationIdx = 13; // index for "Custom Nation..." entry
+
     private OptionButton _nationDropdown = null!;
     private OptionButton _roleDropdown = null!;
     private LineEdit _nameInput = null!;
     private OptionButton _focusDropdown = null!;
     private Label _nationDesc = null!;
     private Button _startButton = null!;
+
+    // Custom nation fields (hidden unless Custom is selected)
+    private Control _customPanel = null!;
+    private LineEdit _customNameInput = null!;
+    private OptionButton _customArchetypeDropdown = null!;
+    private Label _customInfo = null!;
 
     private string[] _roles = {
         "Head of State",
@@ -33,21 +41,33 @@ public partial class CharacterSetupPanel : Control
         "Shadow Broker (+BSA)"
     };
 
+    // Archetypes available for custom nation (subset — not all make sense for player-built)
+    private NationArchetype[] _customArchetypes = {
+        NationArchetype.Hegemon, NationArchetype.Commercial, NationArchetype.Revolutionary,
+        NationArchetype.Traditionalist, NationArchetype.Industrial, NationArchetype.Naval,
+        NationArchetype.FreeState, NationArchetype.Guerrilla, NationArchetype.Intelligence,
+    };
+
     public override void _Ready()
     {
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
 
-        // Full screen dark overlay
         var bg = new ColorRect {
             Color = new Color(0.02f, 0.02f, 0.05f, 0.98f),
             AnchorsPreset = (int)LayoutPreset.FullRect
         };
         AddChild(bg);
 
-        var center = new CenterContainer {
+        var scroll = new ScrollContainer {
             AnchorsPreset = (int)LayoutPreset.FullRect
         };
-        AddChild(center);
+        AddChild(scroll);
+
+        var center = new CenterContainer {
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            CustomMinimumSize = new Vector2(500, 0),
+        };
+        scroll.AddChild(center);
 
         var panel = new PanelContainer();
         var style = new StyleBoxFlat {
@@ -67,7 +87,7 @@ public partial class CharacterSetupPanel : Control
         panel.AddChild(margin);
 
         var vbox = new VBoxContainer();
-        vbox.AddThemeConstantOverride("separation", 12);
+        vbox.AddThemeConstantOverride("separation", 10);
         margin.AddChild(vbox);
 
         var title = new Label { Text = "EXECUTIVE CLEARANCE REQUIRED" };
@@ -85,13 +105,14 @@ public partial class CharacterSetupPanel : Control
         {
             var t = WorldGenerator.Templates[i];
             string tier = t.Tier == NationTier.Large ? "Major" : "Minor";
-            _nationDropdown.AddItem($"{t.Name}  [{tier} — {t.Archetype}]");
+            _nationDropdown.AddItem($"{t.Name}  [{tier} \u2014 {t.Archetype}]");
         }
+        _nationDropdown.AddItem("\u2726 Custom Nation...");
         _nationDropdown.Selected = 6; // Default: Selvara
         _nationDropdown.ItemSelected += OnNationChanged;
         vbox.AddChild(_nationDropdown);
 
-        // Nation description label
+        // Nation description
         _nationDesc = new Label {
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
             CustomMinimumSize = new Vector2(420, 0),
@@ -100,6 +121,40 @@ public partial class CharacterSetupPanel : Control
         _nationDesc.AddThemeColorOverride("font_color", new Color(0.7f, 0.7f, 0.8f, 1f));
         vbox.AddChild(_nationDesc);
         UpdateNationDescription(6);
+
+        // ── Custom nation panel (hidden by default) ──
+        _customPanel = new VBoxContainer();
+        ((VBoxContainer)_customPanel).AddThemeConstantOverride("separation", 8);
+        _customPanel.Visible = false;
+        vbox.AddChild(_customPanel);
+
+        _customPanel.AddChild(new HSeparator());
+        var customTitle = new Label { Text = "FORGE YOUR NATION" };
+        customTitle.AddThemeFontSizeOverride("font_size", 16);
+        customTitle.AddThemeColorOverride("font_color", new Color(0.83f, 0.66f, 0.29f, 1f));
+        _customPanel.AddChild(customTitle);
+
+        _customPanel.AddChild(new Label { Text = "Nation Name:" });
+        _customNameInput = new LineEdit { PlaceholderText = "E.g. Republic of Novagrad", Text = "" };
+        _customPanel.AddChild(_customNameInput);
+
+        _customPanel.AddChild(new Label { Text = "Government Type:" });
+        _customArchetypeDropdown = new OptionButton();
+        foreach (var a in _customArchetypes)
+            _customArchetypeDropdown.AddItem(a.ToString());
+        _customArchetypeDropdown.Selected = 6; // FreeState default
+        _customPanel.AddChild(_customArchetypeDropdown);
+
+        _customInfo = new Label {
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            CustomMinimumSize = new Vector2(420, 0),
+        };
+        _customInfo.AddThemeFontSizeOverride("font_size", 12);
+        _customInfo.AddThemeColorOverride("font_color", new Color(0.6f, 0.65f, 0.5f, 1f));
+        _customInfo.Text = "After setup, click the map to place your capital.\n" +
+            "Starting resources will be derived from the terrain around your capital.\n" +
+            "You'll start as a Small nation: 4 cities, 2 armies.";
+        _customPanel.AddChild(_customInfo);
 
         vbox.AddChild(new HSeparator());
 
@@ -121,11 +176,15 @@ public partial class CharacterSetupPanel : Control
         foreach (var f in _focuses) _focusDropdown.AddItem(f);
         vbox.AddChild(_focusDropdown);
 
-        vbox.AddChild(new Control { CustomMinimumSize = new Vector2(0, 8) });
+        vbox.AddChild(new Control { CustomMinimumSize = new Vector2(0, 6) });
 
         _startButton = new Button { Text = "INITIALIZE CLEARANCE" };
         _startButton.AddThemeFontSizeOverride("font_size", 18);
-        var btnStyle = new StyleBoxFlat { BgColor = new Color(0.83f, 0.66f, 0.29f, 1f), CornerRadiusTopLeft = 4, CornerRadiusBottomRight = 4, CornerRadiusTopRight = 4, CornerRadiusBottomLeft = 4 };
+        var btnStyle = new StyleBoxFlat {
+            BgColor = new Color(0.83f, 0.66f, 0.29f, 1f),
+            CornerRadiusTopLeft = 4, CornerRadiusBottomRight = 4,
+            CornerRadiusTopRight = 4, CornerRadiusBottomLeft = 4
+        };
         _startButton.AddThemeStyleboxOverride("normal", btnStyle);
         _startButton.AddThemeColorOverride("font_color", new Color(0.1f, 0.1f, 0.1f, 1f));
         _startButton.Pressed += OnStartPressed;
@@ -134,7 +193,21 @@ public partial class CharacterSetupPanel : Control
 
     private void OnNationChanged(long index)
     {
-        UpdateNationDescription((int)index);
+        bool isCustom = (int)index == CustomNationIdx;
+        _customPanel.Visible = isCustom;
+
+        if (isCustom)
+        {
+            _nationDesc.Text = "Build your own nation from scratch. Choose a name, government type, " +
+                "and place your capital on the map. Your starting resources, terrain advantages, " +
+                "and military composition will be determined by where you settle.";
+            _startButton.Text = "PLACE CAPITAL ON MAP";
+        }
+        else
+        {
+            _startButton.Text = "INITIALIZE CLEARANCE";
+            UpdateNationDescription((int)index);
+        }
     }
 
     private void UpdateNationDescription(int index)
@@ -182,7 +255,19 @@ public partial class CharacterSetupPanel : Control
         int focusIndex = _focusDropdown.Selected;
         int nationIndex = _nationDropdown.Selected;
 
-        WorldStateManager.Instance?.InitializeWorld(selectedRole, playerName, focusIndex, nationIndex);
+        if (nationIndex == CustomNationIdx)
+        {
+            // Custom nation flow: generate world with 12 AI nations, then enter map-click mode
+            string customName = string.IsNullOrWhiteSpace(_customNameInput.Text) ? "New Republic" : _customNameInput.Text;
+            var archetype = _customArchetypes[_customArchetypeDropdown.Selected];
+
+            WorldStateManager.Instance?.InitializeCustomNation(
+                selectedRole, playerName, focusIndex, customName, archetype);
+        }
+        else
+        {
+            WorldStateManager.Instance?.InitializeWorld(selectedRole, playerName, focusIndex, nationIndex);
+        }
 
         QueueFree();
     }

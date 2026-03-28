@@ -544,6 +544,213 @@ public static class WorldGenerator
         return world;
     }
 
+    /// <summary>Generate world with only 12 AI nations (no player). Used for custom nation flow.</summary>
+    public static WorldData CreateWorldWithoutPlayer(int seed)
+    {
+        // Create world with 12 AI templates (skip index 6 = Selvara, use first 12 non-player)
+        // We generate all 13 preset nations but mark none as player
+        var world = CreateWorld(seed, "J. Crawford", "Defense Minister", 0, 0);
+        // Unset player flag on all nations
+        foreach (var n in world.Nations) n.IsPlayer = false;
+        world.PlayerNationId = null;
+        return world;
+    }
+
+    /// <summary>Add a custom player nation to an existing world at the specified capital location.</summary>
+    public static void AddCustomNation(WorldData world, int capitalX, int capitalY,
+        string nationName, NationArchetype archetype,
+        string playerName, string playerRole, int focusIndex)
+    {
+        var rng = new Random(world.Seed + 999); // deterministic but different from world gen
+        int mapW = world.MapWidth, mapH = world.MapHeight;
+        int nationIdx = world.Nations.Count;
+
+        // Derive resources from geography
+        var res = AnalyzeGeographyForResources(world.TerrainMap!, capitalX, capitalY, mapW, mapH);
+
+        // Pick a military profile based on chosen archetype
+        var milProfile = archetype switch
+        {
+            NationArchetype.Hegemon => MilitaryProfile.CombinedArms,
+            NationArchetype.Commercial => MilitaryProfile.TechDefense,
+            NationArchetype.Revolutionary => MilitaryProfile.MassInfantry,
+            NationArchetype.Traditionalist => MilitaryProfile.Fortified,
+            NationArchetype.Industrial => MilitaryProfile.TankHeavy,
+            NationArchetype.Naval => MilitaryProfile.NavalDominant,
+            NationArchetype.FreeState => MilitaryProfile.NuclearSmall,
+            NationArchetype.Guerrilla => MilitaryProfile.GuerrillaLight,
+            NationArchetype.Intelligence => MilitaryProfile.BalancedSmall,
+            _ => MilitaryProfile.BalancedSmall,
+        };
+
+        // Create nation
+        var nation = new NationData
+        {
+            Id = $"N_{nationIdx}",
+            Name = nationName,
+            Archetype = archetype,
+            Tier = NationTier.Small,
+            NationColor = new Color(0.95f, 0.50f, 0.20f), // Custom orange
+            IsPlayer = true,
+            CapitalX = capitalX,
+            CapitalY = capitalY,
+            Treasury = res.Treasury,
+            Prestige = 25f,
+            Iron = res.Iron, Oil = res.Oil, Uranium = res.Uranium,
+            Electronics = res.Electronics, Manpower = res.Manpower, Food = res.Food,
+            Stability = 70f,
+        };
+        world.Nations.Add(nation);
+        world.PlayerNationId = nation.Id;
+
+        // Create capital city
+        int cityIdx = world.Cities.Count;
+        world.Cities.Add(new CityData
+        {
+            Id = $"C_{cityIdx}",
+            NationId = nation.Id,
+            Name = nationName.Split(' ').Last(),
+            TileX = capitalX,
+            TileY = capitalY,
+            IsCapital = true,
+            Size = 3,
+            HP = 400,
+            CityIndex = cityIdx,
+        });
+
+        // Find 3 nearby spots for secondary cities
+        var candidates = TerrainGenerator.FindCityLocations(
+            world.TerrainMap!, world.RiverPaths.Select(r =>
+            {
+                var flat = new int[r.Length * 2];
+                for (int i = 0; i < r.Length; i++) { flat[i * 2] = (int)r[i].X; flat[i * 2 + 1] = (int)r[i].Y; }
+                return flat;
+            }).ToList(),
+            mapW, mapH, world.Seed + 1000, 30);
+
+        int secondariesPlaced = 0;
+        foreach (var spot in candidates)
+        {
+            if (secondariesPlaced >= 3) break;
+            float dx = spot.x - capitalX, dy = spot.y - capitalY;
+            float dist = dx * dx + dy * dy;
+            if (dist < 15 * 15 || dist > 60 * 60) continue; // too close or too far
+
+            // Check it's not already a city
+            bool tooCloseToExisting = world.Cities.Any(c =>
+            {
+                float cdx = c.TileX - spot.x, cdy = c.TileY - spot.y;
+                return cdx * cdx + cdy * cdy < 20 * 20;
+            });
+            if (tooCloseToExisting) continue;
+
+            cityIdx = world.Cities.Count;
+            world.Cities.Add(new CityData
+            {
+                Id = $"C_{cityIdx}",
+                NationId = nation.Id,
+                Name = $"{CityPrefixes[rng.Next(CityPrefixes.Length)]} {CitySuffixes[rng.Next(CitySuffixes.Length)]}",
+                TileX = spot.x,
+                TileY = spot.y,
+                IsCapital = false,
+                Size = spot.quality > 5f ? 2 : 1,
+                HP = spot.quality > 5f ? 200 : 100,
+                CityIndex = cityIdx,
+            });
+            secondariesPlaced++;
+        }
+
+        // Re-derive territory and borders for the whole map
+        AssignCityTerritory(world, world.TerrainMap!, mapW, mapH);
+        DeriveNationOwnership(world, mapW, mapH);
+        ComputeNationBorders(world, mapW, mapH);
+
+        // Count provinces
+        nation.ProvinceCount = CountTilesOwned(world, nationIdx, mapW, mapH);
+
+        // Spawn 2 armies
+        var nationCities = world.Cities.Where(c => c.NationId == nation.Id).ToList();
+        for (int a = 0; a < 2 && a < nationCities.Count; a++)
+        {
+            var city = nationCities[a];
+            bool isCoastal = IsNearWater(world.TerrainMap!, city.TileX, city.TileY, mapW, mapH);
+            var army = new ArmyData
+            {
+                Id = $"{nation.Id}_A_{world.Armies.Count}",
+                NationId = nation.Id,
+                Name = a < ArmyNames.Length ? ArmyNames[a] : $"Army {a + 1}",
+                TileX = city.TileX, TileY = city.TileY,
+                TargetTileX = city.TileX, TargetTileY = city.TileY,
+                PixelX = city.TileX * MapManagerConstants.TileSize + MapManagerConstants.TileSize / 2f,
+                PixelY = city.TileY * MapManagerConstants.TileSize + MapManagerConstants.TileSize / 2f,
+                CurrentOrder = a == 0 ? MilitaryOrder.BorderWatch : MilitaryOrder.Standby,
+                Formation = a == 0 ? FormationType.Circle : FormationType.Spread,
+            };
+            army.TargetPixelX = army.PixelX;
+            army.TargetPixelY = army.PixelY;
+            PopulateArmyByProfile(army, milProfile, a, isCoastal, rng);
+            if (a == 0) army.GarrisonCityId = city.Id;
+            world.Armies.Add(army);
+        }
+
+        // Spawn characters
+        string[] roles = { "Head of State", "Defense Minister", "Foreign Minister",
+                           "Director of Intelligence", "Chief of Staff",
+                           "Finance Minister", "Interior Minister", "Opposition Leader" };
+        var capital = world.Cities.First(c => c.NationId == nation.Id && c.IsCapital);
+        for (int i = 0; i < roles.Length; i++)
+        {
+            bool isPlayer = roles[i] == playerRole;
+            string cName = isPlayer ? playerName :
+                $"{FirstNames[rng.Next(FirstNames.Length)]} {LastNames[rng.Next(LastNames.Length)]}";
+
+            float ta = 30f, wa = 20f, bsa = 40f;
+            if (roles[i] == "Head of State") { ta = 80; wa = 60; bsa = 70; }
+            else if (roles[i] == "Defense Minister") { ta = 40; wa = 20; bsa = 60; }
+            else if (roles[i] == "Foreign Minister") { ta = 15; wa = 80; bsa = 30; }
+            else if (roles[i] == "Director of Intelligence") { ta = 30; wa = 40; bsa = 95; }
+            else if (roles[i] == "Opposition Leader") { ta = 50; wa = 10; bsa = 30; }
+
+            if (isPlayer)
+            {
+                if (focusIndex == 1) ta = Math.Clamp(ta + 20, 0, 100);
+                if (focusIndex == 2) wa = Math.Clamp(wa + 20, 0, 100);
+                if (focusIndex == 3) bsa = Math.Clamp(bsa + 20, 0, 100);
+            }
+
+            float px = capital.TileX * MapManagerConstants.TileSize + MapManagerConstants.TileSize / 2f;
+            float py = capital.TileY * MapManagerConstants.TileSize + MapManagerConstants.TileSize / 2f;
+
+            world.Characters.Add(new CharacterData
+            {
+                Id = $"{nation.Id}_Char_{i + 1}",
+                NationId = nation.Id,
+                Name = cName,
+                Role = roles[i],
+                IsPlayer = isPlayer,
+                TileX = capital.TileX + (i % 3),
+                TileY = capital.TileY + (i / 3),
+                PixelX = px, PixelY = py,
+                TargetPixelX = px, TargetPixelY = py,
+                TerritoryAuthority = ta,
+                WorldAuthority = wa,
+                BehindTheScenesAuthority = bsa,
+            });
+        }
+
+        // Set diplomacy — custom nation starts neutral with everyone
+        foreach (var other in world.Nations)
+        {
+            if (other.Id == nation.Id) continue;
+            nation.Relations[other.Id] = DiplomaticStatus.Neutral;
+            other.Relations[nation.Id] = DiplomaticStatus.Neutral;
+        }
+
+        GD.Print($"[WorldGen] Custom nation '{nationName}' placed at ({capitalX},{capitalY}). " +
+            $"{secondariesPlaced + 1} cities, 2 armies. Resources: Iron={res.Iron:F0} Oil={res.Oil:F0} " +
+            $"Uranium={res.Uranium:F0} Food={res.Food:F0}");
+    }
+
     // ═══ City-centric territory — each city controls a radius ═══
     private static void AssignCityTerritory(WorldData world, int[,] terrain, int w, int h)
     {

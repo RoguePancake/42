@@ -31,6 +31,14 @@ public partial class EventBus : Node
         _subscribers[type].Add(handler);
     }
 
+    /// <summary>Remove a specific callback from a game event.</summary>
+    public void Unsubscribe<T>(Action<T> handler) where T : IGameEvent
+    {
+        var type = typeof(T);
+        if (_subscribers.TryGetValue(type, out var handlers))
+            handlers.Remove(handler);
+    }
+
     /// <summary>Fire an event immediately to all subscribers.</summary>
     public void Publish<T>(T gameEvent) where T : IGameEvent
     {

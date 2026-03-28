@@ -43,7 +43,14 @@
   - Default: Selvara (#6)
 - Updated `WorldStateManager.cs`:
   - `InitializeWorld` now accepts `nationIndex` parameter
-**Pending:** Chunk F — Custom Nation option with map-click capital placement
+- Added nation traits system (22 unique passives like CarrierDoctrine, GuerrillaResistance, NuclearDeterrent)
+- Reimagined all 13 nations as alternate-history civilizations with lore blurbs
+- Added starting diplomatic dispositions (alliances, rivalries, trade dependencies)
+- Built Custom Nation (14th option): name your country, pick archetype, click map to place capital
+  - Geography-to-resources formula derives starting resources from terrain around capital
+  - AddCustomNation() inserts player nation into existing world, re-derives territory/borders
+  - EventBus gets Unsubscribe method; new CustomNationPlacement events
+**Pending:** In-editor testing. Engines don't check traits yet (M4+ work).
 **Issues:** Cannot verify build (Godot SDK required). Need in-editor test.
 **Next:** Custom nation feature, then M4
 
