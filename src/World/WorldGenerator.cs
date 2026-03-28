@@ -54,129 +54,205 @@ public static class WorldGenerator
         float Iron, float Oil, float Uranium,
         float Electronics, float Manpower, float Food,
         float Stability,
-        string Description
+        NationTrait[] Traits,   // Unique passive abilities
+        string Description,     // Gameplay description
+        string Lore             // Alternate-history backstory
     );
 
     public static readonly NationTemplate[] Templates =
     {
-        // ── 6 LARGE NATIONS ──────────────────────────────────────
-        new("United States Alliance",    // #0 — USA/NATO
+        // ══════════════════════════════════════════════════════════
+        //  6 LARGE NATIONS — The Superpowers
+        //  Each is an alternate-history "what if?" civilization
+        // ══════════════════════════════════════════════════════════
+
+        new("United States Alliance",    // #0 — What if democratic expansionism went continental?
             NationArchetype.Hegemon, NationTier.Large,
             CityCount: 12, ArmyCount: 8, StartingTreasury: 5000f,
             new Color(0.20f, 0.40f, 0.80f), // Deep Blue
             TerrainPreference.Plains, MilitaryProfile.CombinedArms,
             Iron: 40, Oil: 50, Uranium: 30, Electronics: 60, Manpower: 50, Food: 70,
             Stability: 85,
-            "Military superpower. Largest army, highest GDP, 2 carriers, global projection."),
+            new[] { NationTrait.CarrierDoctrine, NationTrait.TradeEmpire },
+            "Military superpower. Carrier strike groups, combined arms doctrine, global projection. Richest food producer.",
+            "Born from a federation of frontier colonies that industrialized faster than anyone predicted. " +
+            "Their carrier fleets project power across every ocean. Their currency IS the global economy. " +
+            "But decades of overreach have stretched them thin — and the debt is coming due."),
 
-        new("Republic of Valdria",       // #1 — Russia/USSR
+        new("Republic of Valdria",       // #1 — What if the Soviet dream survived through reform?
             NationArchetype.Revolutionary, NationTier.Large,
             CityCount: 10, ArmyCount: 7, StartingTreasury: 3000f,
             new Color(0.80f, 0.20f, 0.20f), // Deep Red
             TerrainPreference.Forest, MilitaryProfile.MassInfantry,
             Iron: 35, Oil: 40, Uranium: 20, Electronics: 15, Manpower: 80, Food: 60,
             Stability: 70,
-            "Ideological aggressors. Mass infantry, heavy artillery, high manpower."),
+            new[] { NationTrait.MassConscription, NationTrait.OilWeapon },
+            "Ideological powerhouse. Largest infantry reserves, artillery doctrine, energy leverage. Will drown you in soldiers.",
+            "The revolution never collapsed — it adapted. Valdria reformed just enough to survive, keeping the state apparatus " +
+            "while allowing controlled markets. Their generals still believe in the old doctrine: quantity has a quality all its own. " +
+            "Eleven time zones of strategic depth. The last invader who tried is still thawing."),
 
-        new("Meridian Confederation",    // #2 — EU/Japan/Singapore
+        new("Meridian Confederation",    // #2 — What if the Hanseatic League became a tech superstate?
             NationArchetype.Commercial, NationTier.Large,
             CityCount: 9, ArmyCount: 5, StartingTreasury: 6000f,
             new Color(0.20f, 0.72f, 0.35f), // Green
             TerrainPreference.Coastal, MilitaryProfile.TechDefense,
             Iron: 30, Oil: 10, Uranium: 10, Electronics: 90, Manpower: 30, Food: 20,
             Stability: 90,
-            "Trade empire. Richest treasury, electronics monopoly, but weak military."),
+            new[] { NationTrait.RareEarthMonopoly, NationTrait.CorporateDiplomacy },
+            "Trade league turned superpower. Controls 90% of advanced electronics. Can starve your factories with an embargo.",
+            "What began as a merchants' guild linking coastal city-states evolved into the world's most sophisticated economy. " +
+            "The Meridian doesn't need the largest army — they manufacture everyone else's weapons systems. " +
+            "Every chip in every missile guidance system has their logo etched at the nanometer scale. " +
+            "Cross them, and your tanks become expensive paperweights."),
 
-        new("Kingdom of Ashenmoor",      // #3 — Saudi/GCC/Turkey
+        new("Kingdom of Ashenmoor",      // #3 — What if a caliphate modernized like Meiji Japan?
             NationArchetype.Traditionalist, NationTier.Large,
             CityCount: 8, ArmyCount: 6, StartingTreasury: 4500f,
             new Color(0.80f, 0.65f, 0.15f), // Gold
             TerrainPreference.Mountain, MilitaryProfile.Fortified,
             Iron: 20, Oil: 80, Uranium: 15, Electronics: 10, Manpower: 40, Food: 15,
             Stability: 75,
-            "Oil-rich mountain fortress. Defensive, artillery-heavy, controls chokepoints."),
+            new[] { NationTrait.FortressDefense, NationTrait.SovereignWealth, NationTrait.OilWeapon },
+            "Mountain kingdom sitting on an ocean of oil. $5 trillion sovereign wealth fund. Their fortress cities have never fallen.",
+            "The ancient mountain kingdom watched empires rise and fall from behind their walls. When oil was discovered " +
+            "beneath their deserts, they didn't just sell it — they invested the proceeds into a sovereign wealth fund " +
+            "so vast it could buy most nations outright. Ashenmoor plays defense because they don't need to attack. " +
+            "Time is on their side, and they can wait centuries."),
 
-        new("Volkren Collective",        // #4 — China/Imperial Germany
+        new("Volkren Collective",        // #4 — What if Imperial Germany won and kept industrializing?
             NationArchetype.Industrial, NationTier.Large,
             CityCount: 10, ArmyCount: 7, StartingTreasury: 4000f,
             new Color(0.65f, 0.30f, 0.75f), // Purple
             TerrainPreference.Plains, MilitaryProfile.TankHeavy,
             Iron: 80, Oil: 25, Uranium: 15, Electronics: 40, Manpower: 70, Food: 50,
             Stability: 80,
-            "Industrial juggernaut. Highest steel output, tank-heavy armies, rare earth monopoly."),
+            new[] { NationTrait.ArmoredBlitz, NationTrait.IndustrialBase, NationTrait.RareEarthMonopoly },
+            "The world's factory. 54% of global steel. Their tanks outnumber everyone's. Shipyards build faster than anyone can sink.",
+            "The Collective doesn't innovate — they scale. Every good idea from every nation gets reverse-engineered, " +
+            "mass-produced, and deployed at 10x volume. Their shipyards launch more tonnage in a month than Thalassian builds in a year. " +
+            "Their weakness? They import 80% of their oil through a single strait. " +
+            "Block that, and the machine stops."),
 
-        new("Thalassian Dominion",       // #5 — British Empire/Imperial Japan
+        new("Thalassian Dominion",       // #5 — What if maritime Venice became a nuclear island empire?
             NationArchetype.Naval, NationTier.Large,
             CityCount: 8, ArmyCount: 6, StartingTreasury: 3500f,
             new Color(0.15f, 0.60f, 0.70f), // Teal
             TerrainPreference.Island, MilitaryProfile.NavalDominant,
             Iron: 25, Oil: 15, Uranium: 5, Electronics: 30, Manpower: 25, Food: 30,
             Stability: 85,
-            "Island naval empire. Strongest navy, controls sea lanes, intelligence network."),
+            new[] { NationTrait.NavalSupremacy, NationTrait.SpyMaster },
+            "Island naval empire. Unconquered since founding. Their submarine-launched nukes and spy network make them untouchable.",
+            "An archipelago of island fortresses connected by the world's most powerful navy. " +
+            "Thalassian diplomats know everyone's secrets because Thalassian submarines tap everyone's cables. " +
+            "Their empire was built on trade and maintained by intelligence. " +
+            "Small army, but you have to GET to their islands first — and nobody has, in 400 years."),
 
-        // ── 7 SMALL NATIONS ──────────────────────────────────────
-        new("Selvara",                   // #6 — Israel (PLAYER DEFAULT)
+        // ══════════════════════════════════════════════════════════
+        //  7 SMALL NATIONS — The Survivors
+        //  Each has one defining advantage and a reason to exist
+        // ══════════════════════════════════════════════════════════
+
+        new("Selvara",                   // #6 — What if a city-state split the atom first?
             NationArchetype.FreeState, NationTier.Small,
             CityCount: 4, ArmyCount: 2, StartingTreasury: 800f,
             new Color(0.90f, 0.55f, 0.15f), // Orange
             TerrainPreference.Mixed, MilitaryProfile.NuclearSmall,
             Iron: 10, Oil: 5, Uranium: 20, Electronics: 15, Manpower: 15, Food: 10,
             Stability: 75,
-            "Tiny free state with the world's first nuclear weapon. Surrounded but dangerous."),
+            new[] { NationTrait.NuclearDeterrent, NationTrait.NuclearAmbiguity },
+            "4 provinces. 1 nuclear weapon. The most dangerous small nation in history. Everyone wants you dead or allied.",
+            "A free state born from a disputed border region, populated by refugees from three different empires. " +
+            "Selvara's scientists split the atom before anyone else — a desperate gamble that transformed a doomed buffer state " +
+            "into the world's most dangerous small nation. The bomb hasn't been used. The bomb doesn't need to be used. " +
+            "Everyone knows it's there. That's enough. For now."),
 
-        new("Free City of Orinth",       // #7 — Singapore/Dubai
+        new("Free City of Orinth",       // #7 — What if Carthage survived and became Singapore?
             NationArchetype.TradeCity, NationTier.Small,
             CityCount: 3, ArmyCount: 1, StartingTreasury: 2000f,
             new Color(0.90f, 0.75f, 0.30f), // Bright Gold
             TerrainPreference.Coastal, MilitaryProfile.TokenForce,
             Iron: 5, Oil: 5, Uranium: 0, Electronics: 20, Manpower: 5, Food: 5,
             Stability: 90,
-            "Wealthy trade hub. No real military. Depends on diplomacy and commerce."),
+            new[] { NationTrait.TradeEmpire, NationTrait.CorporateDiplomacy, NationTrait.SovereignWealth },
+            "Richest city per capita in the world. No army to speak of. If trade stops, Orinth dies in weeks.",
+            "Orinth has existed as a free port since before recorded history. Empires conquered the land around it " +
+            "but never Orinth itself — because every empire needed somewhere to trade. The city has no natural resources, " +
+            "no farmland, no strategic depth. What it has is a deep harbor, a reputation for neutrality, " +
+            "and the fact that 40% of global trade passes through its docks. Destroying Orinth would hurt the destroyer more than the destroyed."),
 
-        new("Kaelith Tribes",            // #8 — Afghanistan/Kurds
+        new("Kaelith Tribes",            // #8 — What if the Mongol clans never unified but never submitted?
             NationArchetype.Guerrilla, NationTier.Small,
             CityCount: 5, ArmyCount: 2, StartingTreasury: 400f,
             new Color(0.75f, 0.60f, 0.40f), // Sandy Brown
             TerrainPreference.Desert, MilitaryProfile.GuerrillaLight,
             Iron: 10, Oil: 15, Uranium: 5, Electronics: 0, Manpower: 25, Food: 10,
             Stability: 50,
-            "Desert guerrilla fighters. Spread thin, impossible to conquer. Dirt poor."),
+            new[] { NationTrait.GuerrillaResistance, NationTrait.UnsiegeableDesert },
+            "Dirt poor. Impossible to conquer. Invading armies die of thirst before they find anyone to fight.",
+            "The Kaelith have never had a king, a capital, or a standing army. They don't need them. " +
+            "Every tribe is autonomous. Every adult is a fighter. Their desert is so vast and so hostile " +
+            "that three superpowers have tried to conquer it and three superpowers have given up. " +
+            "The cost of occupation exceeds the value of the land by 500:1. The Kaelith know this. They're patient."),
 
-        new("Duskhollow Pact",           // #9 — Switzerland/Mossad
+        new("Duskhollow Pact",           // #9 — What if the Vatican's spy network went secular?
             NationArchetype.Intelligence, NationTier.Small,
             CityCount: 4, ArmyCount: 2, StartingTreasury: 1500f,
             new Color(0.35f, 0.45f, 0.35f), // Dark Forest Green
             TerrainPreference.Forest, MilitaryProfile.BalancedSmall,
             Iron: 15, Oil: 5, Uranium: 5, Electronics: 10, Manpower: 20, Food: 20,
             Stability: 95,
-            "Intelligence specialists. Spy network depth +2. Neutral info brokers."),
+            new[] { NationTrait.SpyMaster, NationTrait.NeutralBroker },
+            "They know everything about everyone. Spy depth +2 in all nations from turn 1. Attack them and the world knows YOUR secrets.",
+            "Hidden in ancient forests, Duskhollow appears on maps as a minor nation of foresters and scholars. " +
+            "In reality, it's the world's most sophisticated intelligence apparatus wearing the mask of a country. " +
+            "Every embassy in the world has a Duskhollow 'cultural attache.' Every undersea cable passes through their relay stations. " +
+            "They've been neutral for two centuries — not because they're peaceful, but because every nation fears what Duskhollow would reveal if attacked."),
 
-        new("Ironmarch Remnant",         // #10 — Ottoman remnant/Austria
+        new("Ironmarch Remnant",         // #10 — What if Rome shrank but never died?
             NationArchetype.Remnant, NationTier.Small,
             CityCount: 3, ArmyCount: 2, StartingTreasury: 1000f,
             new Color(0.55f, 0.35f, 0.25f), // Brown
             TerrainPreference.Mountain, MilitaryProfile.BalancedSmall,
             Iron: 30, Oil: 10, Uranium: 10, Electronics: 5, Manpower: 10, Food: 10,
             Stability: 60,
-            "Former empire fragment. Good defenses, aging military, low manpower."),
+            new[] { NationTrait.RemnantPride, NationTrait.FortressDefense },
+            "Once ruled half the world. Now holds 3 mountain cities and a grudge. Their old fortresses still stand. Their pride won't bend.",
+            "The Ironmarch Empire once spanned three continents. Legions, aqueducts, roads that still carry traffic a thousand years later. " +
+            "Now they hold a mountain pass and three cities, guarding the ruins of their own glory. " +
+            "Their officers still train in the old academies. Their walls were built to last millennia and have. " +
+            "The empire is gone, but the Remnant fights like it isn't — and that makes them dangerous in defense, " +
+            "even if they can never reclaim what was lost."),
 
-        new("Port Serin",                // #11 — Cuba/Taiwan
+        new("Port Serin",                // #11 — What if Crete became a submarine republic?
             NationArchetype.IslandNaval, NationTier.Small,
             CityCount: 3, ArmyCount: 2, StartingTreasury: 1200f,
             new Color(0.30f, 0.70f, 0.85f), // Light Blue
             TerrainPreference.Island, MilitaryProfile.SubmarineFleet,
             Iron: 10, Oil: 10, Uranium: 0, Electronics: 15, Manpower: 10, Food: 15,
             Stability: 80,
-            "Island naval base. Submarine advantage, strategic position, isolated."),
+            new[] { NationTrait.PorcupineDefense, NationTrait.SubmarineWolf },
+            "Island fortress. Anti-ship missiles and submarines make invasion a suicide mission. Controls a key strait.",
+            "Port Serin's three islands sit astride the busiest shipping lane in the world. " +
+            "Rather than building a surface fleet they can't afford, Serin invested everything in submarines and shore-based missiles. " +
+            "Their doctrine is simple: we can't win a war, but we can make sure you lose one. " +
+            "Any fleet attempting amphibious assault faces a gauntlet of mines, torpedoes, and missiles. " +
+            "The last admiral who tried lost 40% of his ships before reaching shore."),
 
-        new("Ashfall Compact",           // #12 — Kazakhstan/Niger
+        new("Ashfall Compact",           // #12 — What if a nation formed around a supervolcano's riches?
             NationArchetype.ResourceCursed, NationTier.Small,
             CityCount: 3, ArmyCount: 1, StartingTreasury: 500f,
             new Color(0.60f, 0.40f, 0.50f), // Dusty Mauve
             TerrainPreference.Desert, MilitaryProfile.Minimal,
             Iron: 15, Oil: 5, Uranium: 80, Electronics: 0, Manpower: 10, Food: 5,
             Stability: 35,
-            "Uranium-rich wasteland. Everyone wants what they have. Coup every Tuesday."),
+            new[] { NationTrait.ProliferationTarget },
+            "43% of the world's uranium. Weakest military. Lowest stability. Everyone is coming for what's under their soil.",
+            "The Ashfall wastes were uninhabitable until geologists discovered the largest uranium deposit on the planet. " +
+            "Overnight, the scattered mining camps became a nation — or tried to. Six coups in twenty years. " +
+            "Every superpower has 'advisors' in the capital. Every intelligence service runs ops in Ashfall. " +
+            "The current government knows it's sitting on the most valuable — and most dangerous — ground in the world. " +
+            "If they ever stabilize long enough to refine that uranium themselves... the balance of power changes forever."),
     };
 
     private static readonly string[] CityPrefixes =
@@ -253,7 +329,7 @@ public static class WorldGenerator
             bool isPlayer = (n == playerNationIndex);
             var spot = capitalSpots[n];
 
-            world.Nations.Add(new NationData
+            var nation = new NationData
             {
                 Id = $"N_{n}",
                 Name = t.Name,
@@ -268,10 +344,15 @@ public static class WorldGenerator
                 Iron = t.Iron, Oil = t.Oil, Uranium = t.Uranium,
                 Electronics = t.Electronics, Manpower = t.Manpower, Food = t.Food,
                 Stability = t.Stability,
-            });
+                Traits = new List<NationTrait>(t.Traits),
+            };
+            world.Nations.Add(nation);
         }
 
         world.PlayerNationId = $"N_{playerNationIndex}";
+
+        // ═══ Set starting diplomatic dispositions ═══
+        SetStartingDiplomacy(world);
 
         // ═══ Create cities (capital + secondary per nation template) ═══
         int cityIdx = 0;
@@ -886,6 +967,75 @@ public static class WorldGenerator
                     return true;
             }
         return false;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  STARTING DIPLOMACY — Pre-existing relationships between nations
+    //  Not everyone starts neutral. History creates friends & enemies.
+    // ═══════════════════════════════════════════════════════════════
+
+    private static void SetStartingDiplomacy(WorldData world)
+    {
+        // Initialize all relations to Neutral
+        foreach (var a in world.Nations)
+            foreach (var b in world.Nations)
+                if (a.Id != b.Id)
+                    a.Relations[b.Id] = DiplomaticStatus.Neutral;
+
+        // Helper to set symmetric relations
+        void SetRelation(int a, int b, DiplomaticStatus status)
+        {
+            if (a >= world.Nations.Count || b >= world.Nations.Count) return;
+            world.Nations[a].Relations[world.Nations[b].Id] = status;
+            world.Nations[b].Relations[world.Nations[a].Id] = status;
+        }
+
+        // ── Great power rivalries ──
+        // USA Alliance vs Valdria — Cold War rivals
+        SetRelation(0, 1, DiplomaticStatus.Hostile);
+        // USA Alliance vs Volkren — emerging rivalry over industrial dominance
+        SetRelation(0, 4, DiplomaticStatus.Wary);
+        // Valdria vs Volkren — ideological neighbors, uneasy respect
+        SetRelation(1, 4, DiplomaticStatus.Wary);
+
+        // ── Natural alliances ──
+        // USA Alliance + Meridian — democratic trade partners
+        SetRelation(0, 2, DiplomaticStatus.Friendly);
+        // USA Alliance + Thalassian — naval alliance (Five Eyes equivalent)
+        SetRelation(0, 5, DiplomaticStatus.Allied);
+        // Meridian + Thalassian — tech + naval cooperation
+        SetRelation(2, 5, DiplomaticStatus.Friendly);
+
+        // ── Resource tensions ──
+        // Volkren needs Ashenmoor's oil — uneasy trade dependency
+        SetRelation(4, 3, DiplomaticStatus.Wary);
+        // Meridian needs Ashenmoor's oil too — they pay well
+        SetRelation(2, 3, DiplomaticStatus.Friendly);
+
+        // ── Small nation dynamics ──
+        // Everyone eyes Ashfall's uranium
+        SetRelation(0, 12, DiplomaticStatus.Wary); // USA wants to secure it
+        SetRelation(1, 12, DiplomaticStatus.Wary); // Valdria wants to secure it
+        SetRelation(4, 12, DiplomaticStatus.Wary); // Volkren wants to secure it
+
+        // Duskhollow is useful to everyone — friendly with trade powers
+        SetRelation(9, 2, DiplomaticStatus.Friendly); // Meridian values intel
+        SetRelation(9, 5, DiplomaticStatus.Friendly); // Thalassian respects spies
+
+        // Ironmarch wants to reclaim territory — hostile to nearest large power
+        SetRelation(10, 4, DiplomaticStatus.Hostile); // Volkren occupies their old lands
+
+        // Port Serin aligned with whoever controls the strait
+        SetRelation(11, 5, DiplomaticStatus.Friendly); // Naval solidarity with Thalassian
+
+        // Orinth is friends with everyone (trade)
+        SetRelation(7, 2, DiplomaticStatus.Friendly);
+        SetRelation(7, 0, DiplomaticStatus.Friendly);
+
+        // Selvara (player) — surrounded, no natural allies
+        // Everyone is neutral-to-wary. Player must build alliances.
+        SetRelation(6, 0, DiplomaticStatus.Wary);  // USA sees Selvara's nuke as a problem
+        SetRelation(6, 1, DiplomaticStatus.Wary);  // Valdria doesn't trust small nuclear states
     }
 }
 

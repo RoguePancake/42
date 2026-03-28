@@ -1,3 +1,4 @@
+using System.Linq;
 using Godot;
 using Warship.Core;
 using Warship.Data;
@@ -140,9 +141,39 @@ public partial class CharacterSetupPanel : Control
     {
         if (index < 0 || index >= WorldGenerator.Templates.Length) return;
         var t = WorldGenerator.Templates[index];
-        _nationDesc.Text = $"{t.Description}\n" +
+        string traits = t.Traits.Length > 0
+            ? string.Join(", ", t.Traits.Select(tr => FormatTrait(tr)))
+            : "None";
+        _nationDesc.Text = $"{t.Description}\n\n" +
+            $"Traits: {traits}\n" +
             $"Cities: {t.CityCount}  |  Armies: {t.ArmyCount}  |  Treasury: {t.StartingTreasury:F0}";
     }
+
+    private static string FormatTrait(NationTrait trait) => trait switch
+    {
+        NationTrait.CarrierDoctrine => "Carrier Doctrine",
+        NationTrait.MassConscription => "Mass Conscription",
+        NationTrait.FortressDefense => "Fortress Defense",
+        NationTrait.ArmoredBlitz => "Armored Blitz",
+        NationTrait.NavalSupremacy => "Naval Supremacy",
+        NationTrait.NuclearDeterrent => "Nuclear Deterrent",
+        NationTrait.SubmarineWolf => "Submarine Wolf Pack",
+        NationTrait.TradeEmpire => "Trade Empire",
+        NationTrait.IndustrialBase => "Industrial Base",
+        NationTrait.RareEarthMonopoly => "Rare Earth Monopoly",
+        NationTrait.OilWeapon => "Oil Weapon",
+        NationTrait.SovereignWealth => "Sovereign Wealth",
+        NationTrait.SpyMaster => "Spy Master",
+        NationTrait.NeutralBroker => "Neutral Broker",
+        NationTrait.GuerrillaResistance => "Guerrilla Resistance",
+        NationTrait.RemnantPride => "Remnant Pride",
+        NationTrait.NuclearAmbiguity => "Nuclear Ambiguity",
+        NationTrait.ProliferationTarget => "Proliferation Target",
+        NationTrait.PorcupineDefense => "Porcupine Defense",
+        NationTrait.UnsiegeableDesert => "Unsiegeable Desert",
+        NationTrait.CorporateDiplomacy => "Corporate Diplomacy",
+        _ => trait.ToString()
+    };
 
     private void OnStartPressed()
     {

@@ -108,6 +108,59 @@ public enum NationTier
     Small,  // 7 minor nations: 2-5 cities, 1-3 armies
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  NATION TRAITS — Unique passive abilities per nation
+//  Each nation gets 2-3 traits. Engines check for traits and
+//  apply modifiers. This is what makes nations play differently.
+// ═══════════════════════════════════════════════════════════════
+
+public enum NationTrait
+{
+    // Military
+    CarrierDoctrine,     // +50% carrier attack power, can project air power from sea
+    MassConscription,    // +30% infantry count from manpower, faster reinforcement
+    FortressDefense,     // +40% defense in own territory, cities take longer to siege
+    ArmoredBlitz,        // +25% tank speed and attack, -10% defense (offense-focused)
+    NavalSupremacy,      // +30% all naval combat, controls sea trade routes in range
+    NuclearDeterrent,    // AI gets -40% war willingness, 1-shot city/army destroyer
+    SubmarineWolf,       // Submarines invisible until attacking, +50% sub attack
+
+    // Economic
+    TradeEmpire,         // +100% trade route income, can embargo without declaring war
+    IndustrialBase,      // +30% production speed, -15% unit cost
+    RareEarthMonopoly,   // Can restrict electronics supply to enemies, +50% electronics income
+    OilWeapon,           // Can flood/restrict oil to crash/spike prices globally
+    SovereignWealth,     // Treasury generates 2% interest per tick, immune to bank runs
+
+    // Intelligence / Diplomatic
+    SpyMaster,           // Start with spy depth +2 in all nations, +50% covert op success
+    NeutralBroker,       // Can sell intel to all sides, attacking you costs -30 prestige
+    GuerrillaResistance, // Units in home territory get ×2 defense, invaders take attrition
+    RemnantPride,        // +20% morale but -10% diplomacy (won't accept unfavorable deals)
+    NuclearAmbiguity,    // Enemies unsure if you have nukes — intel shows "POSSIBLE NUCLEAR"
+    ProliferationTarget, // Everyone runs covert ops against you, but your uranium is ×3 value
+
+    // Survival / Niche
+    PorcupineDefense,    // Shore missiles + mines make naval invasion ×3 cost
+    UnsiegeableDesert,   // Armies in desert/sand terrain regenerate, enemies take ×2 attrition
+    CorporateDiplomacy,  // Can bribe nations directly with treasury, cheaper alliance costs
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DIPLOMATIC DISPOSITION — Starting relations between nations
+//  Not all nations begin neutral. History creates friends & enemies.
+// ═══════════════════════════════════════════════════════════════
+
+public enum DiplomaticStatus
+{
+    Allied,     // Military alliance, shared intelligence, trade bonus
+    Friendly,   // Positive relations, open trade, will defend if asked
+    Neutral,    // Default — no obligations
+    Wary,       // Suspicious, reduced trade, border patrols
+    Hostile,    // Active rivalry, sanctions, may declare war
+    AtWar,      // Open conflict
+}
+
 public class NationData
 {
     public string Id = "";
@@ -137,6 +190,12 @@ public class NationData
     // Stability & war weariness
     public float Stability = 80f;      // 0-100, below 20 = rebellion risk
     public float WarWeariness;         // 0-100, accumulates during wars
+
+    // Traits — unique passive abilities (set from template)
+    public List<NationTrait> Traits = new();
+
+    // Diplomacy — relations with other nations (key = nation Id)
+    public Dictionary<string, DiplomaticStatus> Relations = new();
 
     // Military Command
     public MilitaryOrder GlobalMilitaryOrder = MilitaryOrder.BorderWatch;
