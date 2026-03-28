@@ -295,6 +295,65 @@ Infantry: 150, Tank: 10, Artillery: 10
 
 ---
 
+## Small Nation Special Mechanics (from real-world research)
+
+### Guerrilla Defense (Kaelith — Afghanistan archetype)
+- Real-world cost asymmetry: US soldier in Afghanistan = ~$1M/year vs Taliban fighter = ~$2,000/year (500:1)
+- Counterinsurgency requires 20-25 troops per 1,000 population — no AI bloc can commit that many
+- Mountains reduce conventional military effectiveness by 60-70%
+- **Game mechanic**: Kaelith units in home territory get ×2 defense. Invading armies suffer attrition damage each tick. Kaelith units can't be fully destroyed — they regenerate as guerrillas. But offensive capability is near zero.
+
+### Trade City-State Fragility (Orinth — Singapore archetype)
+- Singapore's trade-to-GDP ratio is ~300% — totally dependent on open sea lanes
+- Port handles ~37M TEUs/year. Naval blockade = death within weeks
+- **Game mechanic**: Orinth generates ×2 trade income but takes ×3 damage from blockade/embargo. Must maintain positive relations with at least 2 large nations to survive.
+
+### Intelligence Dominance (Duskhollow — Switzerland/Mossad archetype)
+- Israel's Unit 8200: ~5,000-8,000 personnel, alumni founded hundreds of cyber companies
+- Switzerland: neutral info broker, both sides operated freely during WWII. $2.4T in foreign assets managed.
+- **Game mechanic**: Duskhollow starts with spy network depth +2 in all nations. Can sell intelligence to any side. Attacking a neutral intel broker costs massive diplomatic penalties.
+
+### Remnant Empire Overextension (Ironmarch — Turkey/Austria archetype)
+- Ottoman Empire → Turkey: lost 80% of territory. Kept Bosphorus (critical chokepoint) and military tradition.
+- Austria-Hungary → Austria: from 52M people to 6.5M. Kept Vienna. Lost everything else.
+- **Game mechanic**: Ironmarch has good military infrastructure and a strategic pass/chokepoint, but nostalgia faction pushes for reconquest that the economy can't support. Internal stability risk from "reclaim the empire" vs "modernize" tension.
+
+### Island Porcupine Strategy (Port Serin — Taiwan/Cuba archetype)
+- Amphibious invasion is the hardest military operation. D-Day took 2 years prep + total air/naval supremacy.
+- Taiwan Strait: 130km wide, only 14 suitable beaches, invasion possible only April or October (weather windows).
+- Anti-ship missiles ($1-3M each) threaten carriers ($13B each) — 1000:1 cost asymmetry.
+- **Game mechanic**: Port Serin gets massive naval invasion defense penalty for attackers. Shore-based missiles sink ships cheaply. Submarines guard approaches. But Port Serin can't project power beyond its islands.
+
+### Resource Curse Instability (Ashfall — Kazakhstan/Niger archetype)
+- Niger produces 5-7% of world uranium. Powered 1/3 of French lightbulbs. GDP per capita: $560.
+- Kazakhstan: 43% of world uranium production. DRC: 70% of world cobalt.
+- Pattern: strongman sells to one patron → coup by faction wanting different patron → civil war → repeat.
+- **Game mechanic**: Ashfall has enormous uranium reserves but lowest stability. Coup risk every few turns. All blocs run covert ops to install friendly regimes. Whoever controls Ashfall's uranium gains nuke-building capability.
+
+### Nuclear Deterrence (Selvara — Israel archetype)
+- Israel: ~80-90 warheads, policy of ambiguity. "Samson Option" = if we die, you die.
+- No nuclear state has ever been invaded in core territory since 1945.
+- Even 1 nuke changes every calculation: "Is conquering this nation worth losing a city?"
+- **Game mechanic**: AI gets -40% war willingness against Selvara. But the nuke is one-shot — use it and deterrence evaporates. Creates diplomatic pressure (disarmament demands, sharing requests, proliferation crises).
+
+---
+
+## Comparative Balance Matrix (Small Nations)
+
+| Nation | Military | Economy | Territory | Stability | Intel | Defense | Offense |
+|--------|----------|---------|-----------|-----------|-------|---------|---------|
+| Selvara (player) | 7/10 | 6/10 | 2/10 | 6/10 | 9/10 | 9/10 | 7/10 |
+| Orinth | 3/10 | 10/10 | 1/10 | 8/10 | 5/10 | 2/10 | 1/10 |
+| Kaelith | 5/10 | 1/10 | 5/10 | 4/10 | 3/10 | 10/10 | 1/10 |
+| Duskhollow | 4/10 | 8/10 | 3/10 | 9/10 | 10/10 | 7/10 | 2/10 |
+| Ironmarch | 8/10 | 5/10 | 6/10 | 4/10 | 5/10 | 6/10 | 6/10 |
+| Port Serin | 6/10 | 7/10 | 2/10 | 7/10 | 4/10 | 8/10 | 3/10 |
+| Ashfall | 3/10 | 3/10 | 7/10 | 1/10 | 2/10 | 4/10 | 2/10 |
+
+**Design insight**: Each small nation has exactly ONE 10/10 stat that defines its identity. The player (Selvara) is the most "complete" — decent at most things, best at intel, nuke as trump card.
+
+---
+
 ## Custom Nation: Geography-to-Resources Formula
 
 When the player places their capital, scan a 50-tile radius and derive:
