@@ -3,5 +3,6 @@
     <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>Warship</RootNamespace>
     <EnableDynamicLoading>true</EnableDynamicLoading>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 </Project>
