@@ -24,50 +24,64 @@ public partial class WorldStateManager : Node
 
     public override void _Ready()
     {
-        // World generation is now deferred until the player completes the setup screen
-        // InitializeWorld() will be called from CharacterSetupPanel.
+        // World generation deferred until setup screen completes
         var setupPanel = new Warship.UI.Menus.CharacterSetupPanel();
         GetNode("/root/Main/UILayer")?.CallDeferred("add_child", setupPanel);
-        
-        // Setup the "Simulation Engines" (hardcoded simple for now until Engines Phase)
+
+        // Subscribe to movement requests (legacy + army)
         EventBus.Instance!.Subscribe<UnitMoveRequested>(OnUnitMoveRequested);
     }
 
-    public void InitializeWorld(string playerNationName, string playerRole, string playerName, int focusIndex)
+    public void InitializeWorld(string playerRole, string playerName, int focusIndex)
     {
-        GD.Print($"[WorldStateManager] Creating the Universe for {playerName} ({playerRole} of {playerNationName})...");
-        Data = WorldGenerator.CreateWorld(42, playerNationName, playerRole, playerName, focusIndex);
-        
-        // Notify the rest of the game that the world is ready
+        GD.Print($"[WorldStateManager] Generating world for {playerName} ({playerRole})...");
+        Data = WorldGenerator.CreateWorld(42, playerName, playerRole, focusIndex);
+
         EventBus.Instance!.Publish(new WorldReadyEvent(42, Data.PlayerNationId ?? ""));
     }
 
-
     /// <summary>
-    /// Mini-engine for validating and executing unit movement requests.
-    /// In the future this gets moved to MilitaryEngine / ActionEngine.
+    /// Handle army movement requests. Validates terrain and updates army target.
+    /// Legacy UnitMoveRequested still works — tries army matching first.
     /// </summary>
     private void OnUnitMoveRequested(UnitMoveRequested req)
     {
+        if (req.TargetX < 0 || req.TargetX >= Data.MapWidth ||
+            req.TargetY < 0 || req.TargetY >= Data.MapHeight) return;
+
+        // Try to find an army with this ID
+        var army = Data.Armies.FirstOrDefault(a => a.Id == req.UnitId);
+        if (army != null && army.IsAlive)
+        {
+            int targetTerrain = Data.TerrainMap![req.TargetX, req.TargetY];
+
+            // Validate based on army's primary domain
+            if (army.PrimaryDomain == UnitDomain.Naval && TerrainRules.IsLand(targetTerrain)) return;
+            if (army.PrimaryDomain == UnitDomain.Land && !TerrainRules.IsPassable(targetTerrain)) return;
+
+            int oldX = army.TileX, oldY = army.TileY;
+            army.TileX = req.TargetX;
+            army.TileY = req.TargetY;
+            army.TargetTileX = req.TargetX;
+            army.TargetTileY = req.TargetY;
+            army.TargetPixelX = req.TargetX * MapManagerConstants.TileSize + MapManagerConstants.TileSize / 2f;
+            army.TargetPixelY = req.TargetY * MapManagerConstants.TileSize + MapManagerConstants.TileSize / 2f;
+
+            EventBus.Instance!.Publish(new UnitMovedEvent(army.Id, oldX, oldY, req.TargetX, req.TargetY));
+            return;
+        }
+
+        // Legacy fallback: try individual units
+#pragma warning disable CS0612
         var unit = Data.Units.FirstOrDefault(u => u.Id == req.UnitId);
-        if (unit == null || !unit.IsAlive) return;
-
-        // Path validation (Basic: simply check if target is valid terrain for this unit type)
-        if (req.TargetX < 0 || req.TargetX >= Data.MapWidth || req.TargetY < 0 || req.TargetY >= Data.MapHeight) return;
-        
-        int targetTerrain = Data.TerrainMap![req.TargetX, req.TargetY];
-        
-        if (unit.Type == UnitType.Ship && TerrainRules.IsLand(targetTerrain)) return; // Ships need water
-        if (unit.Type != UnitType.Ship && !TerrainRules.IsPassable(targetTerrain)) return; // Tanks avoid deep water/mountains
-
-        // Actually perform the state mutation
-        int oldX = unit.TileX;
-        int oldY = unit.TileY;
-        
-        unit.TileX = req.TargetX;
-        unit.TileY = req.TargetY;
-        
-        // Let the UI know the model just changed so it can animate
-        EventBus.Instance!.Publish(new UnitMovedEvent(unit.Id, oldX, oldY, req.TargetX, req.TargetY));
+        if (unit != null && unit.IsAlive)
+        {
+            int targetTerrain = Data.TerrainMap![req.TargetX, req.TargetY];
+            int oldX = unit.TileX, oldY = unit.TileY;
+            unit.TileX = req.TargetX;
+            unit.TileY = req.TargetY;
+            EventBus.Instance!.Publish(new UnitMovedEvent(unit.Id, oldX, oldY, req.TargetX, req.TargetY));
+        }
+#pragma warning restore CS0612
     }
 }

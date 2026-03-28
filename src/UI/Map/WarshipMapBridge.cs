@@ -148,12 +148,8 @@ public partial class WarshipMapBridge : Node
     
     private void DrawTradeRoutes(WorldData data)
     {
-        // Draw routes from GeoData
-        foreach (var route in GeoData.TradeRoutes)
-        {
-            var color = new Color(0.35f, 0.67f, 0.4f, 0.4f); // Green, semi-transparent
-            _map.DrawRoute(route.FromLon, route.FromLat, route.ToLon, route.ToLat, color, 2);
-        }
+        // Trade routes will be generated from game state in the future
+        // For now, no routes to draw in the procedural world
     }
     
     private void DrawUnits(WorldData data)
