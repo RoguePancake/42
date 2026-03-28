@@ -164,7 +164,7 @@ public partial class WarshipMapBridge : Node
             if (unit.Longitude == 0 && unit.Latitude == 0) continue;
             
             // Skip individual soldiers at low zoom
-            if (unit.Type == UnitType.Soldier && zoom < 6) continue;
+            if (unit.Type == UnitType.Infantry && zoom < 6) continue;
             
             int natIdx = int.Parse(unit.NationId.Split('_')[1]);
             var color = data.Nations[natIdx].NationColor;
@@ -174,7 +174,7 @@ public partial class WarshipMapBridge : Node
             
             // For now we use simple polygon shapes — you can replace with sprites later
             var marker = new Polygon2D();
-            float size = unit.Type == UnitType.Soldier ? 4f : 8f;
+            float size = unit.Type == UnitType.Infantry ? 4f : 8f;
             marker.Polygon = new Vector2[]
             {
                 worldPos + new Vector2(-size, -size),

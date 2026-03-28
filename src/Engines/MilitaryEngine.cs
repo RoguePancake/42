@@ -54,7 +54,7 @@ public partial class MilitaryEngine : Node
 
             // Inherit global order if we are just a generic soldier 
             // (In FA-6 players set global orders, troops follow)
-            if (unit.Type == UnitType.Soldier && unit.CurrentOrder != nation.GlobalMilitaryOrder)
+            if (unit.Type == UnitType.Infantry && unit.CurrentOrder != nation.GlobalMilitaryOrder)
             {
                 unit.CurrentOrder = nation.GlobalMilitaryOrder;
             }

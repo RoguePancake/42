@@ -7,7 +7,7 @@ using Warship.Data;
 namespace Warship.World;
 
 /// <summary>
-/// Procedural world generator. Creates a 600x360 fantasy world where nations
+/// Procedural world generator. Creates a 6000x3600 fantasy world where nations
 /// emerge from geography. Spawns armies (not individual units), assigns
 /// city-centric territory, and pre-computes border polylines.
 /// </summary>
@@ -880,7 +880,8 @@ public static class WorldGenerator
     {
         var assigned = new Dictionary<int, (int x, int y, float quality)>();
         var usedSpots = new HashSet<int>();
-        const int minCapitalSpacing = 40; // tiles between capitals
+        // Scale spacing with map size — ensure capitals spread across the map
+        int minCapitalSpacing = System.Math.Max(40, (w + h) / 20);
 
         // Large nations first (indices 0-5), then small (6-12)
         // Within each tier, randomize order slightly to avoid same placement every seed
@@ -1249,5 +1250,5 @@ public static class WorldGenerator
 /// <summary>Shared tile size constant.</summary>
 public static class MapManagerConstants
 {
-    public const int TileSize = 32; // 32px tiles for the 600x360 world
+    public const int TileSize = 32; // 32px tiles for the 6000x3600 world
 }

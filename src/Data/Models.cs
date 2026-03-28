@@ -238,17 +238,21 @@ public enum UnitType
 {
     // Land
     Infantry,
+    MechInfantry,
     Tank,
     Artillery,
     AntiAir,
+    MobileRadar,
 
     // Air
     Fighter,
     Bomber,
     Transport,
+    ReconPlane,
 
     // Naval
     Destroyer,
+    Cruiser,
     Carrier,
     Submarine,
     LandingCraft,
@@ -265,13 +269,17 @@ public static class UnitRules
     public static UnitDomain GetDomain(UnitType type) => type switch
     {
         UnitType.Infantry => UnitDomain.Land,
+        UnitType.MechInfantry => UnitDomain.Land,
         UnitType.Tank => UnitDomain.Land,
         UnitType.Artillery => UnitDomain.Land,
         UnitType.AntiAir => UnitDomain.Land,
+        UnitType.MobileRadar => UnitDomain.Land,
         UnitType.Fighter => UnitDomain.Air,
         UnitType.Bomber => UnitDomain.Air,
         UnitType.Transport => UnitDomain.Air,
+        UnitType.ReconPlane => UnitDomain.Air,
         UnitType.Destroyer => UnitDomain.Naval,
+        UnitType.Cruiser => UnitDomain.Naval,
         UnitType.Carrier => UnitDomain.Naval,
         UnitType.Submarine => UnitDomain.Naval,
         UnitType.LandingCraft => UnitDomain.Naval,
@@ -284,12 +292,16 @@ public static class UnitRules
     public static float AttackPower(UnitType type) => type switch
     {
         UnitType.Infantry => 1f,
+        UnitType.MechInfantry => 1.5f,
         UnitType.Tank => 5f,
         UnitType.Artillery => 4f,
         UnitType.AntiAir => 2f,
+        UnitType.MobileRadar => 0f,
         UnitType.Fighter => 6f,
         UnitType.Bomber => 8f,
+        UnitType.ReconPlane => 0f,
         UnitType.Destroyer => 7f,
+        UnitType.Cruiser => 9f,
         UnitType.Carrier => 3f,
         UnitType.Submarine => 6f,
         UnitType.Missile => 15f,
@@ -301,12 +313,17 @@ public static class UnitRules
     public static float DefensePower(UnitType type) => type switch
     {
         UnitType.Infantry => 1.5f,
+        UnitType.MechInfantry => 1.2f,
         UnitType.Tank => 4f,
         UnitType.Artillery => 1f,
         UnitType.AntiAir => 3f,
+        UnitType.MobileRadar => 0.5f,
         UnitType.Fighter => 3f,
-        UnitType.Carrier => 8f,
+        UnitType.Bomber => 1.5f,
+        UnitType.ReconPlane => 0.5f,
         UnitType.Destroyer => 5f,
+        UnitType.Cruiser => 7f,
+        UnitType.Carrier => 8f,
         UnitType.Submarine => 2f,
         _ => 1f
     };
@@ -315,11 +332,15 @@ public static class UnitRules
     public static int Speed(UnitType type) => type switch
     {
         UnitType.Infantry => 2,
+        UnitType.MechInfantry => 3,
         UnitType.Tank => 4,
         UnitType.Artillery => 1,
+        UnitType.MobileRadar => 2,
         UnitType.Fighter => 8,
         UnitType.Bomber => 6,
+        UnitType.ReconPlane => 10,
         UnitType.Destroyer => 5,
+        UnitType.Cruiser => 4,
         UnitType.Carrier => 3,
         UnitType.Submarine => 4,
         UnitType.Missile => 12,
@@ -329,7 +350,8 @@ public static class UnitRules
 
 // ═══════════════════════════════════════════════════════════════
 //  ARMIES — Groups of units that move and fight together.
-//  1 pixel dot = 10 troops. An army of 500 = 50 visible dots.
+//  LOD 0: 1 dot per army. LOD 1: 1 dot per 50. LOD 2: 1 dot per 10.
+//  LOD 3: every unit rendered with pixel stamp silhouettes.
 // ═══════════════════════════════════════════════════════════════
 
 public enum MilitaryOrder

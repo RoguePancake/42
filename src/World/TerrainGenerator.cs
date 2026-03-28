@@ -5,7 +5,7 @@ namespace Warship.World;
 
 /// <summary>
 /// Generates a procedural fantasy world with continents, oceans, mountain ranges,
-/// rivers, and biomes. 600x360 tile world — massive scale for real army movement.
+/// rivers, and biomes. 6000x3600 tile world — massive scale for large battles.
 /// Pure C# — no Godot dependency.
 /// </summary>
 public static class TerrainGenerator
@@ -22,9 +22,10 @@ public static class TerrainGenerator
         Snow = 7
     }
 
-    // 600x360 tiles at 32px = 19,200 x 11,520 pixel world
-    public const int DefaultWidth = 600;
-    public const int DefaultHeight = 360;
+    // 6000x3600 tiles at 32px = 192,000 x 115,200 pixel world
+    // Massive map — chunk-streamed, only nearby terrain loaded in VRAM
+    public const int DefaultWidth = 6000;
+    public const int DefaultHeight = 3600;
 
     /// <summary>
     /// Generate a full world: terrain grid + river paths.
@@ -48,14 +49,16 @@ public static class TerrainGenerator
         var temperature = new float[width, height];
 
         // ═══ Step 1: Base elevation with continent blobs ═══
-        int numContinents = 5 + HashInt(seed, 0) % 3; // 5-7 continents for the bigger map
+        int numContinents = 5 + HashInt(seed, 0) % 3; // 5-7 continents
 
+        // Scale continent size with map dimensions
+        float mapScale = (width + height) / 960f; // 1.0 at original 600x360, ~10x at 6000x3600
         var continentCenters = new (float cx, float cy, float radius)[numContinents];
         for (int i = 0; i < numContinents; i++)
         {
             float cx = HashFloat(seed, i * 3 + 100) * (width * 0.7f) + width * 0.15f;
             float cy = HashFloat(seed, i * 3 + 101) * (height * 0.6f) + height * 0.2f;
-            float radius = 50f + HashFloat(seed, i * 3 + 102) * 90f; // 50-140 tile radius (3x scale)
+            float radius = (50f + HashFloat(seed, i * 3 + 102) * 90f) * mapScale;
             continentCenters[i] = (cx, cy, radius);
         }
 
@@ -63,8 +66,9 @@ public static class TerrainGenerator
         {
             for (int y = 0; y < height; y++)
             {
-                // Base noise elevation — frequency scaled for 3x map
-                float elev = FBM(x * 0.008f, y * 0.008f, seed, 6);
+                // Base noise elevation — frequency scales with map size
+                float freq = 4.8f / width; // ~0.008 at 600, ~0.0008 at 6000
+                float elev = FBM(x * freq, y * freq, seed, 6);
 
                 // Continent influence
                 float continentBoost = 0f;
@@ -75,7 +79,8 @@ public static class TerrainGenerator
                     float dy = y - ccy;
 
                     // Warped distance for organic shapes
-                    float warp = FBM(x * 0.02f + c * 50, y * 0.02f + c * 50, seed + 10 + c, 3) * 35f;
+                    float warpFreq = 12f / width; // ~0.02 at 600, scales down for big maps
+                    float warp = FBM(x * warpFreq + c * 50, y * warpFreq + c * 50, seed + 10 + c, 3) * 35f * mapScale;
                     float dist = MathF.Sqrt(dx * dx + dy * dy) + warp;
                     float influence = Math.Clamp(1f - dist / radius, 0f, 1f);
                     influence = influence * influence;
@@ -93,7 +98,8 @@ public static class TerrainGenerator
                 elevation[x, y] = elev;
 
                 // ═══ Step 2: Moisture ═══
-                float moist = FBM(x * 0.012f + 200f, y * 0.012f + 200f, seed + 1, 4);
+                float moistFreq = 7.2f / width; // ~0.012 at 600, scales down
+                float moist = FBM(x * moistFreq + 200f, y * moistFreq + 200f, seed + 1, 4);
                 moisture[x, y] = moist;
 
                 // ═══ Step 3: Temperature (latitude based) ═══
@@ -109,8 +115,8 @@ public static class TerrainGenerator
             float startX = HashFloat(seed, r * 5 + 200) * width;
             float startY = HashFloat(seed, r * 5 + 201) * height;
             float angle = HashFloat(seed, r * 5 + 202) * MathF.PI * 2f;
-            int length = 80 + (int)(HashFloat(seed, r * 5 + 203) * 160f); // 3x longer
-            float rangeWidth = 4f + HashFloat(seed, r * 5 + 204) * 8f;   // Wider ranges
+            int length = (int)((80 + HashFloat(seed, r * 5 + 203) * 160f) * mapScale);
+            float rangeWidth = (4f + HashFloat(seed, r * 5 + 204) * 8f) * mapScale;
 
             float px = startX, py = startY;
             for (int step = 0; step < length; step++)
@@ -199,7 +205,9 @@ public static class TerrainGenerator
     public static List<int[]> GenerateRivers(int[,] terrain, int width, int height, int seed)
     {
         var rivers = new List<int[]>();
-        int numRivers = 15 + HashInt(seed, 300) % 10; // 15-24 rivers for bigger map
+        // Scale river count with map area
+        float riverScale = (width * height) / (600f * 360f); // 1.0 at original, ~100 at 6000x3600
+        int numRivers = (int)(15 + HashInt(seed, 300) % 10 + riverScale * 3); // More rivers for bigger maps
 
         for (int r = 0; r < numRivers; r++)
         {
@@ -225,7 +233,7 @@ public static class TerrainGenerator
             var path = new List<int>();
             int cx = sx, cy = sy;
             var visited = new HashSet<long>();
-            int maxSteps = 400; // Longer rivers for bigger map
+            int maxSteps = (int)(400 * MathF.Sqrt(riverScale)); // Scale river length with map
 
             for (int step = 0; step < maxSteps; step++)
             {
@@ -337,34 +345,32 @@ public static class TerrainGenerator
         }
 
         var locations = new List<(int x, int y, float quality)>();
-        int minSpacing = 30; // Much wider spacing for big map
+        // Scale city spacing with map size to prevent clustering
+        int minSpacing = System.Math.Max(30, (width + height) / 200);
 
-        for (int i = 0; i < count * 4 && locations.Count < count; i++)
+        // Pre-sort candidates for O(1) best-pick instead of full grid scan each time.
+        // Collect all tiles with nonzero desirability, sort descending.
+        var candidates = new List<(int x, int y, float score)>();
+        for (int x = 3; x < width - 3; x++)
+            for (int y = 3; y < height - 3; y++)
+                if (desirability[x, y] > 0f)
+                    candidates.Add((x, y, desirability[x, y]));
+        candidates.Sort((a, b) => b.score.CompareTo(a.score));
+
+        foreach (var (cx, cy, score) in candidates)
         {
-            float bestScore = 0f;
-            int bestX = -1, bestY = -1;
+            if (locations.Count >= count) break;
+            // Check this tile hasn't been zeroed by a previous pick's exclusion zone
+            if (desirability[cx, cy] <= 0f) continue;
 
-            for (int x = 3; x < width - 3; x++)
-            {
-                for (int y = 3; y < height - 3; y++)
-                {
-                    if (desirability[x, y] > bestScore)
-                    {
-                        bestScore = desirability[x, y];
-                        bestX = x;
-                        bestY = y;
-                    }
-                }
-            }
+            locations.Add((cx, cy, score));
 
-            if (bestX < 0) break;
-            locations.Add((bestX, bestY, bestScore));
-
+            // Zero out exclusion zone around picked city
             for (int dx = -minSpacing; dx <= minSpacing; dx++)
             {
                 for (int dy = -minSpacing; dy <= minSpacing; dy++)
                 {
-                    int nx = bestX + dx, ny = bestY + dy;
+                    int nx = cx + dx, ny = cy + dy;
                     if (nx >= 0 && nx < width && ny >= 0 && ny < height)
                         desirability[nx, ny] = 0f;
                 }
