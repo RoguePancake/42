@@ -17,6 +17,34 @@
 
 ## Session Log
 
+### Session 9 — 2026-03-29 (Systems Expansion — Council, Military, Economy)
+**Goal:** Make all UI systems functional with real game logic
+**Done:**
+- **CouncilEngine** (`src/Engines/CouncilEngine.cs`, 350 lines):
+  - Processes 30+ council actions with real consequences
+  - Domestic: tax rate cycling, martial law, infrastructure, suppression, gov-specific actions
+  - Military: defense budget tiers, conscription toggle, nuclear auth, mobilization
+  - Diplomatic: treaties, war declarations, sanctions, aid requests
+  - Intelligence: spy deployment, assassination, sabotage, tech theft (success/fail rolls)
+  - Adviser AI opinion generation based on hawkishness, domain, nation stability, loyalty
+- **MilitaryEngine** rewritten for army-based warfare:
+  - Subscribes to ArmyOrderEvent/ArmyFormationEvent for per-army control
+  - Army-vs-army combat: formation mods, terrain defense, morale/supply/org affecting power
+  - Battle losses distributed across unit types (largest first)
+  - City siege system (HP damage per tick, capture on HP=0)
+  - Supply drain by order, conscription reinforcement, defense budget resupply
+- **EconomyEngine** rewritten with council integration:
+  - Tax rate multiplier on base income
+  - Per-unit-type army upkeep (Infantry $0.2M to Nuke $10M)
+  - Defense budget covers military costs vs deficit
+  - Resource replenishment from territory (province-scaled)
+  - Food consumption + famine mechanics
+  - War weariness stability drain, bankruptcy cascading penalties
+  - Nation trait bonuses (TradeEmpire 2x, SovereignWealth interest)
+- **MainViewSwitcher**: Added COUNCIL tab (5th tab)
+- **RightSidebar**: Now reads real diplomatic status from nation.Relations instead of fake archetype-based labels
+- **CouncilData**: Added TaxRate, DefenseBudgetPct, MartialLawActive, ConscriptionActive, NuclearAuthGranted fields
+
 ### Session 8 — 2026-03-29 (Council System + Combat Command Overhaul)
 **Goal:** Major UI overhaul — add government council system, proper combat controls, council-aware sidebar
 **Done:**
