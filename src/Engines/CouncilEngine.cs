@@ -315,7 +315,7 @@ public partial class CouncilEngine : Node
         {
             case "propose_treaty":
                 if (!SpendTreasury(nation, 100f, "treaty proposal")) return;
-                var currentRelation = nation.Relations.GetValueOrDefault(targetNation.Id, DiplomaticStatus.Neutral);
+                var currentRelation = nation.Relations.TryGetValue(targetNation.Id, out var _cr) ? _cr : DiplomaticStatus.Neutral;
                 if (currentRelation > DiplomaticStatus.Allied)
                 {
                     // Improve by one step (lower enum value = better relations)
@@ -345,7 +345,7 @@ public partial class CouncilEngine : Node
                 break;
 
             case "request_aid":
-                var relation = nation.Relations.GetValueOrDefault(targetNation.Id, DiplomaticStatus.Neutral);
+                var relation = nation.Relations.TryGetValue(targetNation.Id, out var _r) ? _r : DiplomaticStatus.Neutral;
                 if (relation <= DiplomaticStatus.Friendly)
                 {
                     float aid = 100f + (float)SimRng.NextDouble() * 200f;
@@ -365,7 +365,7 @@ public partial class CouncilEngine : Node
                 break;
 
             case "recall_ambassador":
-                var rel = nation.Relations.GetValueOrDefault(targetNation.Id, DiplomaticStatus.Neutral);
+                var rel = nation.Relations.TryGetValue(targetNation.Id, out var _rl) ? _rl : DiplomaticStatus.Neutral;
                 if (rel < DiplomaticStatus.AtWar)
                 {
                     nation.Relations[targetNation.Id] = (DiplomaticStatus)Math.Min((int)rel + 1, (int)DiplomaticStatus.Hostile);

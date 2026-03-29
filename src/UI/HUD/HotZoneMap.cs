@@ -201,17 +201,17 @@ public partial class HotZoneMap : Control
             }
         }
 
-        // Draw units as bright dots
-        foreach (var unit in data.Units)
+        // Draw armies as bright dots
+        foreach (var army in data.Armies)
         {
-            if (!unit.IsAlive) continue;
-            int rx = unit.TileX - (_centerTileX - ViewRadius);
-            int ry = unit.TileY - (_centerTileY - ViewRadius);
+            if (!army.IsAlive) continue;
+            int rx = army.TileX - (_centerTileX - ViewRadius);
+            int ry = army.TileY - (_centerTileY - ViewRadius);
             if (rx < 0 || rx >= viewDiameter || ry < 0 || ry >= viewDiameter) continue;
 
             int owner = -1;
             for (int i = 0; i < data.Nations.Count; i++)
-                if (data.Nations[i].Id == unit.NationId) { owner = i; break; }
+                if (data.Nations[i].Id == army.NationId) { owner = i; break; }
 
             Color unitColor = owner >= 0 ? data.Nations[owner].NationColor : Colors.White;
             int upx = (int)(rx * scale + scale / 2);

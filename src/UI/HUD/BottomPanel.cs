@@ -194,9 +194,9 @@ public partial class BottomPanel : Control
         _provinceCountLabel.Text = $"Provinces: {nat.ProvinceCount}";
 
         int unitCount = 0;
-        foreach (var u in data.Units)
-            if (u.NationId == nat.Id && u.IsAlive) unitCount++;
-        _unitCountLabel.Text = $"Units: {unitCount}";
+        foreach (var a in data.Armies)
+            if (a.NationId == nat.Id && a.IsAlive) unitCount += a.TotalStrength;
+        _unitCountLabel.Text = $"Forces: {unitCount}";
     }
 
     // Data refreshes via TurnAdvancedEvent subscription — no per-frame polling needed

@@ -123,7 +123,7 @@ public partial class WorldStateManager : Node
         }
 
         // Legacy fallback: try individual units
-#pragma warning disable CS0612
+#pragma warning disable CS0612, CS0618
         var unit = Data.Units.FirstOrDefault(u => u.Id == req.UnitId);
         if (unit != null && unit.IsAlive)
         {
@@ -133,6 +133,6 @@ public partial class WorldStateManager : Node
             unit.TileY = req.TargetY;
             EventBus.Instance?.Publish(new UnitMovedEvent(unit.Id, oldX, oldY, req.TargetX, req.TargetY));
         }
-#pragma warning restore CS0612
+#pragma warning restore CS0612, CS0618
     }
 }

@@ -195,11 +195,11 @@ public partial class RuntimeBridge : Node
             ["mapHeight"] = data.MapHeight,
             ["nationCount"] = data.Nations.Count,
             ["cityCount"] = data.Cities.Count,
-            ["unitCount"] = data.Units.Count,
+            ["armyCount"] = data.Armies.Count,
             ["characterCount"] = data.Characters.Count,
             ["nations"] = data.Nations.Select(SerializeNation).ToList(),
             ["cities"] = data.Cities.Select(SerializeCity).ToList(),
-            ["units"] = data.Units.Where(u => u.IsAlive).Select(SerializeUnit).ToList(),
+            ["armies"] = data.Armies.Where(a => a.IsAlive).Select(SerializeArmy).ToList(),
             ["characters"] = data.Characters.Select(SerializeCharacter).ToList(),
         };
     }
@@ -223,12 +223,12 @@ public partial class RuntimeBridge : Node
             return new() { ["error"] = $"Nation not found: {nationId}" };
 
         var cities = data.Cities.Where(c => c.NationId == nationId).Select(SerializeCity).ToList();
-        var units = data.Units.Where(u => u.NationId == nationId && u.IsAlive).Select(SerializeUnit).ToList();
+        var armies = data.Armies.Where(a => a.NationId == nationId && a.IsAlive).Select(SerializeArmy).ToList();
         var characters = data.Characters.Where(c => c.NationId == nationId).Select(SerializeCharacter).ToList();
 
         var result = SerializeNation(nation);
         result["cities"] = cities;
-        result["units"] = units;
+        result["armies"] = armies;
         result["characters"] = characters;
         return result;
     }
@@ -236,13 +236,13 @@ public partial class RuntimeBridge : Node
     private Dictionary<string, object?> GetUnits(Data.WorldData data, JsonElement parms)
     {
         string nationId = GetStringParam(parms, "nationId");
-        var units = data.Units.Where(u => u.IsAlive);
+        var armies = data.Armies.Where(a => a.IsAlive);
         if (!string.IsNullOrEmpty(nationId))
-            units = units.Where(u => u.NationId == nationId);
+            armies = armies.Where(a => a.NationId == nationId);
 
         return new()
         {
-            ["units"] = units.Select(SerializeUnit).ToList(),
+            ["armies"] = armies.Select(SerializeArmy).ToList(),
         };
     }
 
@@ -269,9 +269,9 @@ public partial class RuntimeBridge : Node
 
         int terrain = data.TerrainMap![x, y];
         int owner = data.OwnershipMap![x, y];
-        var unitsHere = data.Units
-            .Where(u => u.IsAlive && u.TileX == x && u.TileY == y)
-            .Select(SerializeUnit).ToList();
+        var armiesHere = data.Armies
+            .Where(a => a.IsAlive && a.TileX == x && a.TileY == y)
+            .Select(SerializeArmy).ToList();
 
         string? ownerNation = owner >= 0 && owner < data.Nations.Count
             ? data.Nations[owner].Id : null;
@@ -283,7 +283,7 @@ public partial class RuntimeBridge : Node
             ["terrain"] = terrain,
             ["terrainName"] = ((Data.TerrainType)terrain).ToString(),
             ["ownerId"] = ownerNation,
-            ["units"] = unitsHere,
+            ["armies"] = armiesHere,
         };
     }
 
@@ -359,17 +359,21 @@ public partial class RuntimeBridge : Node
         };
     }
 
-    private Dictionary<string, object?> SerializeUnit(Data.UnitData u)
+    private Dictionary<string, object?> SerializeArmy(Data.ArmyData a)
     {
         return new()
         {
-            ["id"] = u.Id,
-            ["nationId"] = u.NationId,
-            ["type"] = u.Type.ToString(),
-            ["tileX"] = u.TileX,
-            ["tileY"] = u.TileY,
-            ["strength"] = u.Strength,
-            ["order"] = u.CurrentOrder.ToString(),
+            ["id"] = a.Id,
+            ["nationId"] = a.NationId,
+            ["name"] = a.Name,
+            ["tileX"] = a.TileX,
+            ["tileY"] = a.TileY,
+            ["totalStrength"] = a.TotalStrength,
+            ["morale"] = a.Morale,
+            ["supply"] = a.Supply,
+            ["order"] = a.CurrentOrder.ToString(),
+            ["formation"] = a.Formation.ToString(),
+            ["primaryDomain"] = a.PrimaryDomain.ToString(),
         };
     }
 
