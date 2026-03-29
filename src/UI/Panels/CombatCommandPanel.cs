@@ -211,7 +211,6 @@ public partial class CombatCommandPanel : Control
         EventBus.Instance?.Unsubscribe<ArmySelectedEvent>(OnArmySelected);
         EventBus.Instance?.Unsubscribe<BattleResolvedEvent>(OnBattleResolved);
         EventBus.Instance?.Unsubscribe<TurnAdvancedEvent>(OnTurnAdvanced);
-        EventBus.Instance?.Unsubscribe<BattleResolvedEvent>(OnBattleResolved);
     }
 
     private void OnArmySelected(ArmySelectedEvent ev)

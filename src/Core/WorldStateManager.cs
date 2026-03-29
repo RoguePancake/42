@@ -29,7 +29,7 @@ public partial class WorldStateManager : Node
         GetNode("/root/Main/UILayer")?.CallDeferred("add_child", setupPanel);
 
         // Subscribe to movement requests (legacy + army)
-        EventBus.Instance!.Subscribe<UnitMoveRequested>(OnUnitMoveRequested);
+        EventBus.Instance?.Subscribe<UnitMoveRequested>(OnUnitMoveRequested);
     }
 
     // Stored config for custom nation (used after map click)
@@ -43,7 +43,7 @@ public partial class WorldStateManager : Node
         GD.Print($"[WorldStateManager] Generating world for {playerName} ({playerRole}), nation #{nationIndex}...");
         Data = WorldGenerator.CreateWorld(42, playerName, playerRole, focusIndex, nationIndex);
 
-        EventBus.Instance!.Publish(new WorldReadyEvent(42, Data.PlayerNationId ?? ""));
+        EventBus.Instance?.Publish(new WorldReadyEvent(42, Data.PlayerNationId ?? ""));
     }
 
     /// <summary>
@@ -63,17 +63,17 @@ public partial class WorldStateManager : Node
         Data = WorldGenerator.CreateWorldWithoutPlayer(42);
 
         // Subscribe to capital placement click
-        EventBus.Instance!.Subscribe<CustomNationCapitalPlacedEvent>(OnCustomCapitalPlaced);
+        EventBus.Instance?.Subscribe<CustomNationCapitalPlacedEvent>(OnCustomCapitalPlaced);
 
         // Show map so player can click, and signal placement mode
-        EventBus.Instance!.Publish(new WorldReadyEvent(42, ""));
-        EventBus.Instance!.Publish(new CustomNationPlacementModeEvent(true));
+        EventBus.Instance?.Publish(new WorldReadyEvent(42, ""));
+        EventBus.Instance?.Publish(new CustomNationPlacementModeEvent(true));
     }
 
     private void OnCustomCapitalPlaced(CustomNationCapitalPlacedEvent ev)
     {
-        EventBus.Instance!.Unsubscribe<CustomNationCapitalPlacedEvent>(OnCustomCapitalPlaced);
-        EventBus.Instance!.Publish(new CustomNationPlacementModeEvent(false));
+        EventBus.Instance?.Unsubscribe<CustomNationCapitalPlacedEvent>(OnCustomCapitalPlaced);
+        EventBus.Instance?.Publish(new CustomNationPlacementModeEvent(false));
 
         GD.Print($"[WorldStateManager] Placing custom capital at ({ev.TileX}, {ev.TileY})...");
 
@@ -87,7 +87,7 @@ public partial class WorldStateManager : Node
             _pendingFocusIndex);
 
         // Re-publish WorldReady with the new player nation
-        EventBus.Instance!.Publish(new WorldReadyEvent(42, Data.PlayerNationId ?? ""));
+        EventBus.Instance?.Publish(new WorldReadyEvent(42, Data.PlayerNationId ?? ""));
     }
 
     /// <summary>
@@ -98,12 +98,13 @@ public partial class WorldStateManager : Node
     {
         if (req.TargetX < 0 || req.TargetX >= Data.MapWidth ||
             req.TargetY < 0 || req.TargetY >= Data.MapHeight) return;
+        if (Data.TerrainMap == null) return;
 
         // Try to find an army with this ID
         var army = Data.Armies.FirstOrDefault(a => a.Id == req.UnitId);
         if (army != null && army.IsAlive)
         {
-            int targetTerrain = Data.TerrainMap![req.TargetX, req.TargetY];
+            int targetTerrain = Data.TerrainMap[req.TargetX, req.TargetY];
 
             // Validate based on army's primary domain
             if (army.PrimaryDomain == UnitDomain.Naval && TerrainRules.IsLand(targetTerrain)) return;
@@ -117,7 +118,7 @@ public partial class WorldStateManager : Node
             army.TargetPixelX = req.TargetX * MapManagerConstants.TileSize + MapManagerConstants.TileSize / 2f;
             army.TargetPixelY = req.TargetY * MapManagerConstants.TileSize + MapManagerConstants.TileSize / 2f;
 
-            EventBus.Instance!.Publish(new UnitMovedEvent(army.Id, oldX, oldY, req.TargetX, req.TargetY));
+            EventBus.Instance?.Publish(new UnitMovedEvent(army.Id, oldX, oldY, req.TargetX, req.TargetY));
             return;
         }
 
@@ -126,11 +127,11 @@ public partial class WorldStateManager : Node
         var unit = Data.Units.FirstOrDefault(u => u.Id == req.UnitId);
         if (unit != null && unit.IsAlive)
         {
-            int targetTerrain = Data.TerrainMap![req.TargetX, req.TargetY];
+            int targetTerrain = Data.TerrainMap[req.TargetX, req.TargetY];
             int oldX = unit.TileX, oldY = unit.TileY;
             unit.TileX = req.TargetX;
             unit.TileY = req.TargetY;
-            EventBus.Instance!.Publish(new UnitMovedEvent(unit.Id, oldX, oldY, req.TargetX, req.TargetY));
+            EventBus.Instance?.Publish(new UnitMovedEvent(unit.Id, oldX, oldY, req.TargetX, req.TargetY));
         }
 #pragma warning restore CS0612
     }

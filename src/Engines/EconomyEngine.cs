@@ -22,6 +22,11 @@ public partial class EconomyEngine : Node
         GD.Print("[EconomyEngine] Online. The treasury hungers.");
     }
 
+    public override void _ExitTree()
+    {
+        EventBus.Instance?.Unsubscribe<TurnAdvancedEvent>(OnTurnAdvanced);
+    }
+
     private void OnTurnAdvanced(TurnAdvancedEvent ev)
     {
         var world = WorldStateManager.Instance?.Data;
@@ -38,10 +43,11 @@ public partial class EconomyEngine : Node
 
             // ─── ARMY UPKEEP ───
             float armyUpkeep = 0f;
+            int nationArmyCount = 0;
             foreach (var army in world.Armies)
             {
                 if (!army.IsAlive || army.NationId != nation.Id) continue;
-                // Each unit costs based on type
+                nationArmyCount++;
                 foreach (var (type, count) in army.Composition)
                 {
                     float costPerUnit = type switch
@@ -81,8 +87,8 @@ public partial class EconomyEngine : Node
             // Uranium barely replenishes (rare)
             nation.Uranium = Math.Clamp(nation.Uranium + 0.1f * provinceFactor, 0, 100);
 
-            // Food consumption
-            float foodConsumption = nation.ProvinceCount * 0.005f + world.Armies.Count(a => a.NationId == nation.Id && a.IsAlive) * 0.5f;
+            // Food consumption (army count computed during upkeep loop above)
+            float foodConsumption = nation.ProvinceCount * 0.005f + nationArmyCount * 0.5f;
             nation.Food = Math.Clamp(nation.Food - foodConsumption, 0, 100);
 
             // Low food -> stability hit
@@ -145,9 +151,9 @@ public partial class EconomyEngine : Node
         if (nation.Traits.Contains(NationTrait.TradeEmpire))
             cityIncome *= 2f;
 
-        // Sovereign wealth interest
+        // Sovereign wealth interest (capped to prevent exponential growth)
         if (nation.Traits.Contains(NationTrait.SovereignWealth) && nation.Treasury > 0)
-            baseIncome += nation.Treasury * 0.02f;
+            baseIncome += Math.Min(nation.Treasury * 0.02f, 500f);
 
         return baseIncome + provinceIncome + cityIncome;
     }

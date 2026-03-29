@@ -14,16 +14,22 @@ namespace Warship.Engines;
 /// </summary>
 public partial class MilitaryEngine : Node
 {
-    private Random _rng = new(1337);
     private float _combatTimer = 0f;
     private const float CombatInterval = 1.0f;
 
     public override void _Ready()
     {
-        EventBus.Instance!.Subscribe<ArmyOrderEvent>(OnArmyOrder);
-        EventBus.Instance!.Subscribe<ArmyFormationEvent>(OnArmyFormation);
-        EventBus.Instance!.Subscribe<TurnAdvancedEvent>(OnTurnAdvanced);
+        EventBus.Instance?.Subscribe<ArmyOrderEvent>(OnArmyOrder);
+        EventBus.Instance?.Subscribe<ArmyFormationEvent>(OnArmyFormation);
+        EventBus.Instance?.Subscribe<TurnAdvancedEvent>(OnTurnAdvanced);
         GD.Print("[MilitaryEngine] Online. Army command standing by.");
+    }
+
+    public override void _ExitTree()
+    {
+        EventBus.Instance?.Unsubscribe<ArmyOrderEvent>(OnArmyOrder);
+        EventBus.Instance?.Unsubscribe<ArmyFormationEvent>(OnArmyFormation);
+        EventBus.Instance?.Unsubscribe<TurnAdvancedEvent>(OnTurnAdvanced);
     }
 
     private void OnArmyOrder(ArmyOrderEvent ev)
@@ -137,8 +143,8 @@ public partial class MilitaryEngine : Node
                         Math.Abs(army.PixelY - army.TargetPixelY) < 10f)
                     {
                         int range = 5;
-                        army.TargetTileX = Math.Clamp(army.TileX + _rng.Next(-range, range + 1), 0, world.MapWidth - 1);
-                        army.TargetTileY = Math.Clamp(army.TileY + _rng.Next(-range, range + 1), 0, world.MapHeight - 1);
+                        army.TargetTileX = Math.Clamp(army.TileX + SimRng.Next(-range, range + 1), 0, world.MapWidth - 1);
+                        army.TargetTileY = Math.Clamp(army.TileY + SimRng.Next(-range, range + 1), 0, world.MapHeight - 1);
                         army.TargetPixelX = army.TargetTileX * TileSize + TileSize / 2f;
                         army.TargetPixelY = army.TargetTileY * TileSize + TileSize / 2f;
                     }
@@ -146,7 +152,7 @@ public partial class MilitaryEngine : Node
 
                 case MilitaryOrder.Standby:
                     // Retreat toward capital
-                    if (nation.CapitalX > 0 &&
+                    if (nation.CapitalX >= 0 && nation.CapitalY >= 0 &&
                         army.TargetTileX == army.TileX && army.TargetTileY == army.TileY)
                     {
                         army.TargetTileX = nation.CapitalX;
@@ -178,6 +184,9 @@ public partial class MilitaryEngine : Node
             var a1 = world.Armies[i];
             if (!a1.IsAlive || a1.TotalStrength <= 0) continue;
 
+            int n1 = ParseNationIdx(a1.NationId, world.Nations.Count);
+            if (n1 < 0) continue;
+
             for (int j = i + 1; j < world.Armies.Count; j++)
             {
                 var a2 = world.Armies[j];
@@ -185,9 +194,8 @@ public partial class MilitaryEngine : Node
                 if (a1.NationId == a2.NationId) continue;
 
                 // Must be at war
-                int n1 = ParseNationIdx(a1.NationId, world.Nations.Count);
                 int n2 = ParseNationIdx(a2.NationId, world.Nations.Count);
-                if (n1 < 0 || n2 < 0) continue;
+                if (n2 < 0) continue;
                 var relation = world.Nations[n1].Relations.GetValueOrDefault(world.Nations[n2].Id, DiplomaticStatus.Neutral);
                 if (relation != DiplomaticStatus.AtWar) continue;
 
@@ -195,6 +203,7 @@ public partial class MilitaryEngine : Node
                 float dy = a1.PixelY - a2.PixelY;
                 if (dx * dx + dy * dy > EngagementRange * EngagementRange) continue;
 
+                // At least one side must be attacking to initiate combat
                 if (a1.CurrentOrder != MilitaryOrder.Attack && a2.CurrentOrder != MilitaryOrder.Attack)
                     continue;
 
@@ -223,8 +232,8 @@ public partial class MilitaryEngine : Node
         if (attacker.Supply < 30f) atkPower *= 0.6f;
         if (defender.Supply < 30f) defPower *= 0.6f;
 
-        atkPower *= 0.8f + (float)_rng.NextDouble() * 0.4f;
-        defPower *= 0.8f + (float)_rng.NextDouble() * 0.4f;
+        atkPower *= 0.8f + (float)SimRng.NextDouble() * 0.4f;
+        defPower *= 0.8f + (float)SimRng.NextDouble() * 0.4f;
 
         float ratio = atkPower / Math.Max(defPower, 1f);
         int atkLoss = (int)(attacker.TotalStrength * Math.Clamp(1f / ratio * 0.15f, 0.02f, 0.3f));
@@ -302,14 +311,16 @@ public partial class MilitaryEngine : Node
         {
             if (!army.IsAlive || army.CurrentOrder != MilitaryOrder.Attack) continue;
 
+            int armyN = ParseNationIdx(army.NationId, world.Nations.Count);
+            if (armyN < 0) continue;
+
             foreach (var city in world.Cities)
             {
                 if (city.NationId == army.NationId) continue;
 
                 // Must be at war with city owner
-                int armyN = ParseNationIdx(army.NationId, world.Nations.Count);
                 int cityN = ParseNationIdx(city.NationId, world.Nations.Count);
-                if (armyN < 0 || cityN < 0) continue;
+                if (cityN < 0) continue;
                 var rel = world.Nations[armyN].Relations.GetValueOrDefault(world.Nations[cityN].Id, DiplomaticStatus.Neutral);
                 if (rel != DiplomaticStatus.AtWar) continue;
 

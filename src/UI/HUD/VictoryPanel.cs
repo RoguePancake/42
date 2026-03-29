@@ -1,4 +1,6 @@
 using Godot;
+using Warship.Core;
+using Warship.Events;
 
 namespace Warship.UI.HUD;
 
@@ -7,8 +9,19 @@ public partial class VictoryPanel : Control
     private ColorRect _dimBg = null!;
     private PanelContainer _window = null!;
 
+    private void OnNotification(NotificationEvent ev)
+    {
+        if (ev.Type == "victory") ShowVictory();
+    }
+
+    public override void _ExitTree()
+    {
+        EventBus.Instance?.Unsubscribe<NotificationEvent>(OnNotification);
+    }
+
     public override void _Ready()
     {
+        EventBus.Instance?.Subscribe<NotificationEvent>(OnNotification);
         AnchorsPreset = (int)LayoutPreset.FullRect;
         MouseFilter = MouseFilterEnum.Stop; // Blocks input to map
         Visible = false; // Hidden at start

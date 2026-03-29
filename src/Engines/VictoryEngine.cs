@@ -15,9 +15,15 @@ public partial class VictoryEngine : Node
 
     public override void _Ready()
     {
-        EventBus.Instance!.Subscribe<TurnAdvancedEvent>(OnTurnAdvanced);
-        EventBus.Instance!.Subscribe<AuthorityChangedEvent>(OnAuthorityChanged);
+        EventBus.Instance?.Subscribe<TurnAdvancedEvent>(OnTurnAdvanced);
+        EventBus.Instance?.Subscribe<AuthorityChangedEvent>(OnAuthorityChanged);
         GD.Print("[VictoryEngine] Online. Waiting for absolute power.");
+    }
+
+    public override void _ExitTree()
+    {
+        EventBus.Instance?.Unsubscribe<TurnAdvancedEvent>(OnTurnAdvanced);
+        EventBus.Instance?.Unsubscribe<AuthorityChangedEvent>(OnAuthorityChanged);
     }
 
     private void OnTurnAdvanced(TurnAdvancedEvent ev)
@@ -45,12 +51,11 @@ public partial class VictoryEngine : Node
             _victoryFired = true;
             GD.Print($"[VictoryEngine] FULL AUTHORITY ACHIEVED (FAI {playerChar.FullAuthorityIndex:0.0}). Triggering end game sequence.");
             EventBus.Instance?.Publish(new NotificationEvent("FULL AUTHORITY ACHIEVED.", "success"));
-            
-            // Wait 1 second for drama, then popup
-            GetTree().CreateTimer(1.5).Timeout += () => 
+
+            // Signal victory via EventBus — let UI handle the display
+            GetTree().CreateTimer(1.5).Timeout += () =>
             {
-                var victoryPanel = GetNodeOrNull<UI.HUD.VictoryPanel>("/root/Main/UILayer/VictoryPanel");
-                victoryPanel?.ShowVictory();
+                EventBus.Instance?.Publish(new NotificationEvent("VICTORY_TRIGGER", "victory"));
             };
         }
     }

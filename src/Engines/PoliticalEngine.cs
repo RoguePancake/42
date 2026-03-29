@@ -14,12 +14,17 @@ namespace Warship.Engines;
 /// </summary>
 public partial class PoliticalEngine : Node
 {
-    private Random _rng = new(42);
+    // Uses SimRng for deterministic replay
 
     public override void _Ready()
     {
-        EventBus.Instance!.Subscribe<PoliticalActionEvent>(OnPoliticalAction);
+        EventBus.Instance?.Subscribe<PoliticalActionEvent>(OnPoliticalAction);
         GD.Print("[PoliticalEngine] Online. Listening for political actions.");
+    }
+
+    public override void _ExitTree()
+    {
+        EventBus.Instance?.Unsubscribe<PoliticalActionEvent>(OnPoliticalAction);
     }
 
     private void OnPoliticalAction(PoliticalActionEvent ev)
@@ -61,16 +66,16 @@ public partial class PoliticalEngine : Node
 
     private void ProcessFundMilitia(CharacterData actor)
     {
-        var nation = WorldStateManager.Instance?.Data?.Nations[int.Parse(actor.NationId.Split('_')[1])];
+        var nation = GetActorNation(actor);
         if (nation != null && nation.Treasury < 100f) { Notify("❌ Insufficient Funds! Requires $100M.", "danger"); return; }
         if (nation != null) nation.Treasury -= 100f;
 
-        float gain = 5f + (float)(_rng.NextDouble() * 5);
+        float gain = 5f + (float)(SimRng.NextDouble() * 5);
         float old = actor.TerritoryAuthority;
         actor.TerritoryAuthority = MathF.Min(100f, actor.TerritoryAuthority + gain);
 
         // Small WA cost (looks militaristic to the world)
-        float waLoss = 1f + (float)(_rng.NextDouble() * 2);
+        float waLoss = 1f + (float)(SimRng.NextDouble() * 2);
         actor.WorldAuthority = MathF.Max(0f, actor.WorldAuthority - waLoss);
 
         Notify($"💰 Funded domestic militia: TA +{gain:0.0}%, WA -{waLoss:0.0}%", "success");
@@ -79,7 +84,7 @@ public partial class PoliticalEngine : Node
 
     private void ProcessPublicAddress(CharacterData actor)
     {
-        float gain = 4f + (float)(_rng.NextDouble() * 4);
+        float gain = 4f + (float)(SimRng.NextDouble() * 4);
         float old = actor.WorldAuthority;
         actor.WorldAuthority = MathF.Min(100f, actor.WorldAuthority + gain);
 
@@ -89,7 +94,7 @@ public partial class PoliticalEngine : Node
 
     private void ProcessReviewIntel(CharacterData actor)
     {
-        float gain = 3f + (float)(_rng.NextDouble() * 3);
+        float gain = 3f + (float)(SimRng.NextDouble() * 3);
         float old = actor.BehindTheScenesAuthority;
         actor.BehindTheScenesAuthority = MathF.Min(100f, actor.BehindTheScenesAuthority + gain);
 
@@ -103,7 +108,7 @@ public partial class PoliticalEngine : Node
     {
         // Success based on actor's BSA
         float chance = actor.BehindTheScenesAuthority / 100f;
-        bool success = _rng.NextDouble() < chance;
+        bool success = SimRng.NextDouble() < chance;
 
         if (success)
         {
@@ -119,17 +124,17 @@ public partial class PoliticalEngine : Node
 
     private void ProcessBribe(CharacterData actor, CharacterData target)
     {
-        var nation = WorldStateManager.Instance?.Data?.Nations[int.Parse(actor.NationId.Split('_')[1])];
+        var nation = GetActorNation(actor);
         if (nation != null && nation.Treasury < 50f) { Notify("❌ Insufficient Funds! Requires $50M.", "danger"); return; }
         if (nation != null) nation.Treasury -= 50f;
 
         float chance = (actor.BehindTheScenesAuthority * 0.6f + actor.TerritoryAuthority * 0.4f) / 100f;
-        bool success = _rng.NextDouble() < chance;
+        bool success = SimRng.NextDouble() < chance;
 
         if (success)
         {
             // Steal some of their TA
-            float stolen = 4f + (float)(_rng.NextDouble() * 4);
+            float stolen = 4f + (float)(SimRng.NextDouble() * 4);
             target.TerritoryAuthority = MathF.Max(0f, target.TerritoryAuthority - stolen);
             actor.TerritoryAuthority = MathF.Min(100f, actor.TerritoryAuthority + stolen * 0.5f);
             actor.BehindTheScenesAuthority = MathF.Min(100f, actor.BehindTheScenesAuthority + 2f);
@@ -146,13 +151,13 @@ public partial class PoliticalEngine : Node
 
     private void ProcessThreaten(CharacterData actor, CharacterData target)
     {
-        var nation = WorldStateManager.Instance?.Data?.Nations[int.Parse(actor.NationId.Split('_')[1])];
+        var nation = GetActorNation(actor);
         if (nation != null && nation.Treasury < 10f) { Notify("❌ Insufficient Funds! Requires $10M.", "danger"); return; }
         if (nation != null) nation.Treasury -= 10f;
 
         // Requires high TA to be credible
         float chance = actor.TerritoryAuthority / 100f * 0.7f;
-        bool success = _rng.NextDouble() < chance;
+        bool success = SimRng.NextDouble() < chance;
 
         if (success)
         {
@@ -173,7 +178,7 @@ public partial class PoliticalEngine : Node
 
     private void ProcessEliminate(CharacterData actor, CharacterData target)
     {
-        var nation = WorldStateManager.Instance?.Data?.Nations[int.Parse(actor.NationId.Split('_')[1])];
+        var nation = GetActorNation(actor);
         if (nation != null && nation.Treasury < 300f) { Notify("❌ Insufficient Funds! Requires $300M.", "danger"); return; }
         if (nation != null) nation.Treasury -= 300f;
 
@@ -181,7 +186,7 @@ public partial class PoliticalEngine : Node
         float chance = (actor.BehindTheScenesAuthority - 30f) / 100f; // Need BSA > 30 to even attempt
         if (chance < 0.05f) chance = 0.05f; // Always 5% minimum
 
-        bool success = _rng.NextDouble() < chance;
+        bool success = SimRng.NextDouble() < chance;
 
         if (success)
         {
@@ -215,6 +220,15 @@ public partial class PoliticalEngine : Node
     {
         GD.Print($"[PoliticalEngine] {msg}");
         EventBus.Instance?.Publish(new NotificationEvent(msg, type));
+    }
+
+    private static NationData? GetActorNation(CharacterData actor)
+    {
+        var world = WorldStateManager.Instance?.Data;
+        if (world == null) return null;
+        var parts = actor.NationId.Split('_');
+        if (parts.Length < 2 || !int.TryParse(parts[1], out int idx)) return null;
+        return idx >= 0 && idx < world.Nations.Count ? world.Nations[idx] : null;
     }
 
     private void EmitChange(string charId, string meter, float old, float newVal, string reason)

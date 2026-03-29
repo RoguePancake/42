@@ -13,12 +13,17 @@ namespace Warship.Engines;
 /// </summary>
 public partial class AIEngine : Node
 {
-    private Random _rng = new();
+    // Uses SimRng for deterministic replay
 
     public override void _Ready()
     {
-        EventBus.Instance!.Subscribe<TurnAdvancedEvent>(OnTurnAdvanced);
+        EventBus.Instance?.Subscribe<TurnAdvancedEvent>(OnTurnAdvanced);
         GD.Print("[AIEngine] Online. Rivals are plotting.");
+    }
+
+    public override void _ExitTree()
+    {
+        EventBus.Instance?.Unsubscribe<TurnAdvancedEvent>(OnTurnAdvanced);
     }
 
     private void OnTurnAdvanced(TurnAdvancedEvent ev)
@@ -32,15 +37,15 @@ public partial class AIEngine : Node
         foreach (var rival in rivals)
         {
             // AI decides if it wants to act this turn (60% chance)
-            if (_rng.NextDouble() > 0.6) continue;
+            if (SimRng.NextDouble() > 0.6) continue;
 
             // Pick a target: normally the player, or another rival with high FAI
             var targetOptions = world.Characters.Where(c => c.Id != rival.Id && c.Role != "Eliminated").ToList();
             if (targetOptions.Count == 0) continue;
 
             // Target the player 40% of the time, else random rival
-            var target = targetOptions[_rng.Next(targetOptions.Count)];
-            bool targetIsPlayer = _rng.NextDouble() < 0.4f;
+            var target = targetOptions[SimRng.Next(targetOptions.Count)];
+            bool targetIsPlayer = SimRng.NextDouble() < 0.4f;
             if (targetIsPlayer)
             {
                 var p = targetOptions.FirstOrDefault(c => c.IsPlayer);
@@ -65,12 +70,12 @@ public partial class AIEngine : Node
         // 2. If BSA is extremely high, they get cocky and might try to eliminate
         if (rival.BehindTheScenesAuthority > 60f && target.FullAuthorityIndex > rival.FullAuthorityIndex)
         {
-            if (_rng.NextDouble() < 0.1f) // 10% chance to go for the kill
+            if (SimRng.NextDouble() < 0.1f) // 10% chance to go for the kill
                 return "eliminate";
         }
 
         // 3. Main actions
-        double r = _rng.NextDouble();
+        double r = SimRng.NextDouble();
         if (r < 0.25)
             return "public_address"; // Boost own WA
         else if (r < 0.50)
