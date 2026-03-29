@@ -26,6 +26,7 @@
 [ext_resource type="Script" path="res://src/UI/HUD/MainViewSwitcher.cs" id="24"]
 [ext_resource type="Script" path="res://src/UI/HUD/HotZoneManager.cs" id="25"]
 [ext_resource type="Script" path="res://src/UI/Panels/CouncilPanel.cs" id="26"]
+[ext_resource type="Script" path="res://src/Engines/CouncilEngine.cs" id="28"]
 
 [node name="Main" type="Node2D"]
 
@@ -58,6 +59,9 @@ script = ExtResource("15")
 
 [node name="EconomyEngine" type="Node" parent="."]
 script = ExtResource("18")
+
+[node name="CouncilEngine" type="Node" parent="."]
+script = ExtResource("28")
 
 [node name="Background" type="ColorRect" parent="."]
 anchors_preset = 15

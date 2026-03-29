@@ -567,6 +567,13 @@ public class CouncilData
     public GovernmentType Type;
     public List<AdviserData> Advisers = new();
 
+    // Policy state (modified by CouncilEngine)
+    public float TaxRate = 0.20f;           // 0.0–1.0, affects income and stability
+    public float DefenseBudgetPct = 0.30f;  // 0.0–1.0, fraction of income to military
+    public bool MartialLawActive = false;
+    public bool ConscriptionActive = false;
+    public bool NuclearAuthGranted = false;
+
     /// <summary>Display name for this government body, based on type.</summary>
     public string DisplayName => Type switch
     {
