@@ -1,4 +1,5 @@
 using Godot;
+using System;
 using System.Linq;
 using Warship.Core;
 using Warship.Events;
@@ -13,9 +14,15 @@ public partial class CrisisEngine : Node
 {
     public override void _Ready()
     {
-        EventBus.Instance!.Subscribe<TurnAdvancedEvent>(OnTurnAdvanced);
-        EventBus.Instance!.Subscribe<CrisisResolvedEvent>(OnCrisisResolved);
+        EventBus.Instance?.Subscribe<TurnAdvancedEvent>(OnTurnAdvanced);
+        EventBus.Instance?.Subscribe<CrisisResolvedEvent>(OnCrisisResolved);
         GD.Print("[CrisisEngine] Online. Waiting for the right moment to strike.");
+    }
+
+    public override void _ExitTree()
+    {
+        EventBus.Instance?.Unsubscribe<TurnAdvancedEvent>(OnTurnAdvanced);
+        EventBus.Instance?.Unsubscribe<CrisisResolvedEvent>(OnCrisisResolved);
     }
 
     private void OnTurnAdvanced(TurnAdvancedEvent ev)
@@ -77,7 +84,10 @@ public partial class CrisisEngine : Node
         var world = WorldStateManager.Instance?.Data;
         if (world == null) return;
         
-        int pIdx = int.Parse(world.PlayerNationId!.Split('_')[1]);
+        if (world.PlayerNationId == null) return;
+        var parts = world.PlayerNationId.Split('_');
+        if (parts.Length < 2 || !int.TryParse(parts[1], out int pIdx)) return;
+        if (pIdx < 0 || pIdx >= world.Nations.Count) return;
         var playerNation = world.Nations[pIdx];
         var playerChar = world.Characters.FirstOrDefault(c => c.IsPlayer);
         
@@ -111,8 +121,8 @@ public partial class CrisisEngine : Node
     
     private void ModifyAuth(CharacterData c, string type, float amount)
     {
-        if (type == "TA") c.TerritoryAuthority = Mathf.Clamp(c.TerritoryAuthority + amount, 0, 100);
-        if (type == "WA") c.WorldAuthority = Mathf.Clamp(c.WorldAuthority + amount, 0, 100);
-        if (type == "BSA") c.BehindTheScenesAuthority = Mathf.Clamp(c.BehindTheScenesAuthority + amount, 0, 100);
+        if (type == "TA") c.TerritoryAuthority = Math.Clamp(c.TerritoryAuthority + amount, 0, 100);
+        if (type == "WA") c.WorldAuthority = Math.Clamp(c.WorldAuthority + amount, 0, 100);
+        if (type == "BSA") c.BehindTheScenesAuthority = Math.Clamp(c.BehindTheScenesAuthority + amount, 0, 100);
     }
 }

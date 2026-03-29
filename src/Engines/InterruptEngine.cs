@@ -22,9 +22,15 @@ public partial class InterruptEngine : Node
 
     public override void _Ready()
     {
-        EventBus.Instance!.Subscribe<TurnAdvancedEvent>(OnTick);
-        EventBus.Instance!.Subscribe<InterruptResolvedEvent>(OnResolved);
+        EventBus.Instance?.Subscribe<TurnAdvancedEvent>(OnTick);
+        EventBus.Instance?.Subscribe<InterruptResolvedEvent>(OnResolved);
         GD.Print("[InterruptEngine] Online. The phone will ring.");
+    }
+
+    public override void _ExitTree()
+    {
+        EventBus.Instance?.Unsubscribe<TurnAdvancedEvent>(OnTick);
+        EventBus.Instance?.Unsubscribe<InterruptResolvedEvent>(OnResolved);
     }
 
     private void OnTick(TurnAdvancedEvent ev)
@@ -248,27 +254,27 @@ public partial class InterruptEngine : Node
         switch (id)
         {
             case "border_clash":
-                if (choice == 0) { nation.Prestige -= 5; }        // De-escalate
-                if (choice == 1) { nation.Treasury -= 200; }      // Reinforce
-                if (choice == 2) { nation.Prestige += 10; nation.Treasury -= 300; }  // Retaliate
+                if (choice == 0) { nation.Prestige = Math.Max(0, nation.Prestige - 5); }
+                if (choice == 1) { nation.Treasury -= 200; }
+                if (choice == 2) { nation.Prestige = Math.Clamp(nation.Prestige + 10, 0, 100); nation.Treasury -= 300; }
                 break;
 
             case "coup_attempt":
-                if (choice == 0) { pc.TerritoryAuthority = Math.Max(0, pc.TerritoryAuthority - 15); }
-                if (choice == 1) { pc.TerritoryAuthority = Math.Min(100, pc.TerritoryAuthority + 20); nation.Treasury -= 150; }
-                if (choice == 2) { pc.TerritoryAuthority = Math.Max(0, pc.TerritoryAuthority - 10); nation.Prestige += 5; }
+                if (choice == 0) { pc.TerritoryAuthority = Math.Clamp(pc.TerritoryAuthority - 15, 0, 100); }
+                if (choice == 1) { pc.TerritoryAuthority = Math.Clamp(pc.TerritoryAuthority + 20, 0, 100); nation.Treasury -= 150; }
+                if (choice == 2) { pc.TerritoryAuthority = Math.Clamp(pc.TerritoryAuthority - 10, 0, 100); nation.Prestige = Math.Clamp(nation.Prestige + 5, 0, 100); }
                 break;
 
             case "bank_run":
-                if (choice == 0) { nation.Treasury -= 300; nation.Prestige += 5; }
-                if (choice == 1) { nation.Prestige -= 10; }
-                if (choice == 2) { nation.Treasury += 200; nation.Prestige -= 15; }
+                if (choice == 0) { nation.Treasury -= 300; nation.Prestige = Math.Clamp(nation.Prestige + 5, 0, 100); }
+                if (choice == 1) { nation.Prestige = Math.Max(0, nation.Prestige - 10); }
+                if (choice == 2) { nation.Treasury += 200; nation.Prestige = Math.Max(0, nation.Prestige - 15); }
                 break;
 
             case "protests":
-                if (choice == 0) { nation.Prestige += 15; }
-                if (choice == 1) { nation.Prestige -= 10; pc.TerritoryAuthority = Math.Min(100, pc.TerritoryAuthority + 5); }
-                if (choice == 2) { nation.Treasury -= 100; nation.Prestige += 5; }
+                if (choice == 0) { nation.Prestige = Math.Clamp(nation.Prestige + 15, 0, 100); }
+                if (choice == 1) { nation.Prestige = Math.Max(0, nation.Prestige - 10); pc.TerritoryAuthority = Math.Clamp(pc.TerritoryAuthority + 5, 0, 100); }
+                if (choice == 2) { nation.Treasury -= 100; nation.Prestige = Math.Clamp(nation.Prestige + 5, 0, 100); }
                 break;
 
             default:
@@ -292,8 +298,9 @@ public partial class InterruptEngine : Node
     private static NationData? GetPlayerNation(WorldData world)
     {
         if (world.PlayerNationId == null) return null;
-        int idx = int.Parse(world.PlayerNationId.Split('_')[1]);
-        return idx < world.Nations.Count ? world.Nations[idx] : null;
+        var parts = world.PlayerNationId.Split('_');
+        if (parts.Length < 2 || !int.TryParse(parts[1], out int idx)) return null;
+        return idx >= 0 && idx < world.Nations.Count ? world.Nations[idx] : null;
     }
 
     private static float TileDistance(int x1, int y1, int x2, int y2)

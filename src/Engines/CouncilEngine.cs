@@ -14,12 +14,17 @@ namespace Warship.Engines;
 /// </summary>
 public partial class CouncilEngine : Node
 {
-    private Random _rng = new(777);
+    // Uses SimRng for deterministic replay
 
     public override void _Ready()
     {
-        EventBus.Instance!.Subscribe<CouncilActionEvent>(OnCouncilAction);
+        EventBus.Instance?.Subscribe<CouncilActionEvent>(OnCouncilAction);
         GD.Print("[CouncilEngine] Online. The council awaits orders.");
+    }
+
+    public override void _ExitTree()
+    {
+        EventBus.Instance?.Unsubscribe<CouncilActionEvent>(OnCouncilAction);
     }
 
     private void OnCouncilAction(CouncilActionEvent ev)
@@ -152,7 +157,7 @@ public partial class CouncilEngine : Node
                 var advisers = nation.Council.Advisers;
                 if (advisers.Count > 0)
                 {
-                    var target = advisers[_rng.Next(advisers.Count)];
+                    var target = advisers[SimRng.Next(advisers.Count)];
                     target.Loyalty = Math.Clamp(target.Loyalty + 0.15f, 0, 1);
                     Notify(nation, $"Ennobled {target.Name}: Loyalty +15%. Cost: $80M", "success");
                 }
@@ -311,10 +316,10 @@ public partial class CouncilEngine : Node
             case "propose_treaty":
                 if (!SpendTreasury(nation, 100f, "treaty proposal")) return;
                 var currentRelation = nation.Relations.GetValueOrDefault(targetNation.Id, DiplomaticStatus.Neutral);
-                if (currentRelation < DiplomaticStatus.Neutral)
+                if (currentRelation > DiplomaticStatus.Allied)
                 {
-                    // Improve by one step
-                    var improved = currentRelation - 1;
+                    // Improve by one step (lower enum value = better relations)
+                    var improved = (DiplomaticStatus)Math.Max((int)DiplomaticStatus.Allied, (int)currentRelation - 1);
                     nation.Relations[targetNation.Id] = improved;
                     targetNation.Relations[nation.Id] = improved;
                     Notify(nation, $"Treaty proposed to {targetNation.Name}: Relations improved to {improved}. Cost: $100M", "success");
@@ -343,7 +348,7 @@ public partial class CouncilEngine : Node
                 var relation = nation.Relations.GetValueOrDefault(targetNation.Id, DiplomaticStatus.Neutral);
                 if (relation <= DiplomaticStatus.Friendly)
                 {
-                    float aid = 100f + (float)_rng.NextDouble() * 200f;
+                    float aid = 100f + (float)SimRng.NextDouble() * 200f;
                     nation.Treasury += aid;
                     Notify(nation, $"{targetNation.Name} grants ${aid:0}M in aid!", "success");
                 }
@@ -361,7 +366,7 @@ public partial class CouncilEngine : Node
 
             case "recall_ambassador":
                 var rel = nation.Relations.GetValueOrDefault(targetNation.Id, DiplomaticStatus.Neutral);
-                if (rel < DiplomaticStatus.Hostile)
+                if (rel < DiplomaticStatus.AtWar)
                 {
                     nation.Relations[targetNation.Id] = (DiplomaticStatus)Math.Min((int)rel + 1, (int)DiplomaticStatus.Hostile);
                     Notify(nation, $"Ambassador recalled from {targetNation.Name}. Relations worsened.", "warning");
@@ -393,7 +398,7 @@ public partial class CouncilEngine : Node
             case "deploy_agent":
                 if (!SpendTreasury(nation, 150f, "spy deployment")) return;
                 float spyChance = 0.4f + competenceBonus * 0.3f;
-                if (_rng.NextDouble() < spyChance)
+                if (SimRng.NextDouble() < spyChance)
                 {
                     // Success: reveal some info about target
                     Notify(nation, $"Spy planted in {targetNation.Name}! Intel: Treasury ~${targetNation.Treasury:0}M, Stability ~{targetNation.Stability:0}%", "success");
@@ -415,7 +420,7 @@ public partial class CouncilEngine : Node
             case "approve_assassination":
                 if (!SpendTreasury(nation, 500f, "assassination")) return;
                 float assassinChance = 0.15f + competenceBonus * 0.25f;
-                if (_rng.NextDouble() < assassinChance)
+                if (SimRng.NextDouble() < assassinChance)
                 {
                     // Find a target character
                     var targetChar = world.Characters.FirstOrDefault(c =>
@@ -442,9 +447,9 @@ public partial class CouncilEngine : Node
             case "sabotage_mission":
                 if (!SpendTreasury(nation, 200f, "sabotage")) return;
                 float sabotageChance = 0.3f + competenceBonus * 0.3f;
-                if (_rng.NextDouble() < sabotageChance)
+                if (SimRng.NextDouble() < sabotageChance)
                 {
-                    float damage = 100f + (float)_rng.NextDouble() * 200f;
+                    float damage = 100f + (float)SimRng.NextDouble() * 200f;
                     targetNation.Treasury = Math.Max(0, targetNation.Treasury - damage);
                     targetNation.Iron = Math.Clamp(targetNation.Iron - 10f, 0, 100);
                     Notify(nation, $"Sabotage in {targetNation.Name}: Their treasury -${damage:0}M, Iron -10", "success");
@@ -458,7 +463,7 @@ public partial class CouncilEngine : Node
             case "steal_technology":
                 if (!SpendTreasury(nation, 250f, "tech theft")) return;
                 float techChance = 0.25f + competenceBonus * 0.3f;
-                if (_rng.NextDouble() < techChance)
+                if (SimRng.NextDouble() < techChance)
                 {
                     nation.Electronics = Math.Clamp(nation.Electronics + 15f, 0, 100);
                     Notify(nation, $"Technology stolen from {targetNation.Name}! Electronics +15", "success");
@@ -474,7 +479,7 @@ public partial class CouncilEngine : Node
             case "double_agent":
                 if (!SpendTreasury(nation, 300f, "deep op")) return;
                 float deepChance = 0.2f + competenceBonus * 0.4f;
-                if (_rng.NextDouble() < deepChance)
+                if (SimRng.NextDouble() < deepChance)
                 {
                     targetNation.Stability = Math.Clamp(targetNation.Stability - 12f, 0, 100);
                     Notify(nation, $"Deep operation success in {targetNation.Name}! Their stability -12", "success");
@@ -531,7 +536,7 @@ public partial class CouncilEngine : Node
             approval = 1.0f - approval; // Traitors recommend the opposite
 
         // Add some randomness
-        approval += (float)(_rng.NextDouble() - 0.5) * 0.2f;
+        approval += (float)(SimRng.NextDouble() - 0.5) * 0.2f;
 
         return approval > 0.5f;
     }
