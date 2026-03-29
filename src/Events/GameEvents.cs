@@ -64,3 +64,14 @@ public record InterruptTriggeredEvent(string Id, string Title, string Descriptio
     float TimerSeconds, Warship.Data.InterruptChoice[] Choices, int DefaultChoiceIndex,
     Warship.Data.InterruptPriority Priority) : IGameEvent;
 public record InterruptResolvedEvent(string Id, int ChoiceIndex, bool WasTimeout) : IGameEvent;
+
+// Council System (Government Actions)
+public record CouncilActionEvent(string NationId, Warship.Data.CouncilActionCategory Category,
+    string ActionId) : IGameEvent; // Player issues council order
+public record AdviserOpinionEvent(string AdviserId, string ActionId, bool Approves,
+    string Advice) : IGameEvent; // Adviser reacts to proposed action
+
+// Combat Command (Per-Army Orders)
+public record ArmyOrderEvent(string ArmyId, Warship.Data.MilitaryOrder Order) : IGameEvent;
+public record ArmyFormationEvent(string ArmyId, Warship.Data.FormationType Formation) : IGameEvent;
+public record ArmySelectedEvent(string? ArmyId) : IGameEvent; // null = deselected

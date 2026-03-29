@@ -16,6 +16,7 @@ public partial class MainViewSwitcher : Control
     private Button _intelBtn = null!;
     private Button _warBtn = null!;
     private Button _econBtn = null!;
+    private Button _councilBtn = null!;
 
     // Layout constants matching sidebar/topbar positions
     private const float TopOffset = 64f;   // Below both top bars
@@ -56,11 +57,13 @@ public partial class MainViewSwitcher : Control
         _intelBtn = MakeTab("INTEL", "intel");
         _warBtn = MakeTab("WAR ROOM", "warroom");
         _econBtn = MakeTab("ECONOMY", "economy");
+        _councilBtn = MakeTab("COUNCIL", "council");
 
         hbox.AddChild(_mapBtn);
         hbox.AddChild(_intelBtn);
         hbox.AddChild(_warBtn);
         hbox.AddChild(_econBtn);
+        hbox.AddChild(_councilBtn);
 
         // Start with map active
         UpdateTabStyles();
@@ -98,6 +101,7 @@ public partial class MainViewSwitcher : Control
         StyleTab(_intelBtn, _activeView == "intel");
         StyleTab(_warBtn, _activeView == "warroom");
         StyleTab(_econBtn, _activeView == "economy");
+        StyleTab(_councilBtn, _activeView == "council");
     }
 
     private void StyleTab(Button btn, bool active)

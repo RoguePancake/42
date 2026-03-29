@@ -194,6 +194,9 @@ public class NationData
     // Traits — unique passive abilities (set from template)
     public List<NationTrait> Traits = new();
 
+    // Government council — advisers, government type
+    public CouncilData Council = new();
+
     // Diplomacy — relations with other nations (key = nation Id)
     public Dictionary<string, DiplomaticStatus> Relations = new();
 
@@ -493,6 +496,137 @@ public class InterruptData
     public float TimerSeconds;
     public InterruptChoice[] Choices = System.Array.Empty<InterruptChoice>();
     public int DefaultChoiceIndex;  // applied on timeout
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  GOVERNMENT & COUNCIL — Player's governing body
+//  Name and composition changes by nation archetype.
+// ═══════════════════════════════════════════════════════════════
+
+public enum GovernmentType
+{
+    FederalCouncil,         // Hegemon — military-political cabinet
+    RevolutionaryCommittee, // Revolutionary — politburo of ideologues
+    MerchantSenate,         // Commercial / TradeCity — profit-driven board
+    RoyalCourt,             // Traditionalist — hereditary advisers
+    CentralCommittee,       // Industrial — technocratic planners
+    Admiralty,              // Naval / IslandNaval — naval command
+    NationalAssembly,       // FreeState — elected representatives
+    WarCouncil,             // Guerrilla — tribal elders and war chiefs
+    ShadowCabinet,          // Intelligence — spymasters in the dark
+    ImperialCourt,          // Remnant — faded glory bureaucrats
+    SurvivalCouncil,        // ResourceCursed / Survival — desperate pragmatists
+}
+
+public enum AdviserRole
+{
+    Military,       // Always present — war, defense, conscription
+    Economic,       // Always present — treasury, trade, production
+    Intelligence,   // Always present — spies, counter-intel, covert ops
+    Diplomatic,     // Always present — treaties, alliances, sanctions
+    // Specialist slots vary by government type:
+    FleetAdmiral,       // Naval/IslandNaval — naval operations
+    PartyCommissar,     // Revolutionary — ideological enforcement
+    ChiefEngineer,      // Industrial — production optimization
+    CourtChamberlain,   // Traditionalist/Remnant — court intrigue
+    TradeGuildmaster,   // Commercial/TradeCity — trade route management
+    TribalElder,        // Guerrilla — morale and guerrilla tactics
+    Spymaster,          // Intelligence — deep cover operations
+    NuclearOfficer,     // FreeState (Selvara) — nuclear deterrent
+    ResourceWarden,     // ResourceCursed — resource extraction
+}
+
+/// <summary>Council action categories the player can take through their government.</summary>
+public enum CouncilActionCategory
+{
+    Domestic,       // Tax, infrastructure, martial law, elections, suppress dissent
+    Military,       // Defense budget, authorize ops, conscription, nuclear auth
+    Diplomatic,     // Treaties, declare war, sanctions, request aid
+    Intelligence,   // Spy missions, counter-intel, assassinations
+}
+
+public class AdviserData
+{
+    public string Id = "";
+    public string Name = "";
+    public AdviserRole Role;
+    public string NationId = "";
+
+    // Personality affects recommendations
+    public float Hawkishness = 0.5f;    // 0=dove, 1=hawk — military aggression
+    public float Loyalty = 0.8f;        // 0=traitor, 1=devoted — coup risk
+    public float Competence = 0.7f;     // 0=incompetent, 1=genius — action success modifier
+
+    // Current opinion on proposed actions (set by AI each tick)
+    public string CurrentAdvice = "";   // e.g., "I recommend caution, sir."
+    public bool ApprovesCurrentProposal = true;
+}
+
+public class CouncilData
+{
+    public GovernmentType Type;
+    public List<AdviserData> Advisers = new();
+
+    // Policy state (modified by CouncilEngine)
+    public float TaxRate = 0.20f;           // 0.0–1.0, affects income and stability
+    public float DefenseBudgetPct = 0.30f;  // 0.0–1.0, fraction of income to military
+    public bool MartialLawActive = false;
+    public bool ConscriptionActive = false;
+    public bool NuclearAuthGranted = false;
+
+    /// <summary>Display name for this government body, based on type.</summary>
+    public string DisplayName => Type switch
+    {
+        GovernmentType.FederalCouncil => "Federal Council",
+        GovernmentType.RevolutionaryCommittee => "Revolutionary Committee",
+        GovernmentType.MerchantSenate => "Merchant Senate",
+        GovernmentType.RoyalCourt => "Royal Court",
+        GovernmentType.CentralCommittee => "Central Committee",
+        GovernmentType.Admiralty => "The Admiralty",
+        GovernmentType.NationalAssembly => "National Assembly",
+        GovernmentType.WarCouncil => "War Council",
+        GovernmentType.ShadowCabinet => "Shadow Cabinet",
+        GovernmentType.ImperialCourt => "Imperial Court",
+        GovernmentType.SurvivalCouncil => "Survival Council",
+        _ => "Council"
+    };
+
+    /// <summary>Maps archetype to government type.</summary>
+    public static GovernmentType FromArchetype(NationArchetype archetype) => archetype switch
+    {
+        NationArchetype.Hegemon => GovernmentType.FederalCouncil,
+        NationArchetype.Revolutionary => GovernmentType.RevolutionaryCommittee,
+        NationArchetype.Commercial => GovernmentType.MerchantSenate,
+        NationArchetype.TradeCity => GovernmentType.MerchantSenate,
+        NationArchetype.Traditionalist => GovernmentType.RoyalCourt,
+        NationArchetype.Industrial => GovernmentType.CentralCommittee,
+        NationArchetype.Naval => GovernmentType.Admiralty,
+        NationArchetype.IslandNaval => GovernmentType.Admiralty,
+        NationArchetype.FreeState => GovernmentType.NationalAssembly,
+        NationArchetype.Guerrilla => GovernmentType.WarCouncil,
+        NationArchetype.Intelligence => GovernmentType.ShadowCabinet,
+        NationArchetype.Remnant => GovernmentType.ImperialCourt,
+        NationArchetype.ResourceCursed => GovernmentType.SurvivalCouncil,
+        NationArchetype.Survival => GovernmentType.SurvivalCouncil,
+        _ => GovernmentType.NationalAssembly
+    };
+
+    /// <summary>Returns specialist adviser roles for this government type.</summary>
+    public static AdviserRole[] GetSpecialistRoles(GovernmentType type) => type switch
+    {
+        GovernmentType.FederalCouncil => new[] { AdviserRole.NuclearOfficer },
+        GovernmentType.RevolutionaryCommittee => new[] { AdviserRole.PartyCommissar },
+        GovernmentType.MerchantSenate => new[] { AdviserRole.TradeGuildmaster },
+        GovernmentType.RoyalCourt => new[] { AdviserRole.CourtChamberlain },
+        GovernmentType.CentralCommittee => new[] { AdviserRole.ChiefEngineer },
+        GovernmentType.Admiralty => new[] { AdviserRole.FleetAdmiral },
+        GovernmentType.NationalAssembly => new[] { AdviserRole.NuclearOfficer },
+        GovernmentType.WarCouncil => new[] { AdviserRole.TribalElder },
+        GovernmentType.ShadowCabinet => new[] { AdviserRole.Spymaster },
+        GovernmentType.ImperialCourt => new[] { AdviserRole.CourtChamberlain },
+        GovernmentType.SurvivalCouncil => new[] { AdviserRole.ResourceWarden },
+        _ => System.Array.Empty<AdviserRole>()
+    };
 }
 
 // ═══════════════════════════════════════════════════════════════

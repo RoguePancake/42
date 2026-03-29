@@ -10,12 +10,94 @@
 ## Current Status
 
 **Active Milestone:** M3 — 13 Nations Live (IN PROGRESS)
-**Branch:** claude/start-m3-Are3l
-**Last Session:** 2026-03-28
+**Branch:** claude/overhaul-map-ui-dHnki
+**Last Session:** 2026-03-29
 
 ---
 
 ## Session Log
+
+### Session 9 — 2026-03-29 (Systems Expansion — Council, Military, Economy)
+**Goal:** Make all UI systems functional with real game logic
+**Done:**
+- **CouncilEngine** (`src/Engines/CouncilEngine.cs`, 350 lines):
+  - Processes 30+ council actions with real consequences
+  - Domestic: tax rate cycling, martial law, infrastructure, suppression, gov-specific actions
+  - Military: defense budget tiers, conscription toggle, nuclear auth, mobilization
+  - Diplomatic: treaties, war declarations, sanctions, aid requests
+  - Intelligence: spy deployment, assassination, sabotage, tech theft (success/fail rolls)
+  - Adviser AI opinion generation based on hawkishness, domain, nation stability, loyalty
+- **MilitaryEngine** rewritten for army-based warfare:
+  - Subscribes to ArmyOrderEvent/ArmyFormationEvent for per-army control
+  - Army-vs-army combat: formation mods, terrain defense, morale/supply/org affecting power
+  - Battle losses distributed across unit types (largest first)
+  - City siege system (HP damage per tick, capture on HP=0)
+  - Supply drain by order, conscription reinforcement, defense budget resupply
+- **EconomyEngine** rewritten with council integration:
+  - Tax rate multiplier on base income
+  - Per-unit-type army upkeep (Infantry $0.2M to Nuke $10M)
+  - Defense budget covers military costs vs deficit
+  - Resource replenishment from territory (province-scaled)
+  - Food consumption + famine mechanics
+  - War weariness stability drain, bankruptcy cascading penalties
+  - Nation trait bonuses (TradeEmpire 2x, SovereignWealth interest)
+- **MainViewSwitcher**: Added COUNCIL tab (5th tab)
+- **RightSidebar**: Now reads real diplomatic status from nation.Relations instead of fake archetype-based labels
+- **CouncilData**: Added TaxRate, DefenseBudgetPct, MartialLawActive, ConscriptionActive, NuclearAuthGranted fields
+
+### Session 8 — 2026-03-29 (Council System + Combat Command Overhaul)
+**Goal:** Major UI overhaul — add government council system, proper combat controls, council-aware sidebar
+**Done:**
+- **New Data Models** (`Models.cs`):
+  - `GovernmentType` enum (11 types: FederalCouncil, RevolutionaryCommittee, MerchantSenate, RoyalCourt, CentralCommittee, Admiralty, NationalAssembly, WarCouncil, ShadowCabinet, ImperialCourt, SurvivalCouncil)
+  - `AdviserRole` enum (13 roles: 4 core + 9 specialist)
+  - `AdviserData` class (name, role, loyalty, competence, hawkishness, current advice)
+  - `CouncilData` class (government type, adviser list, display name, archetype mapping, specialist role lookup)
+  - `CouncilActionCategory` enum (Domestic, Military, Diplomatic, Intelligence)
+  - Added `Council` field to `NationData`
+- **New Events** (`GameEvents.cs`):
+  - `CouncilActionEvent`, `AdviserOpinionEvent` (council system)
+  - `ArmyOrderEvent`, `ArmyFormationEvent`, `ArmySelectedEvent` (combat system)
+- **CouncilPanel** (`src/UI/Panels/CouncilPanel.cs`) — full-screen government overlay:
+  - Header adapts to government type (e.g., "REVOLUTIONARY COMMITTEE", "ROYAL COURT")
+  - Flavor text per government type ("The committee is in permanent session...")
+  - Left column: adviser cards with name, role, loyalty/competence bars, current advice
+  - Right column: action categories (Domestic/Military/Diplomatic/Intelligence)
+  - Actions change by government type (e.g., "Purge Dissidents" for Revolutionary, "Hold Feast" for Royal Court)
+  - Toggle with C key or sidebar button
+- **CombatCommandPanel** (`src/UI/Panels/CombatCommandPanel.cs`) — replaces MilitaryCommandPanel:
+  - Army list with color-coded order status
+  - Selected army details: strength, morale, supply, organization
+  - Per-army formation buttons (Column/Spread/Wedge/Circle) with stat tooltips
+  - Per-army order buttons (Defend/Patrol/Stage/Attack/Retreat)
+  - Unit composition breakdown
+  - Battle log feed from BattleResolvedEvent
+- **LeftSidebar rebuilt** — council-aware:
+  - Shows government name + nation archetype in header
+  - "Open Council [C]" button
+  - Quick actions: Military, Diplomatic, Economic, Intelligence
+  - Government-specific special action (varies by type)
+- **WorldGenerator** — council generation:
+  - `GenerateCouncil()` creates council + 5 advisers per nation
+  - Name pools for 5 adviser types (65 unique names)
+  - Randomized loyalty, competence, hawkishness per adviser
+  - Applied to both `CreateWorld()` and `AddCustomNation()` flows
+- **Scene cleanup**:
+  - Replaced MilitaryCommandPanel with CombatCommandPanel in Main.tscn
+  - Added CouncilPanel to UILayer
+  - Deleted MilitaryCommandPanel.cs
+- **Updated CLAUDE.md** project structure to reflect actual files
+
+### Session 7 — 2026-03-28 (Map UI Overhaul)
+**Goal:** Fix map not rendering — root cause was dead OSM system in scene, procedural map never wired up
+**Done:**
+- Diagnosed root cause: Main.tscn had TileMapRenderer (OSM real-world tiles) + WarshipMapBridge instead of MapManager + MapCamera. The procedural map system was never in the scene tree.
+- Rewrote `scenes/Main.tscn`: removed TileMapRenderer + WarshipMapBridge nodes, added MapManager (Node2D) + MapCamera (Camera2D)
+- Deleted `src/UI/Map/TileMapRenderer.cs` (631 lines of dead OSM tile loading code)
+- Deleted `src/UI/Map/WarshipMapBridge.cs` (266 lines of dead OSM bridge code)
+- Added explicit `MakeCurrent()` to MapCamera._Ready() for reliable camera activation
+- Cleaned up stale WarshipMapBridge comment in MilitaryCommandPanel.cs
+**Result:** MapManager now in scene tree, creates TerrainChunkRenderer + TerritoryBorderRenderer + ArmySwarmRenderer layers. MapCamera provides WASD/scroll/edge-scroll navigation. World generation → WorldReadyEvent → MapManager.OnWorldReady() → terrain baking pipeline is now properly connected.
 
 ### Session 6 — 2026-03-28 (M3: 13 Nations Live)
 **Goal:** Replace 6 hardcoded nations with 13 named fictional nations

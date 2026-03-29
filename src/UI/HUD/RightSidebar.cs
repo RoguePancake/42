@@ -1,5 +1,6 @@
 using Godot;
 using Warship.Core;
+using Warship.Data;
 using Warship.Events;
 
 namespace Warship.UI.HUD;
@@ -75,34 +76,41 @@ public partial class RightSidebar : Control
 
     private void PopulateRelations()
     {
-        // Clear existing
         foreach (var child in _relationsBox.GetChildren())
             child.QueueFree();
 
         var data = WorldStateManager.Instance?.Data;
-        if (data == null) return;
+        if (data == null || data.PlayerNationId == null) return;
+
+        int pIdx = int.Parse(data.PlayerNationId.Split('_')[1]);
+        var playerNation = data.Nations[pIdx];
 
         foreach (var nation in data.Nations)
         {
-            if (nation.IsPlayer) continue;
+            if (nation.Id == data.PlayerNationId) continue;
+            if (!nation.IsAlive) continue;
 
-            var status = nation.Archetype switch
+            var dipStatus = playerNation.Relations.GetValueOrDefault(nation.Id, DiplomaticStatus.Neutral);
+
+            var status = dipStatus switch
             {
-                Data.NationArchetype.Hegemon => "HOSTILE",
-                Data.NationArchetype.Commercial => "NEUTRAL",
-                Data.NationArchetype.Revolutionary => "WARY",
-                Data.NationArchetype.Traditionalist => "COOL",
-                Data.NationArchetype.Survival => "FRIENDLY",
+                DiplomaticStatus.Allied => "ALLIED",
+                DiplomaticStatus.Friendly => "FRIENDLY",
+                DiplomaticStatus.Neutral => "NEUTRAL",
+                DiplomaticStatus.Wary => "WARY",
+                DiplomaticStatus.Hostile => "HOSTILE",
+                DiplomaticStatus.AtWar => "AT WAR",
                 _ => "UNKNOWN"
             };
 
-            var color = status switch
+            var color = dipStatus switch
             {
-                "HOSTILE" => new Color(1f, 0.3f, 0.3f),
-                "WARY" => new Color(1f, 0.6f, 0.2f),
-                "COOL" => new Color(0.8f, 0.8f, 0.3f),
-                "NEUTRAL" => new Color(0.6f, 0.6f, 0.7f),
-                "FRIENDLY" => new Color(0.3f, 0.9f, 0.4f),
+                DiplomaticStatus.Allied => new Color(0.2f, 0.8f, 1f),
+                DiplomaticStatus.Friendly => new Color(0.3f, 0.9f, 0.4f),
+                DiplomaticStatus.Neutral => new Color(0.6f, 0.6f, 0.7f),
+                DiplomaticStatus.Wary => new Color(0.9f, 0.7f, 0.2f),
+                DiplomaticStatus.Hostile => new Color(1f, 0.4f, 0.2f),
+                DiplomaticStatus.AtWar => new Color(1f, 0.15f, 0.15f),
                 _ => new Color(0.5f, 0.5f, 0.5f)
             };
 

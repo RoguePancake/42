@@ -42,10 +42,12 @@ public partial class MapCamera : Camera2D
 
         // Center camera on map
         Position = new Vector2(_mapWidth / 2f, _mapHeight / 2f);
-        
+
         // Start zoomed out to see the full 6000x3600 world
         _targetZoom = 0.015f;
         Zoom = new Vector2(_targetZoom, _targetZoom);
+
+        MakeCurrent();
 
         GD.Print("[MapCamera] Ready — WASD/arrows to pan, scroll to zoom, middle-click drag");
     }

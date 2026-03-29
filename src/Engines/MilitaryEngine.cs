@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Linq;
 using Warship.Core;
 using Warship.Events;
 using Warship.Data;
@@ -7,199 +8,364 @@ using Warship.Data;
 namespace Warship.Engines;
 
 /// <summary>
-/// Controls the massive armies autonomously. 
-/// Translates High-Level Nation Orders (Border Watch, Stage, Attack) 
-/// into individual troop steering commands.
-/// Runs continuous simulation of troop movements.
+/// Processes army movement, per-army orders, and combat resolution.
+/// Uses the Army system (not legacy Units). Fires BattleResolvedEvent on combat.
+/// Runs on physics tick for smooth movement interpolation.
 /// </summary>
 public partial class MilitaryEngine : Node
 {
     private Random _rng = new(1337);
-    private float _timer = 0f;
-    private const float UpdateInterval = 0.5f; // Evaluate orders every 0.5 seconds
+    private float _combatTimer = 0f;
+    private const float CombatInterval = 1.0f;
 
     public override void _Ready()
     {
-        GD.Print("[MilitaryEngine] Online. Swarm control standing by.");
+        EventBus.Instance!.Subscribe<ArmyOrderEvent>(OnArmyOrder);
+        EventBus.Instance!.Subscribe<ArmyFormationEvent>(OnArmyFormation);
+        EventBus.Instance!.Subscribe<TurnAdvancedEvent>(OnTurnAdvanced);
+        GD.Print("[MilitaryEngine] Online. Army command standing by.");
+    }
+
+    private void OnArmyOrder(ArmyOrderEvent ev)
+    {
+        var army = WorldStateManager.Instance?.Data?.Armies.FirstOrDefault(a => a.Id == ev.ArmyId);
+        if (army != null) army.CurrentOrder = ev.Order;
+    }
+
+    private void OnArmyFormation(ArmyFormationEvent ev)
+    {
+        var army = WorldStateManager.Instance?.Data?.Armies.FirstOrDefault(a => a.Id == ev.ArmyId);
+        if (army != null) army.Formation = ev.Formation;
+    }
+
+    private void OnTurnAdvanced(TurnAdvancedEvent ev)
+    {
+        var world = WorldStateManager.Instance?.Data;
+        if (world == null) return;
+
+        foreach (var army in world.Armies.Where(a => a.IsAlive))
+        {
+            // Supply drain varies by order
+            float supplyDrain = army.CurrentOrder switch
+            {
+                MilitaryOrder.Attack => 2f,
+                MilitaryOrder.Patrol => 1f,
+                MilitaryOrder.Stage => 0.5f,
+                _ => 0.3f
+            };
+            army.Supply = Math.Clamp(army.Supply - supplyDrain, 0, 100);
+
+            if (army.Supply < 20f)
+                army.Morale = Math.Clamp(army.Morale - 2f, 0, 100);
+
+            // Organization slowly recovers
+            army.Organization = Math.Clamp(army.Organization + 1f, 0, 100);
+
+            // Council policy effects
+            int nIdx = ParseNationIdx(army.NationId, world.Nations.Count);
+            if (nIdx < 0) continue;
+            var nation = world.Nations[nIdx];
+
+            // Conscription adds infantry
+            if (nation.Council.ConscriptionActive && army.TotalStrength < 500)
+            {
+                army.Composition[UnitType.Infantry] = army.Composition.GetValueOrDefault(UnitType.Infantry) + 5;
+            }
+
+            // High defense budget resupplies
+            if (nation.Council.DefenseBudgetPct > 0.3f)
+            {
+                float resupply = (nation.Council.DefenseBudgetPct - 0.3f) * 10f;
+                army.Supply = Math.Clamp(army.Supply + resupply, 0, 100);
+            }
+
+            // Martial law boosts morale
+            if (nation.Council.MartialLawActive)
+                army.Morale = Math.Clamp(army.Morale + 1f, 0, 100);
+        }
     }
 
     public override void _PhysicsProcess(double delta)
     {
         var world = WorldStateManager.Instance?.Data;
-        if (world == null || world.Units == null) return;
+        if (world == null || world.Armies.Count == 0) return;
 
-        _timer += (float)delta;
-        if (_timer >= UpdateInterval)
+        ProcessArmyMovement(world);
+
+        _combatTimer += (float)delta;
+        if (_combatTimer >= CombatInterval)
         {
-            _timer = 0f;
-            UpdateSwarm(world);
+            _combatTimer = 0f;
+            ProcessArmyCombat(world);
+            ProcessCitySieges(world);
         }
     }
 
-    private void UpdateSwarm(WorldData world)
+    // ═══════════════════════════════════════════════════════════════
+    //  ARMY MOVEMENT
+    // ═══════════════════════════════════════════════════════════════
+
+    private void ProcessArmyMovement(WorldData world)
     {
-        // Cache nations
-        var nations = world.Nations;
+        const int TileSize = 32;
 
-        // Process combat first (very simple: if two different nation soldiers are close -> fight)
-        // O(n^2) is scary for 3000 units, but spatial hashing is better. 
-        // For prototype, we'll keep combat simple or skip for now while we get movement right.
-
-        foreach (var unit in world.Units)
+        foreach (var army in world.Armies)
         {
-            if (!unit.IsAlive) continue;
+            if (!army.IsAlive) continue;
 
-            int natIdx = int.Parse(unit.NationId.Split('_')[1]);
-            var nation = nations[natIdx];
+            int nIdx = ParseNationIdx(army.NationId, world.Nations.Count);
+            if (nIdx < 0) continue;
+            var nation = world.Nations[nIdx];
 
-            // Inherit global order if we are just a generic soldier 
-            // (In FA-6 players set global orders, troops follow)
-            if (unit.Type == UnitType.Infantry && unit.CurrentOrder != nation.GlobalMilitaryOrder)
+            switch (army.CurrentOrder)
             {
-                unit.CurrentOrder = nation.GlobalMilitaryOrder;
-            }
-
-            Vector2 currentPos = new Vector2(unit.PixelX, unit.PixelY);
-            Vector2 targetPos = currentPos;
-
-            switch (unit.CurrentOrder)
-            {
-                case MilitaryOrder.BorderWatch:
-                    // Random walk very slowly, but bias towards borders.
-                    // For now: Simple random walk 10-20 pixels
-                    targetPos += new Vector2((float)(_rng.NextDouble() * 40 - 20), (float)(_rng.NextDouble() * 40 - 20));
-                    break;
-
-                case MilitaryOrder.Stage:
-                    if (nation.CommandTargetX >= 0)
-                    {
-                        Vector2 rallyPoint = new Vector2(nation.CommandTargetX * 64 + 32, nation.CommandTargetY * 64 + 32);
-                        Vector2 dir = (rallyPoint - currentPos).Normalized();
-                        // Walk towards rally, add some swarm noise so they don't form a single dot
-                        targetPos += dir * 25f + new Vector2((float)(_rng.NextDouble() * 20 - 10), (float)(_rng.NextDouble() * 20 - 10));
-                    }
-                    break;
-
                 case MilitaryOrder.Attack:
-                    if (nation.CommandTargetX >= 0)
+                case MilitaryOrder.Stage:
+                    // Move toward command target if no individual target set
+                    if (nation.CommandTargetX >= 0 &&
+                        army.TargetTileX == army.TileX && army.TargetTileY == army.TileY)
                     {
-                        Vector2 attackPoint = new Vector2(nation.CommandTargetX * 64 + 32, nation.CommandTargetY * 64 + 32);
-                        Vector2 dir = (attackPoint - currentPos).Normalized();
-                        targetPos += dir * 35f + new Vector2((float)(_rng.NextDouble() * 15 - 7.5f), (float)(_rng.NextDouble() * 15 - 7.5f));
+                        army.TargetTileX = nation.CommandTargetX;
+                        army.TargetTileY = nation.CommandTargetY;
+                        army.TargetPixelX = nation.CommandTargetX * TileSize + TileSize / 2f;
+                        army.TargetPixelY = nation.CommandTargetY * TileSize + TileSize / 2f;
                     }
                     break;
 
                 case MilitaryOrder.Patrol:
+                    if (Math.Abs(army.PixelX - army.TargetPixelX) < 10f &&
+                        Math.Abs(army.PixelY - army.TargetPixelY) < 10f)
+                    {
+                        int range = 5;
+                        army.TargetTileX = Math.Clamp(army.TileX + _rng.Next(-range, range + 1), 0, world.MapWidth - 1);
+                        army.TargetTileY = Math.Clamp(army.TileY + _rng.Next(-range, range + 1), 0, world.MapHeight - 1);
+                        army.TargetPixelX = army.TargetTileX * TileSize + TileSize / 2f;
+                        army.TargetPixelY = army.TargetTileY * TileSize + TileSize / 2f;
+                    }
+                    break;
+
                 case MilitaryOrder.Standby:
-                default:
-                    // Small jitter
-                    targetPos += new Vector2((float)(_rng.NextDouble() * 10 - 5), (float)(_rng.NextDouble() * 10 - 5));
+                    // Retreat toward capital
+                    if (nation.CapitalX > 0 &&
+                        army.TargetTileX == army.TileX && army.TargetTileY == army.TileY)
+                    {
+                        army.TargetTileX = nation.CapitalX;
+                        army.TargetTileY = nation.CapitalY;
+                        army.TargetPixelX = nation.CapitalX * TileSize + TileSize / 2f;
+                        army.TargetPixelY = nation.CapitalY * TileSize + TileSize / 2f;
+                    }
                     break;
             }
 
-            // Keep them on the map loosely
-            float maxW = world.MapWidth * 64;
-            float maxH = world.MapHeight * 64;
-            targetPos.X = Mathf.Clamp(targetPos.X, 0, maxW);
-            targetPos.Y = Mathf.Clamp(targetPos.Y, 0, maxH);
-
-            unit.TargetPixelX = targetPos.X;
-            unit.TargetPixelY = targetPos.Y;
+            // Update tile from pixel position
+            int tx = (int)(army.PixelX / TileSize);
+            int ty = (int)(army.PixelY / TileSize);
+            army.TileX = Math.Clamp(tx, 0, world.MapWidth - 1);
+            army.TileY = Math.Clamp(ty, 0, world.MapHeight - 1);
         }
+    }
 
-        // --- FA-7 COMBAT SIMULATION ---
-        // If swarms collide, they battle. Strength is heavily tied to the Nation's Leaders.
-        for (int i = 0; i < world.Units.Count; i++)
+    // ═══════════════════════════════════════════════════════════════
+    //  COMBAT — Army-vs-army when within engagement range
+    // ═══════════════════════════════════════════════════════════════
+
+    private void ProcessArmyCombat(WorldData world)
+    {
+        const float EngagementRange = 100f;
+
+        for (int i = 0; i < world.Armies.Count; i++)
         {
-            var u1 = world.Units[i];
-            if (!u1.IsAlive) continue;
-            
-            for (int j = i + 1; j < world.Units.Count; j++)
+            var a1 = world.Armies[i];
+            if (!a1.IsAlive || a1.TotalStrength <= 0) continue;
+
+            for (int j = i + 1; j < world.Armies.Count; j++)
             {
-                var u2 = world.Units[j];
-                if (!u2.IsAlive) continue;
-                if (u1.NationId == u2.NationId) continue;
-                
-                float dx = u1.PixelX - u2.PixelX;
-                float dy = u1.PixelY - u2.PixelY;
-                float distSq = dx * dx + dy * dy;
-                
-                // If within 20 pixels of each other (melee range)
-                if (distSq < 400f)
-                {
-                    float u1Strength = GetNationStrength(world, u1.NationId);
-                    float u2Strength = GetNationStrength(world, u2.NationId);
-                    
-                    if (_rng.NextDouble() * u1Strength > _rng.NextDouble() * u2Strength)
-                    {
-                        u2.IsAlive = false; // u1 wins
-                        // Check if u2 was a character? Characters aren't in world.Units, they are in world.Characters.
-                    }
-                    else
-                    {
-                        u1.IsAlive = false; // u2 wins
-                    }
-                }
+                var a2 = world.Armies[j];
+                if (!a2.IsAlive || a2.TotalStrength <= 0) continue;
+                if (a1.NationId == a2.NationId) continue;
+
+                // Must be at war
+                int n1 = ParseNationIdx(a1.NationId, world.Nations.Count);
+                int n2 = ParseNationIdx(a2.NationId, world.Nations.Count);
+                if (n1 < 0 || n2 < 0) continue;
+                var relation = world.Nations[n1].Relations.GetValueOrDefault(world.Nations[n2].Id, DiplomaticStatus.Neutral);
+                if (relation != DiplomaticStatus.AtWar) continue;
+
+                float dx = a1.PixelX - a2.PixelX;
+                float dy = a1.PixelY - a2.PixelY;
+                if (dx * dx + dy * dy > EngagementRange * EngagementRange) continue;
+
+                if (a1.CurrentOrder != MilitaryOrder.Attack && a2.CurrentOrder != MilitaryOrder.Attack)
+                    continue;
+
+                ResolveBattle(world, a1, a2);
             }
         }
+    }
 
-        // --- FA-7 CITY CAPTURE ---
-        // If an enemy troop gets close enough to a city, they capture it! 
-        // This is why eliminating leaders is powerful (troops die, leaving cities undefended).
-        foreach (var unit in world.Units)
+    private void ResolveBattle(WorldData world, ArmyData attacker, ArmyData defender)
+    {
+        float atkPower = attacker.TotalAttackPower * (attacker.Morale / 100f) * (attacker.Organization / 100f);
+        float defPower = defender.TotalDefensePower * (defender.Morale / 100f) * (defender.Organization / 100f);
+
+        atkPower *= FormationAttackMod(attacker.Formation);
+        defPower *= FormationDefenseMod(defender.Formation);
+
+        // Terrain bonus for defender
+        if (world.TerrainMap != null)
         {
-            if (!unit.IsAlive) continue;
+            int terrain = world.TerrainMap[
+                Math.Clamp(defender.TileX, 0, world.MapWidth - 1),
+                Math.Clamp(defender.TileY, 0, world.MapHeight - 1)];
+            defPower *= TerrainDefenseBonus(terrain);
+        }
+
+        if (attacker.Supply < 30f) atkPower *= 0.6f;
+        if (defender.Supply < 30f) defPower *= 0.6f;
+
+        atkPower *= 0.8f + (float)_rng.NextDouble() * 0.4f;
+        defPower *= 0.8f + (float)_rng.NextDouble() * 0.4f;
+
+        float ratio = atkPower / Math.Max(defPower, 1f);
+        int atkLoss = (int)(attacker.TotalStrength * Math.Clamp(1f / ratio * 0.15f, 0.02f, 0.3f));
+        int defLoss = (int)(defender.TotalStrength * Math.Clamp(ratio * 0.15f, 0.02f, 0.3f));
+        bool attackerWon = atkPower > defPower;
+
+        ApplyLosses(attacker, atkLoss);
+        ApplyLosses(defender, defLoss);
+
+        if (attackerWon)
+        {
+            attacker.Morale = Math.Clamp(attacker.Morale + 5f, 0, 100);
+            defender.Morale = Math.Clamp(defender.Morale - 15f, 0, 100);
+            defender.Organization = Math.Clamp(defender.Organization - 20f, 0, 100);
+            if (defender.Morale < 20f) defender.CurrentOrder = MilitaryOrder.Standby;
+        }
+        else
+        {
+            defender.Morale = Math.Clamp(defender.Morale + 5f, 0, 100);
+            attacker.Morale = Math.Clamp(attacker.Morale - 15f, 0, 100);
+            attacker.Organization = Math.Clamp(attacker.Organization - 20f, 0, 100);
+        }
+
+        if (attacker.TotalStrength <= 0) attacker.IsAlive = false;
+        if (defender.TotalStrength <= 0) defender.IsAlive = false;
+
+        // War weariness on nations
+        int aN = ParseNationIdx(attacker.NationId, world.Nations.Count);
+        int dN = ParseNationIdx(defender.NationId, world.Nations.Count);
+        if (aN < 0 || dN < 0) return;
+        world.Nations[aN].WarWeariness = Math.Clamp(world.Nations[aN].WarWeariness + atkLoss * 0.02f, 0, 100);
+        world.Nations[dN].WarWeariness = Math.Clamp(world.Nations[dN].WarWeariness + defLoss * 0.02f, 0, 100);
+
+        EventBus.Instance?.Publish(new BattleResolvedEvent(attacker.Id, defender.Id, attackerWon, atkLoss, defLoss));
+
+        // Player notifications
+        bool atkIsPlayer = world.Nations[aN].IsPlayer;
+        bool defIsPlayer = world.Nations[dN].IsPlayer;
+        if (atkIsPlayer || defIsPlayer)
+        {
+            string winner = attackerWon ? attacker.Name : defender.Name;
+            string loser = attackerWon ? defender.Name : attacker.Name;
+            bool playerWon = (atkIsPlayer && attackerWon) || (defIsPlayer && !attackerWon);
+            EventBus.Instance?.Publish(new NotificationEvent(
+                $"Battle: {winner} defeats {loser}! Losses: {atkLoss}/{defLoss}",
+                playerWon ? "success" : "danger"));
+        }
+    }
+
+    private static void ApplyLosses(ArmyData army, int totalLosses)
+    {
+        var types = army.Composition.OrderByDescending(kv => kv.Value).Select(kv => kv.Key).ToList();
+        int remaining = totalLosses;
+        foreach (var type in types)
+        {
+            if (remaining <= 0) break;
+            int count = army.Composition[type];
+            int removed = Math.Min(count, remaining);
+            army.Composition[type] = count - removed;
+            remaining -= removed;
+            if (army.Composition[type] <= 0) army.Composition.Remove(type);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  CITY SIEGES
+    // ═══════════════════════════════════════════════════════════════
+
+    private void ProcessCitySieges(WorldData world)
+    {
+        const int TileSize = 32;
+        const float SiegeRange = 80f;
+
+        foreach (var army in world.Armies)
+        {
+            if (!army.IsAlive || army.CurrentOrder != MilitaryOrder.Attack) continue;
 
             foreach (var city in world.Cities)
             {
-                if (city.NationId == unit.NationId) continue; // Already own it
+                if (city.NationId == army.NationId) continue;
 
-                float cx = city.TileX * 64 + 32;
-                float cy = city.TileY * 64 + 32;
-                float distSq = (unit.PixelX - cx) * (unit.PixelX - cx) + (unit.PixelY - cy) * (unit.PixelY - cy);
+                // Must be at war with city owner
+                int armyN = ParseNationIdx(army.NationId, world.Nations.Count);
+                int cityN = ParseNationIdx(city.NationId, world.Nations.Count);
+                if (armyN < 0 || cityN < 0) continue;
+                var rel = world.Nations[armyN].Relations.GetValueOrDefault(world.Nations[cityN].Id, DiplomaticStatus.Neutral);
+                if (rel != DiplomaticStatus.AtWar) continue;
 
-                if (distSq < 900f) // Within 30 pixels (half a tile)
+                float cx = city.TileX * TileSize + TileSize / 2f;
+                float cy = city.TileY * TileSize + TileSize / 2f;
+                float dx = army.PixelX - cx;
+                float dy = army.PixelY - cy;
+                if (dx * dx + dy * dy > SiegeRange * SiegeRange) continue;
+
+                city.HP -= Math.Max(1, army.TotalStrength / 50);
+
+                if (city.HP <= 0)
                 {
-                    // The city is captured!
-                    var oldOwner = world.Nations[int.Parse(city.NationId.Split('_')[1])];
-                    var newOwner = world.Nations[int.Parse(unit.NationId.Split('_')[1])];
+                    string oldId = city.NationId;
+                    city.NationId = army.NationId;
+                    city.HP = city.MaxHP / 2;
 
-                    city.NationId = unit.NationId;
-                    
-                    // Adjust territories
-                    oldOwner.ProvinceCount = Math.Max(0, oldOwner.ProvinceCount - 1);
-                    newOwner.ProvinceCount++;
-                    
-                    // Force the ownership map to update visually for the surrounding area
-                    // Not writing the complex flood-fill for borders here, but we will notify!
-                    if (newOwner.IsPlayer)
-                    {
-                        EventBus.Instance?.Publish(new NotificationEvent($"We captured {city.Name} from {oldOwner.Name}!", "success"));
-                    }
-                    else if (oldOwner.IsPlayer)
-                    {
-                        EventBus.Instance?.Publish(new NotificationEvent($"{city.Name} has fallen to {newOwner.Name}!", "danger"));
-                    }
+                    var oldN = world.Nations[cityN];
+                    var newN = world.Nations[armyN];
+                    oldN.ProvinceCount = Math.Max(0, oldN.ProvinceCount - city.ControlRadius);
+                    newN.ProvinceCount += city.ControlRadius;
+
+                    EventBus.Instance?.Publish(new CityCapturedEvent(city.Id, oldId, army.NationId));
+
+                    if (newN.IsPlayer)
+                        EventBus.Instance?.Publish(new NotificationEvent($"CAPTURED {city.Name} from {oldN.Name}!", "success"));
+                    else if (oldN.IsPlayer)
+                        EventBus.Instance?.Publish(new NotificationEvent($"{city.Name} has FALLEN to {newN.Name}!", "danger"));
                 }
             }
         }
     }
 
-    private float GetNationStrength(WorldData world, string nationId)
+    /// <summary>Safely parse nation index from "N_0" format IDs. Returns -1 if invalid.</summary>
+    private static int ParseNationIdx(string nationId, int nationCount)
     {
-        // Base military effectiveness
-        float maxTa = 10f; 
-        
-        // Find highest Territory Authority amongst ALIVE leaders.
-        // If leaders are assassinated, troops lose morale and logistical support, making them easy to slaughter.
-        foreach (var c in world.Characters)
-        {
-            if (c.NationId == nationId && c.Role != "Eliminated")
-            {
-                if (c.TerritoryAuthority > maxTa) maxTa = c.TerritoryAuthority;
-            }
-        }
-        
-        return maxTa / 10f; // Multiplier between 1.0 (dead leaders) and 10.0 (iron grip)
+        var parts = nationId.Split('_');
+        if (parts.Length < 2 || !int.TryParse(parts[1], out int idx)) return -1;
+        return idx >= 0 && idx < nationCount ? idx : -1;
     }
+
+    private static float FormationAttackMod(FormationType f) => f switch
+    {
+        FormationType.Wedge => 1.15f, FormationType.Column => 0.9f,
+        FormationType.Circle => 0.75f, _ => 1.0f
+    };
+
+    private static float FormationDefenseMod(FormationType f) => f switch
+    {
+        FormationType.Circle => 1.20f, FormationType.Spread => 1.05f,
+        FormationType.Wedge => 0.95f, FormationType.Column => 0.90f, _ => 1.0f
+    };
+
+    private static float TerrainDefenseBonus(int t) => t switch
+    {
+        (int)TerrainType.Forest => 1.25f, (int)TerrainType.Hills => 1.30f,
+        (int)TerrainType.Mountain => 1.40f, (int)TerrainType.Snow => 1.10f, _ => 1.0f
+    };
 }

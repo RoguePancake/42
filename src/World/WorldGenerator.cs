@@ -351,6 +351,13 @@ public static class WorldGenerator
 
         world.PlayerNationId = $"N_{playerNationIndex}";
 
+        // ═══ Generate councils for each nation ═══
+        for (int n = 0; n < nationCount; n++)
+        {
+            var nation = world.Nations[n];
+            nation.Council = GenerateCouncil(nation, rng);
+        }
+
         // ═══ Set starting diplomatic dispositions ═══
         SetStartingDiplomacy(world);
 
@@ -600,6 +607,7 @@ public static class WorldGenerator
             Electronics = res.Electronics, Manpower = res.Manpower, Food = res.Food,
             Stability = 70f,
         };
+        nation.Council = GenerateCouncil(nation, rng);
         world.Nations.Add(nation);
         world.PlayerNationId = nation.Id;
 
@@ -1175,6 +1183,56 @@ public static class WorldGenerator
                     return true;
             }
         return false;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  COUNCIL GENERATION — Government body + advisers per nation
+    // ═══════════════════════════════════════════════════════════════
+
+    // Adviser name pools by role
+    private static readonly string[] MilitaryNames = { "Gen. Vasquez", "Marshal Rourke", "Col. Hardin", "Cmdr. Osei", "Gen. Petrov", "Adm. Crane", "Brig. Khouri", "Gen. Molina", "Col. Strand", "Marshal Thorn", "Gen. Aziz", "Col. Rivas", "Brig. Nkosi" };
+    private static readonly string[] EconomicNames = { "Dr. Lin", "Prof. Hartley", "V. Okafor", "Dir. Brennan", "Dr. Zhao", "A. Kowalski", "Prof. Durand", "Dir. Sato", "Dr. Mwangi", "V. Castillo", "Prof. Reis", "Dir. Akram", "Dr. Strand" };
+    private static readonly string[] IntelNames = { "Agent Kira", "Dir. Ashworth", "S. Volkov", "Agent Reyes", "Dir. Hale", "Agent Nox", "S. Adeyemi", "Dir. Engel", "Agent Voss", "S. Tanaka", "Dir. Moreau", "Agent Kaur", "S. Vance" };
+    private static readonly string[] DiplomatNames = { "Amb. Chen", "Min. Delacroix", "Sec. Okonkwo", "Amb. Rossi", "Min. Holt", "Sec. Yamamoto", "Amb. Ferreira", "Min. Andersen", "Sec. Bahadur", "Amb. Novak", "Min. Achebe", "Sec. Torres", "Amb. Voight" };
+    private static readonly string[] SpecialistNames = { "Adm. Serov", "Cmsr. Dragunov", "Eng. Kruger", "Lord Ashford", "Guildmaster Voss", "Elder Makari", "Phantom", "Maj. Blackwell", "Warden Jalo", "Capt. Mire", "Steward Aldric", "Overseer Zola", "Chancellor Wren" };
+
+    private static CouncilData GenerateCouncil(NationData nation, Random rng)
+    {
+        var govType = CouncilData.FromArchetype(nation.Archetype);
+        var council = new CouncilData { Type = govType };
+
+        int nationHash = nation.Id.GetHashCode();
+
+        // 4 core advisers (always present)
+        council.Advisers.Add(MakeAdviser(nation.Id, AdviserRole.Military, MilitaryNames, rng, nationHash));
+        council.Advisers.Add(MakeAdviser(nation.Id, AdviserRole.Economic, EconomicNames, rng, nationHash));
+        council.Advisers.Add(MakeAdviser(nation.Id, AdviserRole.Intelligence, IntelNames, rng, nationHash));
+        council.Advisers.Add(MakeAdviser(nation.Id, AdviserRole.Diplomatic, DiplomatNames, rng, nationHash));
+
+        // Specialist slots from government type
+        var specialistRoles = CouncilData.GetSpecialistRoles(govType);
+        foreach (var role in specialistRoles)
+        {
+            council.Advisers.Add(MakeAdviser(nation.Id, role, SpecialistNames, rng, nationHash + (int)role));
+        }
+
+        return council;
+    }
+
+    private static AdviserData MakeAdviser(string nationId, AdviserRole role, string[] namePool, Random rng, int seed)
+    {
+        int nameIdx = Math.Abs(seed + (int)role * 7) % namePool.Length;
+        return new AdviserData
+        {
+            Id = $"{nationId}_adv_{role}",
+            Name = namePool[nameIdx],
+            Role = role,
+            NationId = nationId,
+            Hawkishness = 0.3f + (float)rng.NextDouble() * 0.5f,
+            Loyalty = 0.5f + (float)rng.NextDouble() * 0.45f,
+            Competence = 0.4f + (float)rng.NextDouble() * 0.5f,
+            CurrentAdvice = "",
+        };
     }
 
     // ═══════════════════════════════════════════════════════════════
