@@ -199,14 +199,18 @@ public partial class CombatCommandPanel : Control
         // Subscribe to events
         EventBus.Instance?.Subscribe<ArmySelectedEvent>(OnArmySelected);
         EventBus.Instance?.Subscribe<BattleResolvedEvent>(OnBattleResolved);
-        EventBus.Instance?.Subscribe<TurnAdvancedEvent>(_ => CallDeferred(nameof(RefreshArmyList)));
+        EventBus.Instance?.Subscribe<TurnAdvancedEvent>(OnTurnAdvanced);
 
         CallDeferred(nameof(RefreshArmyList));
     }
 
+    private void OnTurnAdvanced(TurnAdvancedEvent ev) => CallDeferred(nameof(RefreshArmyList));
+
     public override void _ExitTree()
     {
         EventBus.Instance?.Unsubscribe<ArmySelectedEvent>(OnArmySelected);
+        EventBus.Instance?.Unsubscribe<BattleResolvedEvent>(OnBattleResolved);
+        EventBus.Instance?.Unsubscribe<TurnAdvancedEvent>(OnTurnAdvanced);
         EventBus.Instance?.Unsubscribe<BattleResolvedEvent>(OnBattleResolved);
     }
 

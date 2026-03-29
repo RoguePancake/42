@@ -27,8 +27,9 @@ public partial class CouncilEngine : Node
         var world = WorldStateManager.Instance?.Data;
         if (world == null) return;
 
-        int nIdx = int.Parse(ev.NationId.Split('_')[1]);
-        if (nIdx >= world.Nations.Count) return;
+        var parts = ev.NationId.Split('_');
+        if (parts.Length < 2 || !int.TryParse(parts[1], out int nIdx)) return;
+        if (nIdx < 0 || nIdx >= world.Nations.Count) return;
         var nation = world.Nations[nIdx];
         var council = nation.Council;
 

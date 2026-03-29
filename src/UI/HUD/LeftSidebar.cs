@@ -103,9 +103,18 @@ public partial class LeftSidebar : Control
         vbox.AddChild(_actionBox);
 
         // Subscribe to world ready to populate
-        EventBus.Instance?.Subscribe<WorldReadyEvent>(_ => CallDeferred(nameof(Rebuild)));
-        EventBus.Instance?.Subscribe<TurnAdvancedEvent>(_ => CallDeferred(nameof(RefreshHeader)));
+        EventBus.Instance?.Subscribe<WorldReadyEvent>(OnWorldReady);
+        EventBus.Instance?.Subscribe<TurnAdvancedEvent>(OnTurnAdvanced);
         CallDeferred(nameof(Rebuild));
+    }
+
+    private void OnWorldReady(WorldReadyEvent ev) => CallDeferred(nameof(Rebuild));
+    private void OnTurnAdvanced(TurnAdvancedEvent ev) => CallDeferred(nameof(RefreshHeader));
+
+    public override void _ExitTree()
+    {
+        EventBus.Instance?.Unsubscribe<WorldReadyEvent>(OnWorldReady);
+        EventBus.Instance?.Unsubscribe<TurnAdvancedEvent>(OnTurnAdvanced);
     }
 
     private void Rebuild()

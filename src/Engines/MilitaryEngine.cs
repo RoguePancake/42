@@ -62,7 +62,8 @@ public partial class MilitaryEngine : Node
             army.Organization = Math.Clamp(army.Organization + 1f, 0, 100);
 
             // Council policy effects
-            int nIdx = int.Parse(army.NationId.Split('_')[1]);
+            int nIdx = ParseNationIdx(army.NationId, world.Nations.Count);
+            if (nIdx < 0) continue;
             var nation = world.Nations[nIdx];
 
             // Conscription adds infantry
@@ -112,7 +113,8 @@ public partial class MilitaryEngine : Node
         {
             if (!army.IsAlive) continue;
 
-            int nIdx = int.Parse(army.NationId.Split('_')[1]);
+            int nIdx = ParseNationIdx(army.NationId, world.Nations.Count);
+            if (nIdx < 0) continue;
             var nation = world.Nations[nIdx];
 
             switch (army.CurrentOrder)
@@ -183,8 +185,9 @@ public partial class MilitaryEngine : Node
                 if (a1.NationId == a2.NationId) continue;
 
                 // Must be at war
-                int n1 = int.Parse(a1.NationId.Split('_')[1]);
-                int n2 = int.Parse(a2.NationId.Split('_')[1]);
+                int n1 = ParseNationIdx(a1.NationId, world.Nations.Count);
+                int n2 = ParseNationIdx(a2.NationId, world.Nations.Count);
+                if (n1 < 0 || n2 < 0) continue;
                 var relation = world.Nations[n1].Relations.GetValueOrDefault(world.Nations[n2].Id, DiplomaticStatus.Neutral);
                 if (relation != DiplomaticStatus.AtWar) continue;
 
@@ -249,8 +252,9 @@ public partial class MilitaryEngine : Node
         if (defender.TotalStrength <= 0) defender.IsAlive = false;
 
         // War weariness on nations
-        int aN = int.Parse(attacker.NationId.Split('_')[1]);
-        int dN = int.Parse(defender.NationId.Split('_')[1]);
+        int aN = ParseNationIdx(attacker.NationId, world.Nations.Count);
+        int dN = ParseNationIdx(defender.NationId, world.Nations.Count);
+        if (aN < 0 || dN < 0) return;
         world.Nations[aN].WarWeariness = Math.Clamp(world.Nations[aN].WarWeariness + atkLoss * 0.02f, 0, 100);
         world.Nations[dN].WarWeariness = Math.Clamp(world.Nations[dN].WarWeariness + defLoss * 0.02f, 0, 100);
 
@@ -303,8 +307,9 @@ public partial class MilitaryEngine : Node
                 if (city.NationId == army.NationId) continue;
 
                 // Must be at war with city owner
-                int armyN = int.Parse(army.NationId.Split('_')[1]);
-                int cityN = int.Parse(city.NationId.Split('_')[1]);
+                int armyN = ParseNationIdx(army.NationId, world.Nations.Count);
+                int cityN = ParseNationIdx(city.NationId, world.Nations.Count);
+                if (armyN < 0 || cityN < 0) continue;
                 var rel = world.Nations[armyN].Relations.GetValueOrDefault(world.Nations[cityN].Id, DiplomaticStatus.Neutral);
                 if (rel != DiplomaticStatus.AtWar) continue;
 
@@ -336,6 +341,14 @@ public partial class MilitaryEngine : Node
                 }
             }
         }
+    }
+
+    /// <summary>Safely parse nation index from "N_0" format IDs. Returns -1 if invalid.</summary>
+    private static int ParseNationIdx(string nationId, int nationCount)
+    {
+        var parts = nationId.Split('_');
+        if (parts.Length < 2 || !int.TryParse(parts[1], out int idx)) return -1;
+        return idx >= 0 && idx < nationCount ? idx : -1;
     }
 
     private static float FormationAttackMod(FormationType f) => f switch
