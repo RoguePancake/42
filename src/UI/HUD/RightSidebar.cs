@@ -90,7 +90,7 @@ public partial class RightSidebar : Control
             if (nation.Id == data.PlayerNationId) continue;
             if (!nation.IsAlive) continue;
 
-            var dipStatus = playerNation.Relations.GetValueOrDefault(nation.Id, DiplomaticStatus.Neutral);
+            var dipStatus = playerNation.Relations.TryGetValue(nation.Id, out var _ds) ? _ds : DiplomaticStatus.Neutral;
 
             var status = dipStatus switch
             {

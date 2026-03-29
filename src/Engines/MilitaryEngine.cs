@@ -75,7 +75,7 @@ public partial class MilitaryEngine : Node
             // Conscription adds infantry
             if (nation.Council.ConscriptionActive && army.TotalStrength < 500)
             {
-                army.Composition[UnitType.Infantry] = army.Composition.GetValueOrDefault(UnitType.Infantry) + 5;
+                army.Composition[UnitType.Infantry] = (army.Composition.TryGetValue(UnitType.Infantry, out var _ic) ? _ic : 0) + 5;
             }
 
             // High defense budget resupplies
@@ -196,7 +196,7 @@ public partial class MilitaryEngine : Node
                 // Must be at war
                 int n2 = ParseNationIdx(a2.NationId, world.Nations.Count);
                 if (n2 < 0) continue;
-                var relation = world.Nations[n1].Relations.GetValueOrDefault(world.Nations[n2].Id, DiplomaticStatus.Neutral);
+                var relation = world.Nations[n1].Relations.TryGetValue(world.Nations[n2].Id, out var _rel) ? _rel : DiplomaticStatus.Neutral;
                 if (relation != DiplomaticStatus.AtWar) continue;
 
                 float dx = a1.PixelX - a2.PixelX;
@@ -321,7 +321,7 @@ public partial class MilitaryEngine : Node
                 // Must be at war with city owner
                 int cityN = ParseNationIdx(city.NationId, world.Nations.Count);
                 if (cityN < 0) continue;
-                var rel = world.Nations[armyN].Relations.GetValueOrDefault(world.Nations[cityN].Id, DiplomaticStatus.Neutral);
+                var rel = world.Nations[armyN].Relations.TryGetValue(world.Nations[cityN].Id, out var _sr) ? _sr : DiplomaticStatus.Neutral;
                 if (rel != DiplomaticStatus.AtWar) continue;
 
                 float cx = city.TileX * TileSize + TileSize / 2f;
