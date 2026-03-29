@@ -1028,13 +1028,19 @@ Each milestone ends with a testable build you can hand to someone and say "play 
 **Goal:** Full player interaction in real-time.
 
 **Build:**
-- **Unit orders panel:** Select army → right-click destination → army moves. Order types: Move, Attack Move, Hold, Patrol, Garrison, Bombard, Blockade, Escort, Airlift, Amphibious, Nuclear Strike.
+- **Council system (DONE):** Government body changes by nation archetype (National Assembly, Royal Court, Politburo, etc.). 5 advisers per nation (Military, Economic, Intelligence, Diplomatic + specialist). Council actions: Domestic, Military, Diplomatic, Intelligence — available actions vary by government type.
+  - `src/UI/Panels/CouncilPanel.cs` — full-screen council overlay, toggle with C key
+  - `src/Data/Models.cs` — GovernmentType, AdviserData, CouncilData
+- **Combat command (DONE):** Per-army tactical orders (Defend/Patrol/Stage/Attack/Retreat), formation selection (Column/Spread/Wedge/Circle), army list with status, composition view, battle log.
+  - `src/UI/Panels/CombatCommandPanel.cs` — replaces old MilitaryCommandPanel
+- **Council-aware sidebar (DONE):** LeftSidebar shows government name, quick actions, government-specific special action.
 - **Budget panel:** Allocate spending across Military / Infrastructure / Intelligence / Diplomacy. Changes take effect over time.
 - **Diplomacy panel:** Click nation → Propose alliance, Declare war, Offer trade, Demand tribute, Embargo.
 - **Production panel:** Select city → view facilities → queue construction.
 - **Resource display:** Show all 6 resource stockpiles + income/consumption rates.
+- **Council engine:** Wire `CouncilActionEvent` to actual game state changes (tax rate → treasury, martial law → stability, etc.)
 
-**New files:** `src/UI/Panels/OrderPanel.cs`, `src/UI/Panels/BudgetPanel.cs`, `src/UI/Panels/DiplomacyPanel.cs`, `src/UI/Panels/ProductionPanel.cs`
+**New files:** `src/UI/Panels/CouncilPanel.cs` (DONE), `src/UI/Panels/CombatCommandPanel.cs` (DONE), `src/UI/Panels/BudgetPanel.cs`, `src/UI/Panels/DiplomacyPanel.cs`, `src/UI/Panels/ProductionPanel.cs`
 **Modified:** `UI/Map/MapManager.cs` (army selection/ordering), `Engines/ResourceEngine.cs`, `Engines/EconomicEngine.cs`
 
 **Test:** Full gameplay loop — manage nation in real-time, issue military orders, adjust budget, do diplomacy, build units, respond to interrupts. Playable for 10+ minutes.

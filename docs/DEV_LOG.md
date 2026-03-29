@@ -11,11 +11,54 @@
 
 **Active Milestone:** M3 — 13 Nations Live (IN PROGRESS)
 **Branch:** claude/overhaul-map-ui-dHnki
-**Last Session:** 2026-03-28
+**Last Session:** 2026-03-29
 
 ---
 
 ## Session Log
+
+### Session 8 — 2026-03-29 (Council System + Combat Command Overhaul)
+**Goal:** Major UI overhaul — add government council system, proper combat controls, council-aware sidebar
+**Done:**
+- **New Data Models** (`Models.cs`):
+  - `GovernmentType` enum (11 types: FederalCouncil, RevolutionaryCommittee, MerchantSenate, RoyalCourt, CentralCommittee, Admiralty, NationalAssembly, WarCouncil, ShadowCabinet, ImperialCourt, SurvivalCouncil)
+  - `AdviserRole` enum (13 roles: 4 core + 9 specialist)
+  - `AdviserData` class (name, role, loyalty, competence, hawkishness, current advice)
+  - `CouncilData` class (government type, adviser list, display name, archetype mapping, specialist role lookup)
+  - `CouncilActionCategory` enum (Domestic, Military, Diplomatic, Intelligence)
+  - Added `Council` field to `NationData`
+- **New Events** (`GameEvents.cs`):
+  - `CouncilActionEvent`, `AdviserOpinionEvent` (council system)
+  - `ArmyOrderEvent`, `ArmyFormationEvent`, `ArmySelectedEvent` (combat system)
+- **CouncilPanel** (`src/UI/Panels/CouncilPanel.cs`) — full-screen government overlay:
+  - Header adapts to government type (e.g., "REVOLUTIONARY COMMITTEE", "ROYAL COURT")
+  - Flavor text per government type ("The committee is in permanent session...")
+  - Left column: adviser cards with name, role, loyalty/competence bars, current advice
+  - Right column: action categories (Domestic/Military/Diplomatic/Intelligence)
+  - Actions change by government type (e.g., "Purge Dissidents" for Revolutionary, "Hold Feast" for Royal Court)
+  - Toggle with C key or sidebar button
+- **CombatCommandPanel** (`src/UI/Panels/CombatCommandPanel.cs`) — replaces MilitaryCommandPanel:
+  - Army list with color-coded order status
+  - Selected army details: strength, morale, supply, organization
+  - Per-army formation buttons (Column/Spread/Wedge/Circle) with stat tooltips
+  - Per-army order buttons (Defend/Patrol/Stage/Attack/Retreat)
+  - Unit composition breakdown
+  - Battle log feed from BattleResolvedEvent
+- **LeftSidebar rebuilt** — council-aware:
+  - Shows government name + nation archetype in header
+  - "Open Council [C]" button
+  - Quick actions: Military, Diplomatic, Economic, Intelligence
+  - Government-specific special action (varies by type)
+- **WorldGenerator** — council generation:
+  - `GenerateCouncil()` creates council + 5 advisers per nation
+  - Name pools for 5 adviser types (65 unique names)
+  - Randomized loyalty, competence, hawkishness per adviser
+  - Applied to both `CreateWorld()` and `AddCustomNation()` flows
+- **Scene cleanup**:
+  - Replaced MilitaryCommandPanel with CombatCommandPanel in Main.tscn
+  - Added CouncilPanel to UILayer
+  - Deleted MilitaryCommandPanel.cs
+- **Updated CLAUDE.md** project structure to reflect actual files
 
 ### Session 7 — 2026-03-28 (Map UI Overhaul)
 **Goal:** Fix map not rendering — root cause was dead OSM system in scene, procedural map never wired up

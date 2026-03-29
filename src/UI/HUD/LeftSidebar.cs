@@ -1,19 +1,25 @@
 using Godot;
 using Warship.Core;
+using Warship.Data;
 using Warship.Events;
 
 namespace Warship.UI.HUD;
 
 /// <summary>
-/// Left Column — 250px wide action menu with categorized command buttons.
-/// Categories: Diplomatic, Military, Economic, Intelligence.
+/// Left sidebar — 250px wide. Shows the council name (government-type-aware),
+/// quick action buttons, and a prominent "Open Council" button.
+/// Adapts its header and available actions to the player's government type.
 /// </summary>
 public partial class LeftSidebar : Control
 {
+    private Label _councilNameLabel = null!;
+    private Label _govTypeLabel = null!;
+    private VBoxContainer _actionBox = null!;
+
     public override void _Ready()
     {
         SetAnchorsAndOffsetsPreset(LayoutPreset.LeftWide);
-        OffsetTop = 64;   // Below both top bars (32 + 32)
+        OffsetTop = 64;    // Below both top bars (32 + 32)
         OffsetRight = 250; // 250px wide
         OffsetBottom = 0;
 
@@ -40,43 +46,144 @@ public partial class LeftSidebar : Control
         vbox.AddThemeConstantOverride("separation", 0);
         scroll.AddChild(vbox);
 
-        // Header
-        var header = new Label
+        // Council name header (changes with government type)
+        var headerPanel = new PanelContainer();
+        var headerStyle = new StyleBoxFlat
         {
-            Text = "COMMANDS",
-            HorizontalAlignment = HorizontalAlignment.Center,
-            CustomMinimumSize = new Vector2(0, 36)
+            BgColor = new Color(0.06f, 0.07f, 0.1f),
+            ContentMarginLeft = 12, ContentMarginTop = 10,
+            ContentMarginBottom = 10, ContentMarginRight = 12,
         };
-        header.AddThemeFontSizeOverride("font_size", 13);
-        header.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.6f));
-        header.VerticalAlignment = VerticalAlignment.Center;
-        vbox.AddChild(header);
+        headerPanel.AddThemeStyleboxOverride("panel", headerStyle);
+        var headerVBox = new VBoxContainer();
+        headerVBox.AddThemeConstantOverride("separation", 2);
 
-        // Diplomatic
-        AddCategoryHeader(vbox, "DIPLOMATIC", new Color(0.3f, 0.6f, 1f));
-        AddActionButton(vbox, "diplomatic", "Propose Alliance");
-        AddActionButton(vbox, "diplomatic", "Trade Agreement");
-        AddActionButton(vbox, "diplomatic", "Send Envoy");
-        AddActionButton(vbox, "diplomatic", "Declare War");
+        _councilNameLabel = new Label { Text = "THE COUNCIL" };
+        _councilNameLabel.AddThemeFontSizeOverride("font_size", 16);
+        _councilNameLabel.AddThemeColorOverride("font_color", Colors.Gold);
+        headerVBox.AddChild(_councilNameLabel);
 
-        // Military
-        AddCategoryHeader(vbox, "MILITARY", new Color(1f, 0.4f, 0.3f));
-        AddActionButton(vbox, "military", "Border Watch");
-        AddActionButton(vbox, "military", "Patrol");
-        AddActionButton(vbox, "military", "Stage Army");
-        AddActionButton(vbox, "military", "Attack");
+        _govTypeLabel = new Label { Text = "" };
+        _govTypeLabel.AddThemeFontSizeOverride("font_size", 10);
+        _govTypeLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.6f));
+        headerVBox.AddChild(_govTypeLabel);
 
-        // Economic
-        AddCategoryHeader(vbox, "ECONOMIC", new Color(0.3f, 0.9f, 0.4f));
-        AddActionButton(vbox, "economic", "Adjust Budget");
-        AddActionButton(vbox, "economic", "Set Tariffs");
-        AddActionButton(vbox, "economic", "Open Trade Route");
+        headerPanel.AddChild(headerVBox);
+        vbox.AddChild(headerPanel);
 
-        // Intelligence
-        AddCategoryHeader(vbox, "INTELLIGENCE", new Color(0.8f, 0.6f, 1f));
-        AddActionButton(vbox, "intelligence", "Deploy Spy");
-        AddActionButton(vbox, "intelligence", "Counter-Intel");
-        AddActionButton(vbox, "intelligence", "Sabotage");
+        // Open Council button (prominent)
+        var openCouncilBtn = new Button
+        {
+            Text = "OPEN COUNCIL  [C]",
+            CustomMinimumSize = new Vector2(0, 44),
+        };
+        var councilBtnStyle = new StyleBoxFlat
+        {
+            BgColor = new Color(0.15f, 0.18f, 0.28f),
+            BorderColor = new Color(0.3f, 0.4f, 0.6f),
+            BorderWidthTop = 1, BorderWidthBottom = 1,
+            ContentMarginLeft = 12,
+        };
+        var councilBtnHover = (StyleBoxFlat)councilBtnStyle.Duplicate();
+        councilBtnHover.BgColor = new Color(0.2f, 0.25f, 0.4f);
+        openCouncilBtn.AddThemeStyleboxOverride("normal", councilBtnStyle);
+        openCouncilBtn.AddThemeStyleboxOverride("hover", councilBtnHover);
+        openCouncilBtn.AddThemeFontSizeOverride("font_size", 14);
+        openCouncilBtn.AddThemeColorOverride("font_color", Colors.Gold);
+        openCouncilBtn.Pressed += () =>
+        {
+            EventBus.Instance?.Publish(new ViewSwitchEvent("council"));
+        };
+        vbox.AddChild(openCouncilBtn);
+
+        // Quick actions (subset of council actions available inline)
+        _actionBox = new VBoxContainer();
+        _actionBox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _actionBox.AddThemeConstantOverride("separation", 0);
+        vbox.AddChild(_actionBox);
+
+        // Subscribe to world ready to populate
+        EventBus.Instance?.Subscribe<WorldReadyEvent>(_ => CallDeferred(nameof(Rebuild)));
+        EventBus.Instance?.Subscribe<TurnAdvancedEvent>(_ => CallDeferred(nameof(RefreshHeader)));
+        CallDeferred(nameof(Rebuild));
+    }
+
+    private void Rebuild()
+    {
+        RefreshHeader();
+        RebuildQuickActions();
+    }
+
+    private void RefreshHeader()
+    {
+        var data = WorldStateManager.Instance?.Data;
+        if (data?.PlayerNationId == null) return;
+
+        int pIdx = int.Parse(data.PlayerNationId.Split('_')[1]);
+        var nation = data.Nations[pIdx];
+
+        _councilNameLabel.Text = nation.Council.DisplayName.ToUpper();
+        _govTypeLabel.Text = $"{nation.Name} \u2022 {nation.Archetype}";
+    }
+
+    private void RebuildQuickActions()
+    {
+        foreach (var child in _actionBox.GetChildren()) child.QueueFree();
+
+        var data = WorldStateManager.Instance?.Data;
+        if (data?.PlayerNationId == null)
+        {
+            // Default actions before world is ready
+            BuildDefaultActions();
+            return;
+        }
+
+        int pIdx = int.Parse(data.PlayerNationId.Split('_')[1]);
+        var nation = data.Nations[pIdx];
+        var govType = nation.Council.Type;
+
+        // Quick Military
+        AddCategoryHeader(_actionBox, "MILITARY", new Color(1f, 0.4f, 0.3f));
+        AddQuickAction(_actionBox, "military", "Set Global Order", new Color(1f, 0.4f, 0.3f));
+        AddQuickAction(_actionBox, "military", "Mobilize Reserves", new Color(1f, 0.4f, 0.3f));
+
+        // Quick Diplomatic
+        AddCategoryHeader(_actionBox, "DIPLOMATIC", new Color(0.3f, 0.6f, 1f));
+        AddQuickAction(_actionBox, "diplomatic", "Propose Treaty", new Color(0.3f, 0.6f, 1f));
+        AddQuickAction(_actionBox, "diplomatic", "Declare War", new Color(0.3f, 0.6f, 1f));
+
+        // Quick Economic
+        AddCategoryHeader(_actionBox, "ECONOMIC", new Color(0.3f, 0.9f, 0.4f));
+        AddQuickAction(_actionBox, "economic", "Adjust Tax Rate", new Color(0.3f, 0.9f, 0.4f));
+
+        // Quick Intelligence
+        AddCategoryHeader(_actionBox, "INTELLIGENCE", new Color(0.8f, 0.6f, 1f));
+        AddQuickAction(_actionBox, "intelligence", "Deploy Spy", new Color(0.8f, 0.6f, 1f));
+
+        // Government-specific quick action
+        string specialAction = govType switch
+        {
+            GovernmentType.RevolutionaryCommittee => "Purge Dissidents",
+            GovernmentType.RoyalCourt => "Hold Feast",
+            GovernmentType.MerchantSenate => "Issue Bonds",
+            GovernmentType.Admiralty => "Commission Warship",
+            GovernmentType.WarCouncil => "Rally Warriors",
+            GovernmentType.ShadowCabinet => "Blackmail Official",
+            GovernmentType.CentralCommittee => "Production Quota",
+            GovernmentType.ImperialCourt => "Ennoble Loyalist",
+            GovernmentType.SurvivalCouncil => "Ration Supplies",
+            _ => "Fund Infrastructure",
+        };
+        AddCategoryHeader(_actionBox, "SPECIAL", new Color(0.9f, 0.8f, 0.3f));
+        AddQuickAction(_actionBox, "special", specialAction, new Color(0.9f, 0.8f, 0.3f));
+    }
+
+    private void BuildDefaultActions()
+    {
+        AddCategoryHeader(_actionBox, "MILITARY", new Color(1f, 0.4f, 0.3f));
+        AddQuickAction(_actionBox, "military", "Border Watch", new Color(1f, 0.4f, 0.3f));
+        AddCategoryHeader(_actionBox, "DIPLOMATIC", new Color(0.3f, 0.6f, 1f));
+        AddQuickAction(_actionBox, "diplomatic", "Send Envoy", new Color(0.3f, 0.6f, 1f));
     }
 
     private void AddCategoryHeader(VBoxContainer parent, string text, Color accentColor)
@@ -93,23 +200,19 @@ public partial class LeftSidebar : Control
         };
         container.AddThemeStyleboxOverride("panel", headerStyle);
 
-        var label = new Label
-        {
-            Text = text,
-            VerticalAlignment = VerticalAlignment.Center
-        };
+        var label = new Label { Text = text, VerticalAlignment = VerticalAlignment.Center };
         label.AddThemeFontSizeOverride("font_size", 12);
         label.AddThemeColorOverride("font_color", accentColor);
         container.AddChild(label);
         parent.AddChild(container);
     }
 
-    private void AddActionButton(VBoxContainer parent, string category, string text)
+    private void AddQuickAction(VBoxContainer parent, string category, string text, Color accent)
     {
         var btn = new Button
         {
             Text = text,
-            CustomMinimumSize = new Vector2(0, 40),
+            CustomMinimumSize = new Vector2(0, 36),
             Alignment = HorizontalAlignment.Left
         };
 
@@ -120,21 +223,19 @@ public partial class LeftSidebar : Control
             BorderWidthBottom = 1,
             ContentMarginLeft = 20
         };
-
         var hover = (StyleBoxFlat)normal.Duplicate();
-        hover.BgColor = new Color(0.2f, 0.22f, 0.28f, 1f);
+        hover.BgColor = accent * 0.2f;
 
         btn.AddThemeStyleboxOverride("normal", normal);
         btn.AddThemeStyleboxOverride("hover", hover);
         btn.AddThemeStyleboxOverride("pressed", hover);
-        btn.AddThemeFontSizeOverride("font_size", 14);
+        btn.AddThemeFontSizeOverride("font_size", 13);
         btn.AddThemeColorOverride("font_color", new Color(0.75f, 0.75f, 0.8f));
 
-        // Wire button to publish PlayerActionEvent via EventBus
         string actionId = text.ToLower().Replace(" ", "_");
         btn.Pressed += () =>
         {
-            GD.Print($"[LeftSidebar] Action: {category}/{actionId}");
+            GD.Print($"[Sidebar] Quick action: {category}/{actionId}");
             EventBus.Instance?.Publish(new PlayerActionEvent(category, actionId));
         };
 

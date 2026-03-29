@@ -87,25 +87,34 @@ warship-godot/
 │   │
 │   └── UI/
 │       ├── Map/
-│       │   ├── MapManager.cs        ← TileMapLayer setup + rendering
-│       │   ├── MapCamera.cs         ← Zoom, pan, edge scroll
-│       │   ├── UnitManager.cs       ← Spawn/move/animate unit sprites
-│       │   ├── CityRenderer.cs      ← Multi-tile city placement
-│       │   ├── BorderRenderer.cs    ← Nation border lines
-│       │   └── RouteRenderer.cs     ← Trade routes + rivers
+│       │   ├── MapManager.cs          ← 3-layer renderer orchestrator
+│       │   ├── MapCamera.cs           ← Zoom, pan, edge scroll, clamped
+│       │   ├── TerrainChunkRenderer.cs ← Chunk-based terrain streaming
+│       │   ├── TerritoryBorderRenderer.cs ← Territory tints + borders
+│       │   ├── ArmySwarmRenderer.cs   ← 4-level LOD army rendering
+│       │   └── UnitStamp.cs           ← Pixel-art unit silhouettes
 │       ├── HUD/
-│       │   ├── TopBar.cs            ← Nation stats, turn counter
-│       │   ├── BottomPanel.cs       ← News feed, orders
-│       │   └── Minimap.cs
+│       │   ├── TopBar.cs             ← Turn counter, player stats
+│       │   ├── BottomPanel.cs        ← Economy + authority meters
+│       │   ├── LeftSidebar.cs        ← Council-aware action menu
+│       │   ├── RightSidebar.cs       ← Intel & diplomacy panel
+│       │   ├── MainViewSwitcher.cs   ← Map/Intel/WarRoom/Economy tabs
+│       │   ├── SpeedControlBar.cs    ← Sim speed controls
+│       │   ├── NotificationManager.cs ← Toast notifications
+│       │   ├── NewsTicker.cs         ← News headline ticker
+│       │   ├── DossierPanel.cs       ← Character detail panel
+│       │   ├── VictoryPanel.cs       ← Win/lose screen
+│       │   ├── HotZoneManager.cs     ← Mini-map pin system
+│       │   └── CrisisPanel.cs        ← Crisis event modal
 │       ├── Panels/
-│       │   ├── NationPanel.cs
-│       │   ├── UnitPanel.cs
-│       │   ├── BudgetPanel.cs
-│       │   └── WarPanel.cs
+│       │   ├── CouncilPanel.cs       ← Government body (changes by type)
+│       │   ├── CombatCommandPanel.cs ← Tactical army command interface
+│       │   └── InterruptPanel.cs     ← "The Phone Rings" modal
+│       ├── Menus/
+│       │   ├── MainMenu.cs           ← Title screen
+│       │   └── CharacterSetupPanel.cs ← Nation picker + custom nation
 │       └── Screens/
-│           ├── TitleScreen.cs
-│           ├── SetupScreen.cs
-│           └── SpeechScreen.cs
+│           └── (future scenario screens)
 │
 ├── scenes/
 │   ├── Main.tscn                ← Main scene, GameBootstrapper here
