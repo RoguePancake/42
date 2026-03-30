@@ -12,11 +12,14 @@ namespace Warship.UI.HUD;
 public partial class TopBar : Control
 {
     private WorldData? _world;
+    private string _speedLabel = "1x";
 
     public override void _Ready()
     {
         EventBus.Instance?.Subscribe<WorldReadyEvent>(_ =>
             _world = WorldStateManager.Instance?.World);
+        EventBus.Instance?.Subscribe<SimSpeedChangedEvent>(ev =>
+            _speedLabel = ev.Label);
 
         CustomMinimumSize = new Vector2(0, 32);
         MouseFilter = MouseFilterEnum.Ignore;
@@ -55,9 +58,9 @@ public partial class TopBar : Control
             $"Squads: {_world.Squads.Count}  Buildings: {_world.Buildings.Count}",
             HorizontalAlignment.Left, -1, fs, Colors.LightGray);
 
-        // Position
-        DrawString(font, new Vector2(size.X - 180, 22),
-            $"Pos: ({p.TileX}, {p.TileY})",
+        // Tick + Speed
+        DrawString(font, new Vector2(size.X - 350, 22),
+            $"Tick: {_world.TickNumber}  Speed: {_speedLabel}  [SPACE +/-]",
             HorizontalAlignment.Left, -1, fs, Colors.LightBlue);
     }
 }

@@ -39,9 +39,11 @@ public partial class MapManager : Node2D
 
         _chunks = new ChunkRenderer { Name = "ChunkLayer" };
         _entities = new EntityRenderer { Name = "EntityLayer" };
+        var cursor = new TileCursor { Name = "TileCursor" };
 
         AddChild(_chunks);
         AddChild(_entities);
+        AddChild(cursor);
 
         // Listen for world ready
         EventBus.Instance?.Subscribe<WorldReadyEvent>(OnWorldReady);

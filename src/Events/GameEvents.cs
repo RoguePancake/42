@@ -9,6 +9,7 @@ namespace Warship.Events;
 
 public record WorldReadyEvent(int Seed) : IGameEvent;
 public record TickEvent(int TickNumber) : IGameEvent;
+public record SimSpeedChangedEvent(float Speed, string Label) : IGameEvent;
 
 // ═══════════════════════════════════════════════════════════════
 //  Player actions → game state

@@ -24,6 +24,7 @@ public partial class GameplayManager : Node
     public override void _Ready()
     {
         EventBus.Instance?.Subscribe<WorldReadyEvent>(OnWorldReady);
+        EventBus.Instance?.Subscribe<TickEvent>(OnTick);
         EventBus.Instance?.Subscribe<PlaceBuildingEvent>(OnPlaceBuilding);
         EventBus.Instance?.Subscribe<SpawnSquadEvent>(OnSpawnSquad);
         EventBus.Instance?.Subscribe<SquadOrderEvent>(OnSquadOrder);
@@ -36,6 +37,59 @@ public partial class GameplayManager : Node
     private void OnWorldReady(WorldReadyEvent ev)
     {
         _world = WorldStateManager.Instance?.World;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  TICK ECONOMY — runs every game tick
+    // ════════════════════════════════════════════════════════════════
+
+    private void OnTick(TickEvent ev)
+    {
+        if (_world == null) return;
+        _world.TickNumber = ev.TickNumber;
+
+        // Troop camps produce troops every 3 ticks
+        if (ev.TickNumber % 3 == 0)
+        {
+            foreach (var bld in _world.Buildings)
+            {
+                if (bld.Type != BuildingType.TroopCamp) continue;
+                if (bld.GarrisonCount >= bld.GarrisonCap) continue;
+
+                // Produce 10 troops per camp per cycle (costs 5 food)
+                if (_world.Player.Food >= 5)
+                {
+                    int produce = Math.Min(10, bld.GarrisonCap - bld.GarrisonCount);
+                    bld.GarrisonCount += produce;
+                    _world.Player.Food -= 5;
+                }
+            }
+        }
+
+        // Passive income: +5 gold per tick
+        _world.Player.Gold += 5;
+
+        // Passive food: +2 food per tick (farms/foraging)
+        _world.Player.Food += 2;
+
+        // Squad upkeep: -1 food per 100 troops per tick
+        foreach (var squad in _world.Squads)
+        {
+            if (!squad.IsAlive) continue;
+            int foodCost = Math.Max(1, squad.Count / 100);
+            _world.Player.Food -= foodCost;
+        }
+
+        // Starvation: if food goes negative, squads lose morale
+        if (_world.Player.Food < 0)
+        {
+            _world.Player.Food = 0;
+            foreach (var squad in _world.Squads)
+            {
+                if (!squad.IsAlive) continue;
+                squad.Morale = Math.Max(0, squad.Morale - 5f);
+            }
+        }
     }
 
     // ════════════════════════════════════════════════════════════════
