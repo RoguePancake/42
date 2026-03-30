@@ -9,13 +9,11 @@ namespace Warship.Engines;
 
 /// <summary>
 /// Processes all political actions: bribe, threaten, eliminate, fund militia, etc.
-/// Uses dice rolls with BSA-weighted success rates.
-/// Routes all results back through EventBus as AuthorityChangedEvent / NotificationEvent.
+/// Uses dice rolls with prestige-weighted success rates.
+/// Routes all results back through EventBus as NotificationEvent.
 /// </summary>
 public partial class PoliticalEngine : Node
 {
-    // Uses SimRng for deterministic replay
-
     public override void _Ready()
     {
         EventBus.Instance?.Subscribe<PoliticalActionEvent>(OnPoliticalAction);
@@ -41,8 +39,8 @@ public partial class PoliticalEngine : Node
             case "fund_militia":
                 ProcessFundMilitia(actor);
                 break;
-            case "public_address":
-                ProcessPublicAddress(actor);
+            case "fortify":
+                ProcessFortify(actor);
                 break;
             case "review_intel":
                 ProcessReviewIntel(actor);
@@ -67,150 +65,149 @@ public partial class PoliticalEngine : Node
     private void ProcessFundMilitia(CharacterData actor)
     {
         var nation = GetActorNation(actor);
-        if (nation != null && nation.Treasury < 100f) { Notify("❌ Insufficient Funds! Requires $100M.", "danger"); return; }
-        if (nation != null) nation.Treasury -= 100f;
-
-        float gain = 5f + (float)(SimRng.NextDouble() * 5);
-        float old = actor.TerritoryAuthority;
-        actor.TerritoryAuthority = MathF.Min(100f, actor.TerritoryAuthority + gain);
-
-        // Small WA cost (looks militaristic to the world)
-        float waLoss = 1f + (float)(SimRng.NextDouble() * 2);
-        actor.WorldAuthority = MathF.Max(0f, actor.WorldAuthority - waLoss);
-
-        Notify($"💰 Funded domestic militia: TA +{gain:0.0}%, WA -{waLoss:0.0}%", "success");
-        EmitChange(actor.Id, "TA", old, actor.TerritoryAuthority, "Funded militia");
+        if (nation != null && nation.Treasury < 100f) { Notify("Insufficient Funds! Requires $100M.", "danger"); return; }
+        if (nation != null)
+        {
+            nation.Treasury -= 100f;
+            float stabilityGain = 3f + (float)(SimRng.NextDouble() * 3);
+            nation.Stability = MathF.Min(100f, nation.Stability + stabilityGain);
+            Notify($"Funded domestic militia: Stability +{stabilityGain:0.0}%, Treasury -$100M", "success");
+        }
     }
 
-    private void ProcessPublicAddress(CharacterData actor)
+    private void ProcessFortify(CharacterData actor)
     {
-        float gain = 4f + (float)(SimRng.NextDouble() * 4);
-        float old = actor.WorldAuthority;
-        actor.WorldAuthority = MathF.Min(100f, actor.WorldAuthority + gain);
-
-        Notify($"🎙 Public address broadcast: WA +{gain:0.0}%", "success");
-        EmitChange(actor.Id, "WA", old, actor.WorldAuthority, "Public address");
+        var nation = GetActorNation(actor);
+        if (nation != null && nation.Treasury < 150f) { Notify("Insufficient Funds! Requires $150M.", "danger"); return; }
+        if (nation != null)
+        {
+            nation.Treasury -= 150f;
+            float stabilityGain = 5f + (float)(SimRng.NextDouble() * 3);
+            nation.Stability = MathF.Min(100f, nation.Stability + stabilityGain);
+            Notify($"Fortified territories: Stability +{stabilityGain:0.0}%, Treasury -$150M", "success");
+        }
     }
 
     private void ProcessReviewIntel(CharacterData actor)
     {
-        float gain = 3f + (float)(SimRng.NextDouble() * 3);
-        float old = actor.BehindTheScenesAuthority;
-        actor.BehindTheScenesAuthority = MathF.Min(100f, actor.BehindTheScenesAuthority + gain);
-
-        Notify($"📋 Intel review complete: BSA +{gain:0.0}%", "info");
-        EmitChange(actor.Id, "BSA", old, actor.BehindTheScenesAuthority, "Intel review");
+        var nation = GetActorNation(actor);
+        if (nation != null)
+        {
+            float prestigeGain = 2f + (float)(SimRng.NextDouble() * 3);
+            nation.Prestige = MathF.Min(100f, nation.Prestige + prestigeGain);
+            Notify($"Intel review complete: Prestige +{prestigeGain:0.0}%", "info");
+        }
     }
 
     // ─── Rival Actions ───────────────────────────────
 
     private void ProcessInvestigate(CharacterData actor, CharacterData target)
     {
-        // Success based on actor's BSA
-        float chance = actor.BehindTheScenesAuthority / 100f;
+        var nation = GetActorNation(actor);
+        float chance = nation != null ? nation.Prestige / 100f : 0.3f;
         bool success = SimRng.NextDouble() < chance;
 
         if (success)
         {
-            float bsaGain = 3f;
-            actor.BehindTheScenesAuthority = MathF.Min(100f, actor.BehindTheScenesAuthority + bsaGain);
-            Notify($"🔍 Investigation on {target.Name} successful! BSA +{bsaGain:0.0}%", "success");
+            Notify($"Investigation on {target.Name} successful! Intel gathered.", "success");
         }
         else
         {
-            Notify($"🔍 Investigation on {target.Name} turned up nothing.", "warning");
+            Notify($"Investigation on {target.Name} turned up nothing.", "warning");
         }
     }
 
     private void ProcessBribe(CharacterData actor, CharacterData target)
     {
         var nation = GetActorNation(actor);
-        if (nation != null && nation.Treasury < 50f) { Notify("❌ Insufficient Funds! Requires $50M.", "danger"); return; }
+        if (nation != null && nation.Treasury < 50f) { Notify("Insufficient Funds! Requires $50M.", "danger"); return; }
         if (nation != null) nation.Treasury -= 50f;
 
-        float chance = (actor.BehindTheScenesAuthority * 0.6f + actor.TerritoryAuthority * 0.4f) / 100f;
+        var targetNation = GetActorNation(target);
+        float chance = nation != null ? nation.Prestige / 100f * 0.6f : 0.2f;
         bool success = SimRng.NextDouble() < chance;
 
         if (success)
         {
-            // Steal some of their TA
-            float stolen = 4f + (float)(SimRng.NextDouble() * 4);
-            target.TerritoryAuthority = MathF.Max(0f, target.TerritoryAuthority - stolen);
-            actor.TerritoryAuthority = MathF.Min(100f, actor.TerritoryAuthority + stolen * 0.5f);
-            actor.BehindTheScenesAuthority = MathF.Min(100f, actor.BehindTheScenesAuthority + 2f);
-
-            Notify($"💵 Bribed {target.Name}'s loyalists! TA +{stolen * 0.5f:0.0}%, their TA -{stolen:0.0}%", "success");
+            if (targetNation != null)
+            {
+                float stabilityLoss = 4f + (float)(SimRng.NextDouble() * 4);
+                targetNation.Stability = MathF.Max(0f, targetNation.Stability - stabilityLoss);
+                Notify($"Bribed {target.Name}'s loyalists! Their stability -{stabilityLoss:0.0}%", "success");
+            }
         }
         else
         {
-            // Backfire: they find out
-            actor.BehindTheScenesAuthority = MathF.Max(0f, actor.BehindTheScenesAuthority - 5f);
-            Notify($"💵 Bribe attempt on {target.Name} FAILED! They know. BSA -5%", "danger");
+            if (nation != null)
+            {
+                nation.Prestige = MathF.Max(0f, nation.Prestige - 5f);
+                Notify($"Bribe attempt on {target.Name} FAILED! They know. Prestige -5%", "danger");
+            }
         }
     }
 
     private void ProcessThreaten(CharacterData actor, CharacterData target)
     {
         var nation = GetActorNation(actor);
-        if (nation != null && nation.Treasury < 10f) { Notify("❌ Insufficient Funds! Requires $10M.", "danger"); return; }
+        if (nation != null && nation.Treasury < 10f) { Notify("Insufficient Funds! Requires $10M.", "danger"); return; }
         if (nation != null) nation.Treasury -= 10f;
 
-        // Requires high TA to be credible
-        float chance = actor.TerritoryAuthority / 100f * 0.7f;
+        var targetNation = GetActorNation(target);
+        float chance = nation != null ? nation.Prestige / 100f * 0.7f : 0.2f;
         bool success = SimRng.NextDouble() < chance;
 
         if (success)
         {
-            float waGain = 5f;
-            float targetWaLoss = 6f;
-            actor.WorldAuthority = MathF.Min(100f, actor.WorldAuthority + waGain);
-            target.WorldAuthority = MathF.Max(0f, target.WorldAuthority - targetWaLoss);
-
-            Notify($"⚠️ Threatened {target.Name}! WA +{waGain:0.0}%, their WA -{targetWaLoss:0.0}%", "success");
+            if (targetNation != null)
+            {
+                float stabilityLoss = 6f;
+                targetNation.Stability = MathF.Max(0f, targetNation.Stability - stabilityLoss);
+            }
+            if (nation != null)
+            {
+                nation.Prestige = MathF.Min(100f, nation.Prestige + 5f);
+            }
+            Notify($"Threatened {target.Name}! Their stability drops. Prestige +5%", "success");
         }
         else
         {
-            actor.WorldAuthority = MathF.Max(0f, actor.WorldAuthority - 3f);
-            actor.TerritoryAuthority = MathF.Max(0f, actor.TerritoryAuthority - 2f);
-            Notify($"⚠️ {target.Name} called your bluff! WA -3%, TA -2%", "danger");
+            if (nation != null)
+            {
+                nation.Prestige = MathF.Max(0f, nation.Prestige - 3f);
+            }
+            Notify($"{target.Name} called your bluff! Prestige -3%", "danger");
         }
     }
 
     private void ProcessEliminate(CharacterData actor, CharacterData target)
     {
         var nation = GetActorNation(actor);
-        if (nation != null && nation.Treasury < 300f) { Notify("❌ Insufficient Funds! Requires $300M.", "danger"); return; }
+        if (nation != null && nation.Treasury < 300f) { Notify("Insufficient Funds! Requires $300M.", "danger"); return; }
         if (nation != null) nation.Treasury -= 300f;
 
-        // Highest risk, highest reward. Needs strong BSA.
-        float chance = (actor.BehindTheScenesAuthority - 30f) / 100f; // Need BSA > 30 to even attempt
-        if (chance < 0.05f) chance = 0.05f; // Always 5% minimum
+        float chance = nation != null ? (nation.Prestige - 30f) / 100f : 0.05f;
+        if (chance < 0.05f) chance = 0.05f;
 
         bool success = SimRng.NextDouble() < chance;
 
         if (success)
         {
-            // Absorb their authority
-            actor.TerritoryAuthority = MathF.Min(100f, actor.TerritoryAuthority + target.TerritoryAuthority * 0.3f);
-            actor.WorldAuthority = MathF.Min(100f, actor.WorldAuthority + target.WorldAuthority * 0.2f);
-            actor.BehindTheScenesAuthority = MathF.Min(100f, actor.BehindTheScenesAuthority + 10f);
-
-            // Mark target as eliminated
-            target.TerritoryAuthority = 0;
-            target.WorldAuthority = 0;
-            target.BehindTheScenesAuthority = 0;
+            var targetNation = GetActorNation(target);
+            if (targetNation != null)
+            {
+                targetNation.Stability = MathF.Max(0f, targetNation.Stability - 25f);
+            }
             target.Role = "Eliminated";
-
-            Notify($"🗡 {target.Name} has been... removed. You absorb their power.", "success");
+            Notify($"{target.Name} has been... removed. Their nation destabilized.", "success");
         }
         else
         {
-            // Catastrophic backfire
-            actor.BehindTheScenesAuthority = MathF.Max(0f, actor.BehindTheScenesAuthority - 15f);
-            actor.WorldAuthority = MathF.Max(0f, actor.WorldAuthority - 10f);
-            target.BehindTheScenesAuthority = MathF.Min(100f, target.BehindTheScenesAuthority + 10f);
-
-            Notify($"🗡 ASSASSINATION FAILED! {target.Name} survives and knows it was you! BSA -15%, WA -10%", "danger");
+            if (nation != null)
+            {
+                nation.Prestige = MathF.Max(0f, nation.Prestige - 15f);
+                nation.Stability = MathF.Max(0f, nation.Stability - 5f);
+            }
+            Notify($"ASSASSINATION FAILED! {target.Name} survives and knows it was you! Prestige -15%", "danger");
         }
     }
 
@@ -229,10 +226,5 @@ public partial class PoliticalEngine : Node
         var parts = actor.NationId.Split('_');
         if (parts.Length < 2 || !int.TryParse(parts[1], out int idx)) return null;
         return idx >= 0 && idx < world.Nations.Count ? world.Nations[idx] : null;
-    }
-
-    private void EmitChange(string charId, string meter, float old, float newVal, string reason)
-    {
-        EventBus.Instance?.Publish(new AuthorityChangedEvent(charId, meter, old, newVal, reason));
     }
 }

@@ -7,14 +7,12 @@ using Warship.Events;
 namespace Warship.Engines;
 
 /// <summary>
-/// Controls Rival VIPs. When a turn drops, the AI analyzes the board 
-/// and attempts to increase their own Full Authority Index (FAI) by 
-/// targeting the weakest links or the player.
+/// Controls Rival VIPs. When a turn drops, the AI analyzes the board
+/// and attempts to expand territory and weaken rivals through
+/// military and political actions.
 /// </summary>
 public partial class AIEngine : Node
 {
-    // Uses SimRng for deterministic replay
-
     public override void _Ready()
     {
         EventBus.Instance?.Subscribe<TurnAdvancedEvent>(OnTurnAdvanced);
@@ -31,19 +29,15 @@ public partial class AIEngine : Node
         var world = WorldStateManager.Instance?.Data;
         if (world == null) return;
 
-        // Everyone who is alive and not the player
         var rivals = world.Characters.Where(c => !c.IsPlayer && c.Role != "Eliminated").ToList();
 
         foreach (var rival in rivals)
         {
-            // AI decides if it wants to act this turn (60% chance)
             if (SimRng.NextDouble() > 0.6) continue;
 
-            // Pick a target: normally the player, or another rival with high FAI
             var targetOptions = world.Characters.Where(c => c.Id != rival.Id && c.Role != "Eliminated").ToList();
             if (targetOptions.Count == 0) continue;
 
-            // Target the player 40% of the time, else random rival
             var target = targetOptions[SimRng.Next(targetOptions.Count)];
             bool targetIsPlayer = SimRng.NextDouble() < 0.4f;
             if (targetIsPlayer)
@@ -63,26 +57,40 @@ public partial class AIEngine : Node
 
     private string DetermineBestAction(Warship.Data.CharacterData rival, Warship.Data.CharacterData target)
     {
-        // 1. If TA is critically low, they panic and fund militia
-        if (rival.TerritoryAuthority < 30f)
+        var world = WorldStateManager.Instance?.Data;
+        if (world == null) return "none";
+
+        var rivalNation = GetNation(rival);
+
+        // If stability is critically low, fund militia to stabilize
+        if (rivalNation != null && rivalNation.Stability < 30f)
             return "fund_militia";
 
-        // 2. If BSA is extremely high, they get cocky and might try to eliminate
-        if (rival.BehindTheScenesAuthority > 60f && target.FullAuthorityIndex > rival.FullAuthorityIndex)
+        // If prestige is high and they're aggressive, try elimination
+        if (rivalNation != null && rivalNation.Prestige > 60f)
         {
-            if (SimRng.NextDouble() < 0.1f) // 10% chance to go for the kill
+            if (SimRng.NextDouble() < 0.1f)
                 return "eliminate";
         }
 
-        // 3. Main actions
+        // Main actions — weighted random
         double r = SimRng.NextDouble();
         if (r < 0.25)
-            return "public_address"; // Boost own WA
+            return "fortify";
         else if (r < 0.50)
-            return "review_intel"; // Boost own BSA
+            return "review_intel";
         else if (r < 0.75)
-            return "investigate"; // Gain intel on target
+            return "investigate";
         else
-            return "threaten"; // Attack target WA
+            return "threaten";
+    }
+
+    private static Warship.Data.NationData? GetNation(Warship.Data.CharacterData character)
+    {
+        var world = WorldStateManager.Instance?.Data;
+        if (world == null) return null;
+        var parts = character.NationId.Split('_');
+        if (parts.Length < 2 || !int.TryParse(parts[1], out int idx)) return null;
+        return idx >= 0 && idx < world.Nations.Count ? world.Nations[idx] : null;
     }
 }

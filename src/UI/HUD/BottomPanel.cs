@@ -6,7 +6,7 @@ namespace Warship.UI.HUD;
 
 /// <summary>
 /// Lower Main Section — 200px tall data dashboard between the sidebars.
-/// Shows nation stats with HP-bar style meters: Treasury, Prestige, Authority, Units.
+/// Shows nation stats with HP-bar style meters: Treasury, Prestige, Stability, War Weariness, Units.
 /// </summary>
 public partial class BottomPanel : Control
 {
@@ -14,12 +14,10 @@ public partial class BottomPanel : Control
     private Label _prestigeValue = null!;
     private ProgressBar _treasuryBar = null!;
     private ProgressBar _prestigeBar = null!;
-    private Label _taValue = null!;
-    private Label _waValue = null!;
-    private Label _bsaValue = null!;
-    private ProgressBar _taBar = null!;
-    private ProgressBar _waBar = null!;
-    private ProgressBar _bsaBar = null!;
+    private Label _stabilityValue = null!;
+    private Label _warWearinessValue = null!;
+    private ProgressBar _stabilityBar = null!;
+    private ProgressBar _warWearinessBar = null!;
     private Label _unitCountLabel = null!;
     private Label _provinceCountLabel = null!;
 
@@ -84,15 +82,14 @@ public partial class BottomPanel : Control
         var sep = new VSeparator();
         columns.AddChild(sep);
 
-        // Right column: Authority meters
+        // Right column: Military readiness
         var rightCol = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         rightCol.AddThemeConstantOverride("separation", 4);
         columns.AddChild(rightCol);
 
-        AddColumnHeader(rightCol, "AUTHORITY", new Color(0.5f, 0.7f, 1f));
-        (_taBar, _taValue) = AddStatBar(rightCol, "Territory (TA)", 0, 100, new Color(0.3f, 0.6f, 1f));
-        (_waBar, _waValue) = AddStatBar(rightCol, "World (WA)", 0, 100, new Color(0.4f, 0.8f, 1f));
-        (_bsaBar, _bsaValue) = AddStatBar(rightCol, "Behind Scenes (BSA)", 0, 100, new Color(0.6f, 0.5f, 1f));
+        AddColumnHeader(rightCol, "MILITARY", new Color(0.9f, 0.3f, 0.3f));
+        (_stabilityBar, _stabilityValue) = AddStatBar(rightCol, "Stability", 0, 100, new Color(0.3f, 0.8f, 0.3f));
+        (_warWearinessBar, _warWearinessValue) = AddStatBar(rightCol, "War Weariness", 0, 100, new Color(0.9f, 0.4f, 0.2f));
 
         EventBus.Instance?.Subscribe<TurnAdvancedEvent>(_ => CallDeferred(nameof(RefreshData)));
         CallDeferred(nameof(RefreshData));
@@ -182,14 +179,11 @@ public partial class BottomPanel : Control
         _prestigeBar.Value = System.Math.Clamp(nat.Prestige, 0, 100);
         _prestigeValue.Text = $"{nat.Prestige:0}";
 
-        _taBar.Value = pc.TerritoryAuthority;
-        _taValue.Text = $"{pc.TerritoryAuthority:0}%";
+        _stabilityBar.Value = System.Math.Clamp(nat.Stability, 0, 100);
+        _stabilityValue.Text = $"{nat.Stability:0}%";
 
-        _waBar.Value = pc.WorldAuthority;
-        _waValue.Text = $"{pc.WorldAuthority:0}%";
-
-        _bsaBar.Value = pc.BehindTheScenesAuthority;
-        _bsaValue.Text = $"{pc.BehindTheScenesAuthority:0}%";
+        _warWearinessBar.Value = System.Math.Clamp(nat.WarWeariness, 0, 100);
+        _warWearinessValue.Text = $"{nat.WarWeariness:0}%";
 
         _provinceCountLabel.Text = $"Provinces: {nat.ProvinceCount}";
 

@@ -63,7 +63,7 @@ public partial class VictoryPanel : Control
 
         var title = new Label
         {
-            Text = "FULL AUTHORITY ACHIEVED",
+            Text = "TOTAL DOMINATION ACHIEVED",
             HorizontalAlignment = HorizontalAlignment.Center
         };
         title.AddThemeFontSizeOverride("font_size", 36);
@@ -74,7 +74,7 @@ public partial class VictoryPanel : Control
 
         var desc = new Label
         {
-            Text = "The shadows bend to your command. The military marches at your word. And the world trembles at your state. You have consolidated unchecked power.\n\nYou have achieved Full Authority.\nThe Nation is Yours.",
+            Text = "Every territory on the map flies your banner. For twenty turns, no rival has dared challenge your supremacy. The world is yours — completely and absolutely.\n\nYou have achieved Total Domination.\nThe Nation is Yours.",
             AutowrapMode = TextServer.AutowrapMode.Word,
             HorizontalAlignment = HorizontalAlignment.Center
         };

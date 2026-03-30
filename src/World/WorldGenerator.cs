@@ -509,23 +509,6 @@ public static class WorldGenerator
                 string cName = isPlayer ? playerName :
                     $"{FirstNames[rng.Next(FirstNames.Length)]} {LastNames[rng.Next(LastNames.Length)]}";
 
-                float ta = 30f, wa = 20f, bsa = 40f;
-                if (role == "Head of State") { ta = 80; wa = 60; bsa = 70; }
-                else if (role == "Defense Minister") { ta = 40; wa = 20; bsa = 60; }
-                else if (role == "Foreign Minister") { ta = 15; wa = 80; bsa = 30; }
-                else if (role == "Director of Intelligence") { ta = 30; wa = 40; bsa = 95; }
-                else if (role == "Opposition Leader") { ta = 50; wa = 10; bsa = 30; }
-
-                if (isPlayer)
-                {
-                    if (focusIndex == 1) ta += 20;
-                    if (focusIndex == 2) wa += 20;
-                    if (focusIndex == 3) bsa += 20;
-                    ta = Math.Clamp(ta, 0, 100);
-                    wa = Math.Clamp(wa, 0, 100);
-                    bsa = Math.Clamp(bsa, 0, 100);
-                }
-
                 float px = capital.TileX * MapManagerConstants.TileSize + MapManagerConstants.TileSize / 2f;
                 float py = capital.TileY * MapManagerConstants.TileSize + MapManagerConstants.TileSize / 2f;
 
@@ -540,9 +523,6 @@ public static class WorldGenerator
                     TileY = capital.TileY + (i / 3),
                     PixelX = px, PixelY = py,
                     TargetPixelX = px, TargetPixelY = py,
-                    TerritoryAuthority = ta,
-                    WorldAuthority = wa,
-                    BehindTheScenesAuthority = bsa,
                 });
             }
         }
@@ -712,20 +692,6 @@ public static class WorldGenerator
             string cName = isPlayer ? playerName :
                 $"{FirstNames[rng.Next(FirstNames.Length)]} {LastNames[rng.Next(LastNames.Length)]}";
 
-            float ta = 30f, wa = 20f, bsa = 40f;
-            if (roles[i] == "Head of State") { ta = 80; wa = 60; bsa = 70; }
-            else if (roles[i] == "Defense Minister") { ta = 40; wa = 20; bsa = 60; }
-            else if (roles[i] == "Foreign Minister") { ta = 15; wa = 80; bsa = 30; }
-            else if (roles[i] == "Director of Intelligence") { ta = 30; wa = 40; bsa = 95; }
-            else if (roles[i] == "Opposition Leader") { ta = 50; wa = 10; bsa = 30; }
-
-            if (isPlayer)
-            {
-                if (focusIndex == 1) ta = Math.Clamp(ta + 20, 0, 100);
-                if (focusIndex == 2) wa = Math.Clamp(wa + 20, 0, 100);
-                if (focusIndex == 3) bsa = Math.Clamp(bsa + 20, 0, 100);
-            }
-
             float px = capital.TileX * MapManagerConstants.TileSize + MapManagerConstants.TileSize / 2f;
             float py = capital.TileY * MapManagerConstants.TileSize + MapManagerConstants.TileSize / 2f;
 
@@ -740,9 +706,6 @@ public static class WorldGenerator
                 TileY = capital.TileY + (i / 3),
                 PixelX = px, PixelY = py,
                 TargetPixelX = px, TargetPixelY = py,
-                TerritoryAuthority = ta,
-                WorldAuthority = wa,
-                BehindTheScenesAuthority = bsa,
             });
         }
 

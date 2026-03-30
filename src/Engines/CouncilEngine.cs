@@ -428,9 +428,6 @@ public partial class CouncilEngine : Node
                     if (targetChar != null)
                     {
                         targetChar.Role = "Eliminated";
-                        targetChar.TerritoryAuthority = 0;
-                        targetChar.WorldAuthority = 0;
-                        targetChar.BehindTheScenesAuthority = 0;
                         targetNation.Stability = Math.Clamp(targetNation.Stability - 20f, 0, 100);
                         Notify(nation, $"ASSASSINATION successful! {targetChar.Name} of {targetNation.Name} eliminated. Their stability -20", "success");
                     }
