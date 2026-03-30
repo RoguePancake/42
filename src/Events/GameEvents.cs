@@ -74,3 +74,30 @@ public record AdviserOpinionEvent(string AdviserId, string ActionId, bool Approv
 public record ArmyOrderEvent(string ArmyId, Warship.Data.MilitaryOrder Order) : IGameEvent;
 public record ArmyFormationEvent(string ArmyId, Warship.Data.FormationType Formation) : IGameEvent;
 public record ArmySelectedEvent(string? ArmyId) : IGameEvent; // null = deselected
+
+// ── World Engine Events ──
+
+// LOD System
+public record LodChangedEvent(Warship.Data.LodLevel OldLod, Warship.Data.LodLevel NewLod, float Zoom) : IGameEvent;
+
+// Chunk System
+public record ChunkLoadedEvent(Warship.Data.ChunkCoord Coord) : IGameEvent;
+public record ChunkUnloadedEvent(Warship.Data.ChunkCoord Coord) : IGameEvent;
+
+// Build System
+public record BuildRequestEvent(Warship.Data.StructureType Type, int TileX, int TileY, string NationId) : IGameEvent;
+public record BuildCompletedEvent(string StructureId, Warship.Data.StructureType Type, int TileX, int TileY) : IGameEvent;
+public record BuildFailedEvent(string Reason, int TileX, int TileY) : IGameEvent;
+public record DemolishRequestEvent(int TileX, int TileY) : IGameEvent;
+
+// Road System
+public record RoadBuildRequestEvent(int FromX, int FromY, int ToX, int ToY, Warship.Data.RoadType Type) : IGameEvent;
+public record RoadBuiltEvent(int FromX, int FromY, int ToX, int ToY, Warship.Data.RoadType Type) : IGameEvent;
+
+// Wall System
+public record WallBuildRequestEvent(int TileX, int TileY, Warship.Data.DirectionMask Facing, Warship.Data.WallType Type) : IGameEvent;
+public record WallBuiltEvent(int TileX, int TileY, Warship.Data.DirectionMask Facing) : IGameEvent;
+
+// Pathfinding
+public record PathRequestEvent(string UnitId, int FromX, int FromY, int ToX, int ToY) : IGameEvent;
+public record PathComputedEvent(string UnitId, (int x, int y)[] Path) : IGameEvent;
