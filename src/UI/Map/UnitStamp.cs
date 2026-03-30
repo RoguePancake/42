@@ -1,196 +1,180 @@
+using System.Collections.Generic;
 using Warship.Data;
 
 namespace Warship.UI.Map;
 
 /// <summary>
-/// Pixel stamp definitions for each unit type. At close zoom (LOD 3),
-/// each individual unit is rendered as a small pixel silhouette instead
-/// of a generic dot.
+/// Pixel-art silhouette definitions for each unit type.
+/// At LOD 3 (close zoom), each unit is rendered as a small pixel stamp
+/// instead of a generic dot.
 ///
 /// Scale: 1 pixel = 1 soldier-width at max zoom.
-///   Infantry = 1x1 dot, Tank = 3x2 rectangle, Carrier = 20x5 hull.
-///   Shapes are simple — rectangles, crosses, lines — the beauty is in the SCALE.
+/// Shapes are simple — rectangles, crosses, lines.
 /// </summary>
 public static class UnitStamp
 {
-    // ── Stamp data: relative pixel offsets from unit center ──
+    // Infantry: 1x1 dot
+    private static readonly (int dx, int dy)[] Infantry = { (0, 0) };
 
-    private static readonly (int dx, int dy)[] StampInfantry =
-    {
-        (0, 0)
-    };
+    // MechInfantry: 1x2 vertical
+    private static readonly (int dx, int dy)[] MechInfantry = { (0, 0), (0, 1) };
 
-    private static readonly (int dx, int dy)[] StampMechInfantry =
-    {
-        (0, 0), (0, 1)
-    };
-
-    // 3x2 rectangle — wide and blocky
-    private static readonly (int dx, int dy)[] StampTank =
+    // Tank: 3x2 rectangle
+    private static readonly (int dx, int dy)[] Tank =
     {
         (-1, 0), (0, 0), (1, 0),
-        (-1, 1), (0, 1), (1, 1)
+        (-1, 1), (0, 1), (1, 1),
     };
 
-    // 2x3 tall rectangle — gun barrel
-    private static readonly (int dx, int dy)[] StampArtillery =
+    // Artillery: 2x3 tall
+    private static readonly (int dx, int dy)[] Artillery =
     {
         (0, -1), (1, -1),
         (0, 0),  (1, 0),
-        (0, 1),  (1, 1)
+        (0, 1),  (1, 1),
     };
 
-    // 2x2 square with a pip on top
-    private static readonly (int dx, int dy)[] StampAntiAir =
+    // AntiAir: 2x2 with pip
+    private static readonly (int dx, int dy)[] AntiAir =
     {
-        (0, -1),
-        (0, 0), (1, 0),
-        (0, 1), (1, 1)
+                 (0, -1),
+        (0, 0),  (1, 0),
+        (0, 1),  (1, 1),
     };
 
-    // Diamond shape — radar dish
-    private static readonly (int dx, int dy)[] StampMobileRadar =
+    // MobileRadar: diamond
+    private static readonly (int dx, int dy)[] MobileRadar =
     {
-        (0, -1),
-        (-1, 0), (0, 0), (1, 0),
-        (0, 1)
-    };
-
-    // 5-wide cross — wings + fuselage
-    private static readonly (int dx, int dy)[] StampFighter =
-    {
-                  (0, -2),
                   (0, -1),
-        (-2, 0), (-1, 0), (0, 0), (1, 0), (2, 0),
+        (-1, 0),  (0, 0), (1, 0),
                   (0, 1),
-                  (0, 2)
     };
 
-    // 7-wide fat cross — heavy bomber
-    private static readonly (int dx, int dy)[] StampBomber =
+    // Fighter: cross (5-wide wings + fuselage)
+    private static readonly (int dx, int dy)[] Fighter =
     {
-                           (0, -3),
                            (0, -2),
-                  (-1, -1),(0, -1),(1, -1),
-        (-3, 0), (-2, 0), (-1, 0), (0, 0), (1, 0), (2, 0), (3, 0),
-                  (-1, 1),(0, 1),(1, 1),
+                           (0, -1),
+        (-2, 0), (-1, 0),  (0, 0), (1, 0), (2, 0),
+                           (0, 1),
                            (0, 2),
-                           (0, 3)
     };
 
-    // 5x3 wide body — cargo plane
-    private static readonly (int dx, int dy)[] StampTransport =
+    // Bomber: fat cross (7-wide)
+    private static readonly (int dx, int dy)[] Bomber =
+    {
+                                    (0, -3),
+                                    (0, -2),
+                  (-1, -1),         (0, -1), (1, -1),
+        (-3, 0), (-2, 0), (-1, 0), (0, 0),  (1, 0), (2, 0), (3, 0),
+                  (-1, 1),         (0, 1),  (1, 1),
+                                    (0, 2),
+                                    (0, 3),
+    };
+
+    // Transport: 5x3 cargo plane
+    private static readonly (int dx, int dy)[] Transport =
     {
         (-2, 0), (-1, 0), (0, 0), (1, 0), (2, 0),
-        (-1, 1), (0, 1), (1, 1),
-        (0, 2)
+                 (-1, 1), (0, 1), (1, 1),
+                          (0, 2),
     };
 
-    // 5-wide cross, thinner — scout
-    private static readonly (int dx, int dy)[] StampReconPlane =
+    // ReconPlane: thin cross (5-wide)
+    private static readonly (int dx, int dy)[] ReconPlane =
     {
-                  (0, -1),
-        (-2, 0), (-1, 0), (0, 0), (1, 0), (2, 0),
-                  (0, 1)
+                           (0, -1),
+        (-2, 0), (-1, 0),  (0, 0), (1, 0), (2, 0),
+                           (0, 1),
     };
 
-    // 8x3 long oval — warship hull
-    private static readonly (int dx, int dy)[] StampDestroyer =
+    // Destroyer: 8x3 hull
+    private static readonly (int dx, int dy)[] Destroyer =
     {
               (-3, -1), (-2, -1), (-1, -1), (0, -1), (1, -1), (2, -1),
         (-4, 0), (-3, 0), (-2, 0), (-1, 0), (0, 0), (1, 0), (2, 0), (3, 0),
-              (-3, 1), (-2, 1), (-1, 1), (0, 1), (1, 1), (2, 1)
+              (-3, 1), (-2, 1), (-1, 1), (0, 1), (1, 1), (2, 1),
     };
 
-    // 12x4 long rectangle — heavy cruiser
-    private static readonly (int dx, int dy)[] StampCruiser =
+    // Cruiser: 12x4 heavy warship
+    private static readonly (int dx, int dy)[] Cruiser =
     {
               (-5, -1), (-4, -1), (-3, -1), (-2, -1), (-1, -1), (0, -1), (1, -1), (2, -1), (3, -1), (4, -1),
         (-6, 0), (-5, 0), (-4, 0), (-3, 0), (-2, 0), (-1, 0), (0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (5, 0),
         (-6, 1), (-5, 1), (-4, 1), (-3, 1), (-2, 1), (-1, 1), (0, 1), (1, 1), (2, 1), (3, 1), (4, 1), (5, 1),
-              (-5, 2), (-4, 2), (-3, 2), (-2, 2), (-1, 2), (0, 2), (1, 2), (2, 2), (3, 2), (4, 2)
+              (-5, 2), (-4, 2), (-3, 2), (-2, 2), (-1, 2), (0, 2), (1, 2), (2, 2), (3, 2), (4, 2),
     };
 
-    // 20x5 massive hull — aircraft carrier with deck stripe
-    private static readonly (int dx, int dy)[] StampCarrier;
+    // Carrier: 20x5 (built procedurally)
+    private static readonly (int dx, int dy)[] Carrier;
 
-    // 6x2 thin rectangle — submarine
-    private static readonly (int dx, int dy)[] StampSubmarine =
+    // Submarine: 6x2 thin
+    private static readonly (int dx, int dy)[] Submarine =
     {
         (-3, 0), (-2, 0), (-1, 0), (0, 0), (1, 0), (2, 0),
-        (-2, 1), (-1, 1), (0, 1), (1, 1)
+                 (-2, 1), (-1, 1), (0, 1), (1, 1),
     };
 
-    // 5x3 rectangle — landing craft
-    private static readonly (int dx, int dy)[] StampLandingCraft =
+    // LandingCraft: 5x3
+    private static readonly (int dx, int dy)[] LandingCraft =
     {
         (-2, 0), (-1, 0), (0, 0), (1, 0), (2, 0),
         (-2, 1), (-1, 1), (0, 1), (1, 1), (2, 1),
-        (-1, 2), (0, 2), (1, 2)
+                 (-1, 2), (0, 2), (1, 2),
     };
 
-    // 1x4 vertical line — arrow/missile
-    private static readonly (int dx, int dy)[] StampMissile =
+    // Missile: 1x4 vertical
+    private static readonly (int dx, int dy)[] Missile =
     {
-        (0, -2), (0, -1), (0, 0), (0, 1)
+        (0, -2), (0, -1), (0, 0), (0, 1),
     };
 
-    // 2x6 thick vertical — ICBM
-    private static readonly (int dx, int dy)[] StampNuclearMissile =
+    // NuclearMissile: 2x6 thick ICBM
+    private static readonly (int dx, int dy)[] NuclearMissile =
     {
         (0, -3), (1, -3),
         (0, -2), (1, -2),
         (0, -1), (1, -1),
         (0, 0),  (1, 0),
         (0, 1),  (1, 1),
-        (0, 2),  (1, 2)
+        (0, 2),  (1, 2),
     };
 
     static UnitStamp()
     {
-        // Build carrier stamp procedurally — 20x5 hull
-        var list = new System.Collections.Generic.List<(int, int)>();
+        // Build carrier hull: 20x5, tapered bow/stern
+        var hull = new List<(int, int)>();
         for (int x = -10; x < 10; x++)
-        {
             for (int y = -2; y <= 2; y++)
             {
-                // Taper bow and stern
                 if ((x == -10 || x == 9) && (y == -2 || y == 2)) continue;
-                list.Add((x, y));
+                hull.Add((x, y));
             }
-        }
-        StampCarrier = list.ToArray();
+        Carrier = hull.ToArray();
     }
 
-    /// <summary>
-    /// Get the pixel stamp for a unit type. Returns array of (dx, dy)
-    /// offsets relative to the unit's center pixel.
-    /// </summary>
     public static (int dx, int dy)[] GetStamp(UnitType type) => type switch
     {
-        UnitType.Infantry => StampInfantry,
-        UnitType.MechInfantry => StampMechInfantry,
-        UnitType.Tank => StampTank,
-        UnitType.Artillery => StampArtillery,
-        UnitType.AntiAir => StampAntiAir,
-        UnitType.MobileRadar => StampMobileRadar,
-        UnitType.Fighter => StampFighter,
-        UnitType.Bomber => StampBomber,
-        UnitType.Transport => StampTransport,
-        UnitType.ReconPlane => StampReconPlane,
-        UnitType.Destroyer => StampDestroyer,
-        UnitType.Cruiser => StampCruiser,
-        UnitType.Carrier => StampCarrier,
-        UnitType.Submarine => StampSubmarine,
-        UnitType.LandingCraft => StampLandingCraft,
-        UnitType.Missile => StampMissile,
-        UnitType.NuclearMissile => StampNuclearMissile,
-        _ => StampInfantry
+        UnitType.Infantry => Infantry,
+        UnitType.MechInfantry => MechInfantry,
+        UnitType.Tank => Tank,
+        UnitType.Artillery => Artillery,
+        UnitType.AntiAir => AntiAir,
+        UnitType.MobileRadar => MobileRadar,
+        UnitType.Fighter => Fighter,
+        UnitType.Bomber => Bomber,
+        UnitType.Transport => Transport,
+        UnitType.ReconPlane => ReconPlane,
+        UnitType.Destroyer => Destroyer,
+        UnitType.Cruiser => Cruiser,
+        UnitType.Carrier => Carrier,
+        UnitType.Submarine => Submarine,
+        UnitType.LandingCraft => LandingCraft,
+        UnitType.Missile => Missile,
+        UnitType.NuclearMissile => NuclearMissile,
+        _ => Infantry,
     };
 
-    /// <summary>
-    /// Bounding box size in pixels for a unit type (for click detection).
-    /// </summary>
     public static (int w, int h) GetSize(UnitType type) => type switch
     {
         UnitType.Infantry => (1, 1),
@@ -210,6 +194,6 @@ public static class UnitStamp
         UnitType.LandingCraft => (5, 3),
         UnitType.Missile => (1, 4),
         UnitType.NuclearMissile => (2, 6),
-        _ => (1, 1)
+        _ => (1, 1),
     };
 }
