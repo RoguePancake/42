@@ -1,4 +1,4 @@
-# FULL AUTHORITY — Military Command & Production System
+# WARSHIP — Military Command & Production System
 ## Design Specification
 
 > **Created:** 2026-03-25
@@ -199,7 +199,7 @@ Population of 2M generates a finite manpower pool.
 | Mountain defense | +50% |
 | City defense | +40% |
 | Fortified | +50% |
-| Leader authority | Territory Authority scales effectiveness |
+| Leader prestige | Nation Prestige scales effectiveness |
 | Supply lines | >5 tiles from city = -10% strength/turn |
 | Encirclement | Attacker on 3+ sides = defender -25% |
 | Amphibious | -30% on landing turn |
@@ -571,7 +571,7 @@ DEFCON only drops (improves) if: no wars for 5 consecutive turns AND no nukes un
 AI nations evaluate a Deterrence Score before military action:
 
 ```
-DeterrenceScore = (NumWarheads * 50) + (HasNukeSub ? 200 : 0) + (DeliveryRange * 10) + (WorldAuthority * 2)
+DeterrenceScore = (NumWarheads * 50) + (HasNukeSub ? 200 : 0) + (DeliveryRange * 10) + (Prestige * 2)
 ```
 
 ### AI Behavior by Deterrence
@@ -632,7 +632,7 @@ Tools to exploit the DECEIVED intel state.
 - Draws enemy bombing raids to waste targets
 
 ### Player Decision
-10 real tanks + 20 decoys = enemy sees 30 tanks on their border. If they shift defenders to meet your "invasion," your real 10 tanks attack somewhere else. Pairs with BSA (Behind the Scenes Authority) — higher BSA = more convincing deceptions.
+10 real tanks + 20 decoys = enemy sees 30 tanks on their border. If they shift defenders to meet your "invasion," your real 10 tanks attack somewhere else. Higher Prestige = more convincing deceptions.
 
 ---
 
@@ -641,7 +641,7 @@ Tools to exploit the DECEIVED intel state.
 Characters with military roles can be assigned to formations.
 
 ### Command Bonus
-- General provides +X% to all units in formation, where X = General's TerritoryAuthority / 5
+- General provides +X% to all units in formation, where X = Nation's Prestige / 5
 - TA-60 general = +12% to all stats
 - Max 3 generals per nation
 
@@ -745,7 +745,7 @@ These aren't isolated features — they chain together into emergent gameplay:
 4. **War weariness → Crisis events → TA drops → Military weakens → Enemy exploits opening**
    Long wars destroy you from within before the enemy does.
 
-5. **Decoys + high BSA → Enemy wastes resources → Real attack elsewhere**
+5. **Decoys + high Prestige → Enemy wastes resources → Real attack elsewhere**
    Intelligence warfare as force multiplier.
 
 6. **DEFCON rises → Economy penalty → Must choose military or economy → Deterrence shifts AI to covert ops**

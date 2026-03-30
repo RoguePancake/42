@@ -388,10 +388,6 @@ public partial class RuntimeBridge : Node
             ["isPlayer"] = c.IsPlayer,
             ["tileX"] = c.TileX,
             ["tileY"] = c.TileY,
-            ["territoryAuthority"] = c.TerritoryAuthority,
-            ["worldAuthority"] = c.WorldAuthority,
-            ["behindTheScenesAuthority"] = c.BehindTheScenesAuthority,
-            ["fullAuthorityIndex"] = c.FullAuthorityIndex,
         };
     }
 }

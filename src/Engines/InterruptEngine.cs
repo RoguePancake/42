@@ -88,9 +88,9 @@ public partial class InterruptEngine : Node
             }
         }
 
-        // CRITICAL: Coup plotters (low stability / low authority)
+        // CRITICAL: Coup plotters (low stability)
         if (!_firedOneTimeIds.Contains("coup_attempt") && tick > 25 &&
-            playerChar.FullAuthorityIndex < 35f)
+            playerNation.Stability < 25f)
         {
             _firedOneTimeIds.Add("coup_attempt");
             return new InterruptData
@@ -102,9 +102,9 @@ public partial class InterruptEngine : Node
                 TimerSeconds = 10f,
                 Choices = new[]
                 {
-                    new InterruptChoice { Label = "Flee to the bunker", EffectDescription = "Survive but look weak. Authority drops." },
+                    new InterruptChoice { Label = "Flee to the bunker", EffectDescription = "Survive but look weak. Stability drops further." },
                     new InterruptChoice { Label = "Rally loyalist troops", EffectDescription = "Risky — could crush it or die trying." },
-                    new InterruptChoice { Label = "Negotiate with plotters", EffectDescription = "Share power. Stability rises but authority splits." }
+                    new InterruptChoice { Label = "Negotiate with plotters", EffectDescription = "Share power. Stability rises but costs treasury." }
                 },
                 DefaultChoiceIndex = 0
             };
@@ -260,9 +260,9 @@ public partial class InterruptEngine : Node
                 break;
 
             case "coup_attempt":
-                if (choice == 0) { pc.TerritoryAuthority = Math.Clamp(pc.TerritoryAuthority - 15, 0, 100); }
-                if (choice == 1) { pc.TerritoryAuthority = Math.Clamp(pc.TerritoryAuthority + 20, 0, 100); nation.Treasury -= 150; }
-                if (choice == 2) { pc.TerritoryAuthority = Math.Clamp(pc.TerritoryAuthority - 10, 0, 100); nation.Prestige = Math.Clamp(nation.Prestige + 5, 0, 100); }
+                if (choice == 0) { nation.Stability = Math.Clamp(nation.Stability - 15, 0, 100); nation.Prestige = Math.Max(0, nation.Prestige - 10); }
+                if (choice == 1) { nation.Stability = Math.Clamp(nation.Stability + 10, 0, 100); nation.Treasury -= 150; }
+                if (choice == 2) { nation.Stability = Math.Clamp(nation.Stability + 5, 0, 100); nation.Treasury -= 200; }
                 break;
 
             case "bank_run":
@@ -273,7 +273,7 @@ public partial class InterruptEngine : Node
 
             case "protests":
                 if (choice == 0) { nation.Prestige = Math.Clamp(nation.Prestige + 15, 0, 100); }
-                if (choice == 1) { nation.Prestige = Math.Max(0, nation.Prestige - 10); pc.TerritoryAuthority = Math.Clamp(pc.TerritoryAuthority + 5, 0, 100); }
+                if (choice == 1) { nation.Prestige = Math.Max(0, nation.Prestige - 10); nation.Stability = Math.Clamp(nation.Stability + 5, 0, 100); }
                 if (choice == 2) { nation.Treasury -= 100; nation.Prestige = Math.Clamp(nation.Prestige + 5, 0, 100); }
                 break;
 

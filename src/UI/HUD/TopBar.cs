@@ -62,7 +62,7 @@ public partial class TopBar : Control
 
         _statsLabel = new Label
         {
-            Text = " TA: ... WA: ... BSA: ... [FAI: ...] ",
+            Text = " Treasury: ... | Provinces: ... ",
             VerticalAlignment = VerticalAlignment.Center
         };
         _statsLabel.AddThemeFontSizeOverride("font_size", 14);
@@ -95,7 +95,7 @@ public partial class TopBar : Control
             {
                 int natIdx = int.Parse(pc.NationId.Split('_')[1]);
                 var nat = data.Nations[natIdx];
-                _statsLabel.Text = $" Treasury: ${nat.Treasury:0}M  |  {pc.Role} {pc.Name}  |  TA: {pc.TerritoryAuthority:0}%  WA: {pc.WorldAuthority:0}%  BSA: {pc.BehindTheScenesAuthority:0}%  [FAI: {pc.FullAuthorityIndex:0}%] ";
+                _statsLabel.Text = $" Treasury: ${nat.Treasury:0}M  |  {pc.Role} {pc.Name}  |  Provinces: {nat.ProvinceCount}  |  Stability: {nat.Stability:0}% ";
             }
         }
     }

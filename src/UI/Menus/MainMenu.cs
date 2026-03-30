@@ -21,7 +21,7 @@ public partial class MainMenu : Control
         // Huge Title Label
         var title = new Label
         {
-            Text = "FULL AUTHORITY",
+            Text = "WARSHIP",
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center
         };

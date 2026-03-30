@@ -647,10 +647,4 @@ public class CharacterData
     public float TargetPixelX, TargetPixelY;
     public bool IsMoving = false;
 
-    // Authority Meters (0.0 to 100.0)
-    public float TerritoryAuthority = 30f;
-    public float WorldAuthority = 20f;
-    public float BehindTheScenesAuthority = 40f;
-
-    public float FullAuthorityIndex => (TerritoryAuthority + WorldAuthority + BehindTheScenesAuthority) / 3f;
 }

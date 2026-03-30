@@ -17,10 +17,6 @@ public partial class DossierPanel : Control
     private Label _nameLabel = null!;
     private Label _roleLabel = null!;
     private Label _nationLabel = null!;
-    private ProgressBar _taBar = null!;
-    private ProgressBar _waBar = null!;
-    private ProgressBar _bsaBar = null!;
-    private Label _faiLabel = null!;
     private VBoxContainer _actionBox = null!;
     private Button _closeBtn = null!;
 
@@ -90,18 +86,6 @@ public partial class DossierPanel : Control
         // Separator
         _content.AddChild(new HSeparator());
 
-        // === AUTHORITY METERS ===
-        _content.AddChild(MakeBarSection("Territory Authority (TA)", out _taBar, new Color(0.2f, 0.7f, 0.3f)));
-        _content.AddChild(MakeBarSection("World Authority (WA)", out _waBar, new Color(0.3f, 0.5f, 0.9f)));
-        _content.AddChild(MakeBarSection("Shadow Authority (BSA)", out _bsaBar, new Color(0.7f, 0.2f, 0.6f)));
-
-        // FAI composite
-        _faiLabel = new Label { Text = "Full Authority Index: 0%" };
-        _faiLabel.AddThemeFontSizeOverride("font_size", 20);
-        _faiLabel.AddThemeColorOverride("font_color", Colors.Gold);
-        _faiLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        _content.AddChild(_faiLabel);
-
         // Separator
         _content.AddChild(new HSeparator());
 
@@ -115,11 +99,10 @@ public partial class DossierPanel : Control
         _actionBox.AddThemeConstantOverride("separation", 6);
         _content.AddChild(_actionBox);
 
-        // Listen for authority changes to update bars live
-        EventBus.Instance?.Subscribe<AuthorityChangedEvent>(ev => {
-            if (_target != null && (ev.CharacterId == _target.Id || _target.IsPlayer))
+        // Listen for turn changes to update display
+        EventBus.Instance?.Subscribe<TurnAdvancedEvent>(_ => {
+            if (_target != null)
             {
-                // Simple refresh trick: re-call ShowCharacter
                 CallDeferred(nameof(RefreshDisplay));
             }
         });
@@ -128,34 +111,6 @@ public partial class DossierPanel : Control
     private void RefreshDisplay()
     {
         if (_target != null) ShowCharacter(_target);
-    }
-
-    private VBoxContainer MakeBarSection(string label, out ProgressBar bar, Color color)
-    {
-        var box = new VBoxContainer();
-        box.AddThemeConstantOverride("separation", 2);
-
-        var lbl = new Label { Text = label };
-        lbl.AddThemeFontSizeOverride("font_size", 13);
-        lbl.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.7f));
-        box.AddChild(lbl);
-
-        bar = new ProgressBar
-        {
-            MinValue = 0,
-            MaxValue = 100,
-            Value = 0,
-            CustomMinimumSize = new Vector2(0, 22),
-            ShowPercentage = true
-        };
-        // Style the bar fill
-        var fillStyle = new StyleBoxFlat { BgColor = color, CornerRadiusTopLeft = 4, CornerRadiusTopRight = 4, CornerRadiusBottomLeft = 4, CornerRadiusBottomRight = 4 };
-        var bgStyle = new StyleBoxFlat { BgColor = new Color(0.15f, 0.15f, 0.2f), CornerRadiusTopLeft = 4, CornerRadiusTopRight = 4, CornerRadiusBottomLeft = 4, CornerRadiusBottomRight = 4 };
-        bar.AddThemeStyleboxOverride("fill", fillStyle);
-        bar.AddThemeStyleboxOverride("background", bgStyle);
-        box.AddChild(bar);
-
-        return box;
     }
 
     /// <summary>Open the dossier for a specific character.</summary>
@@ -176,21 +131,15 @@ public partial class DossierPanel : Control
             _nationLabel.Text = $"Nation: {world.Nations[natIdx].Name}";
         }
 
-        // Update bars
-        _taBar.Value = character.TerritoryAuthority;
-        _waBar.Value = character.WorldAuthority;
-        _bsaBar.Value = character.BehindTheScenesAuthority;
-        _faiLabel.Text = $"Full Authority Index: {character.FullAuthorityIndex:0.0}%";
-
         // Build action buttons
         foreach (var child in _actionBox.GetChildren())
             child.QueueFree();
 
         if (character.IsPlayer)
         {
-            AddActionButton("📋 Review Intel", "Analyze your own networks");
-            AddActionButton("💰 Fund Militia (+TA)", "Spend resources to boost local control");
-            AddActionButton("🎙 Public Address (+WA)", "Broadcast to raise world standing");
+            AddActionButton("📋 Review Intel", "Analyze your own intelligence networks");
+            AddActionButton("💰 Fund Militia", "Spend resources to recruit local militia");
+            AddActionButton("🛡 Fortify", "Improve defenses in controlled territories");
         }
         else
         {
@@ -248,8 +197,8 @@ public partial class DossierPanel : Control
         string commandType = action switch
         {
             "📋 Review Intel" => "review_intel",
-            "💰 Fund Militia (+TA)" => "fund_militia",
-            "🎙 Public Address (+WA)" => "public_address",
+            "💰 Fund Militia" => "fund_militia",
+            "🛡 Fortify" => "fortify",
             "🔍 Investigate" => "investigate",
             "💵 Bribe" => "bribe",
             "⚠️ Threaten" => "threaten",
