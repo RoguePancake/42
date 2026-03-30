@@ -4,138 +4,113 @@ using Warship.World;
 namespace Warship.UI.Map;
 
 /// <summary>
-/// Camera with WASD pan, mouse scroll zoom, middle-click drag,
-/// arrow keys, and edge scrolling. Clamped to map bounds.
+/// Camera controller: WASD/arrow pan, scroll zoom, middle-click drag, edge scroll.
+/// Clamped to map bounds. Smooth zoom interpolation.
 /// </summary>
 public partial class MapCamera : Camera2D
 {
-    // Zoom settings — 0.007x sees entire 6000x3600 map, 4.0x sees individual soldiers
-    private float _targetZoom = 1.0f;
+    // Zoom: 0.007x = entire world, 4.0x = individual soldiers
+    private float _targetZoom = 0.015f;
     private const float ZoomMin = 0.007f;
     private const float ZoomMax = 4.0f;
-    private const float ZoomSpeed = 0.15f;
+    private const float ZoomStep = 0.15f;
     private const float ZoomSmoothing = 8.0f;
 
-    // Pan settings
+    // Pan
     private const float PanSpeed = 500f;
     private const float EdgeScrollSpeed = 400f;
-    private const float EdgeScrollMargin = 30f; // pixels from screen edge
+    private const float EdgeMargin = 30f;
 
-    // UI insets — edge scroll only triggers within the map viewport area
-    private const float UiInsetTop = 64f;     // Top Bar A (32) + Top Bar B (32)
-    private const float UiInsetBottom = 200f;  // BottomPanel
-    private const float UiInsetLeft = 250f;    // LeftSidebar
-    private const float UiInsetRight = 250f;   // RightSidebar
+    // UI panel insets (don't edge-scroll over UI)
+    private const float InsetTop = 64f;
+    private const float InsetBottom = 200f;
+    private const float InsetLeft = 250f;
+    private const float InsetRight = 250f;
 
-    // Drag state
-    private bool _dragging = false;
-    private Vector2 _dragStart;
+    // Middle-click drag
+    private bool _dragging;
 
-    // Map bounds (in pixels)
-    private float _mapWidth;
-    private float _mapHeight;
+    // Map size in pixels
+    private float _mapPixelW;
+    private float _mapPixelH;
 
     public override void _Ready()
     {
-        _mapWidth = TerrainGenerator.DefaultWidth * MapManagerConstants.TileSize;
-        _mapHeight = TerrainGenerator.DefaultHeight * MapManagerConstants.TileSize;
+        _mapPixelW = TerrainGenerator.DefaultWidth * MapManagerConstants.TileSize;
+        _mapPixelH = TerrainGenerator.DefaultHeight * MapManagerConstants.TileSize;
 
-        // Center camera on map
-        Position = new Vector2(_mapWidth / 2f, _mapHeight / 2f);
-
-        // Start zoomed out to see the full 6000x3600 world
-        _targetZoom = 0.015f;
+        // Start centered, zoomed out
+        Position = new Vector2(_mapPixelW / 2f, _mapPixelH / 2f);
         Zoom = new Vector2(_targetZoom, _targetZoom);
-
         MakeCurrent();
 
-        GD.Print("[MapCamera] Ready — WASD/arrows to pan, scroll to zoom, middle-click drag");
+        GD.Print("[MapCamera] Ready — WASD/arrows pan, scroll zoom, middle-drag");
     }
 
     public override void _UnhandledInput(InputEvent e)
     {
-        // Mouse scroll → zoom
         if (e is InputEventMouseButton mb)
         {
             if (mb.ButtonIndex == MouseButton.WheelUp && mb.Pressed)
-            {
-                _targetZoom = Mathf.Clamp(_targetZoom + ZoomSpeed, ZoomMin, ZoomMax);
-            }
+                _targetZoom = Mathf.Clamp(_targetZoom * 1.15f, ZoomMin, ZoomMax);
             else if (mb.ButtonIndex == MouseButton.WheelDown && mb.Pressed)
-            {
-                _targetZoom = Mathf.Clamp(_targetZoom - ZoomSpeed, ZoomMin, ZoomMax);
-            }
-            // Middle mouse → start/stop drag
+                _targetZoom = Mathf.Clamp(_targetZoom / 1.15f, ZoomMin, ZoomMax);
             else if (mb.ButtonIndex == MouseButton.Middle)
-            {
                 _dragging = mb.Pressed;
-                if (_dragging)
-                    _dragStart = mb.GlobalPosition;
-            }
         }
 
-        // Mouse drag → pan
         if (e is InputEventMouseMotion mm && _dragging)
         {
-            float currentZoom = Zoom.X;
-            Position -= (mm.Relative / currentZoom);
+            Position -= mm.Relative / Zoom.X;
         }
     }
 
     public override void _Process(double delta)
     {
         float dt = (float)delta;
-        float currentZoom = Zoom.X;
+        float z = Zoom.X;
 
-        // ─── Keyboard Pan (WASD + Arrows) ───
-        var panDir = Vector2.Zero;
+        // Keyboard pan
+        var pan = Vector2.Zero;
+        if (Input.IsKeyPressed(Key.W) || Input.IsKeyPressed(Key.Up)) pan.Y -= 1;
+        if (Input.IsKeyPressed(Key.S) || Input.IsKeyPressed(Key.Down)) pan.Y += 1;
+        if (Input.IsKeyPressed(Key.A) || Input.IsKeyPressed(Key.Left)) pan.X -= 1;
+        if (Input.IsKeyPressed(Key.D) || Input.IsKeyPressed(Key.Right)) pan.X += 1;
 
-        if (Input.IsKeyPressed(Key.W) || Input.IsKeyPressed(Key.Up))
-            panDir.Y -= 1;
-        if (Input.IsKeyPressed(Key.S) || Input.IsKeyPressed(Key.Down))
-            panDir.Y += 1;
-        if (Input.IsKeyPressed(Key.A) || Input.IsKeyPressed(Key.Left))
-            panDir.X -= 1;
-        if (Input.IsKeyPressed(Key.D) || Input.IsKeyPressed(Key.Right))
-            panDir.X += 1;
+        if (pan != Vector2.Zero)
+            Position += pan.Normalized() * PanSpeed * dt / z;
 
-        if (panDir != Vector2.Zero)
-            Position += panDir.Normalized() * PanSpeed * dt / currentZoom;
-
-        // ─── Edge Scroll (mouse near screen edges) ───
+        // Edge scroll (only when not dragging, mouse in map area)
         if (!_dragging)
         {
-            var mousePos = GetViewport().GetMousePosition();
-            var viewportSize = GetViewportRect().Size;
-            var edgeDir = Vector2.Zero;
+            var mouse = GetViewport().GetMousePosition();
+            var vpSize = GetViewportRect().Size;
+            var edge = Vector2.Zero;
 
-            // Only trigger edge scroll when mouse is in the map area (not over UI panels)
-            bool inMapArea = mousePos.X > UiInsetLeft && mousePos.X < viewportSize.X - UiInsetRight
-                          && mousePos.Y > UiInsetTop && mousePos.Y < viewportSize.Y - UiInsetBottom;
+            bool inMap = mouse.X > InsetLeft && mouse.X < vpSize.X - InsetRight
+                      && mouse.Y > InsetTop && mouse.Y < vpSize.Y - InsetBottom;
 
-            if (inMapArea)
+            if (inMap)
             {
-                if (mousePos.X < UiInsetLeft + EdgeScrollMargin) edgeDir.X -= 1;
-                if (mousePos.X > viewportSize.X - UiInsetRight - EdgeScrollMargin) edgeDir.X += 1;
-                if (mousePos.Y < UiInsetTop + EdgeScrollMargin) edgeDir.Y -= 1;
-                if (mousePos.Y > viewportSize.Y - UiInsetBottom - EdgeScrollMargin) edgeDir.Y += 1;
+                if (mouse.X < InsetLeft + EdgeMargin) edge.X -= 1;
+                if (mouse.X > vpSize.X - InsetRight - EdgeMargin) edge.X += 1;
+                if (mouse.Y < InsetTop + EdgeMargin) edge.Y -= 1;
+                if (mouse.Y > vpSize.Y - InsetBottom - EdgeMargin) edge.Y += 1;
             }
 
-            if (edgeDir != Vector2.Zero)
-                Position += edgeDir.Normalized() * EdgeScrollSpeed * dt / currentZoom;
+            if (edge != Vector2.Zero)
+                Position += edge.Normalized() * EdgeScrollSpeed * dt / z;
         }
 
-        // ─── Smooth Zoom ───
-        float newZoom = Mathf.Lerp(currentZoom, _targetZoom, ZoomSmoothing * dt);
+        // Smooth zoom
+        float newZoom = Mathf.Lerp(z, _targetZoom, ZoomSmoothing * dt);
         Zoom = new Vector2(newZoom, newZoom);
 
-        // ─── Clamp to Map Bounds ───
-        float halfViewW = GetViewportRect().Size.X / (2f * newZoom);
-        float halfViewH = GetViewportRect().Size.Y / (2f * newZoom);
-
+        // Clamp to map bounds
+        float halfW = GetViewportRect().Size.X / (2f * newZoom);
+        float halfH = GetViewportRect().Size.Y / (2f * newZoom);
         Position = new Vector2(
-            Mathf.Clamp(Position.X, halfViewW, _mapWidth - halfViewW),
-            Mathf.Clamp(Position.Y, halfViewH, _mapHeight - halfViewH)
-        );
+            Mathf.Clamp(Position.X, halfW, _mapPixelW - halfW),
+            Mathf.Clamp(Position.Y, halfH, _mapPixelH - halfH));
     }
 }

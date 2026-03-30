@@ -6,97 +6,90 @@ using Warship.World;
 namespace Warship.UI.Map;
 
 /// <summary>
-/// Streams terrain chunks based on camera position — Minecraft-style.
+/// Streams terrain chunks based on camera viewport — Minecraft-style.
 ///
-/// Only chunks near the camera are baked and held in VRAM. Distant chunks
-/// are freed. 6000x3600 map = 188x113 = ~21,000 total chunks, but only
-/// ~200-400 loaded at any time = constant VRAM usage.
+/// The 6000x3600 map = 188x113 chunks (32x32 tiles each).
+/// Only chunks near the camera are baked into textures. Distant chunks are freed.
+/// Typically 200-400 chunks loaded = constant VRAM regardless of map size.
 ///
-/// KEY TECHNIQUES:
-///   1. Height-based relief shading — north-neighbor comparison
-///   2. Sub-tile 4x4 pixel detail with jitter
-///   3. Water depth gradient near coastlines
-///   4. Seamless chunk boundaries
-///   5. Camera-based streaming — load ring around viewport, free the rest
-///
-/// Each chunk = 32x32 tiles = 1024x1024 pixel texture (~4MB VRAM).
-/// Load radius keeps ~200-400 chunks loaded at any time = 800MB-1.6GB max.
+/// Terrain rendering:
+///   - Height-based relief shading (north-neighbor comparison)
+///   - Sub-tile 4x4 pixel detail with color jitter
+///   - Water depth gradient near coastlines
+///   - River polylines drawn on a separate layer above terrain
 /// </summary>
 public partial class TerrainChunkRenderer : Node2D
 {
-    public const int ChunkTiles = 32;  // 32x32 tiles per chunk
-    public const int TileSize = MapManagerConstants.TileSize; // 32px
-    public const int SubBlock = 4;     // 4x4 pixel sub-blocks within each tile
+    private const int ChunkTiles = 32;
+    private const int TileSize = MapManagerConstants.TileSize;
+    private const int SubBlock = 4;  // 4x4 pixel sub-blocks per tile
 
-    // ── Streaming config ────────────────────────────────────────
-    // How many chunks beyond the viewport edge to keep loaded
-    private const int LoadBufferChunks = 3;
-    // How many chunks beyond the load ring before unloading
-    private const int UnloadBufferChunks = 5;
-    // Max chunks to bake per frame (spread load across frames)
+    // Streaming
+    private const int LoadBuffer = 3;     // chunks beyond viewport to keep loaded
+    private const int UnloadBuffer = 5;   // chunks beyond load ring to unload
     private const int MaxBakesPerFrame = 4;
 
-    // ── Minecraft map color palette ─────────────────────────────
-    private static readonly Color[] TerrainColors =
+    // Terrain color palette
+    private static readonly Color[] Colors =
     {
-        new(0.15f, 0.21f, 0.43f),  // 0: Deep Water — dark ocean
-        new(0.25f, 0.30f, 0.85f),  // 1: Water — Minecraft blue
-        new(0.86f, 0.82f, 0.55f),  // 2: Sand — warm desert tan
-        new(0.55f, 0.73f, 0.28f),  // 3: Grass — iconic Minecraft green
-        new(0.05f, 0.46f, 0.07f),  // 4: Forest — dark oak canopy green
-        new(0.47f, 0.44f, 0.40f),  // 5: Hills — stone grey-brown
-        new(0.54f, 0.50f, 0.46f),  // 6: Mountain — lighter stone
-        new(0.96f, 0.97f, 0.98f),  // 7: Snow — near-white
+        new(0.15f, 0.21f, 0.43f),  // 0 DeepWater
+        new(0.25f, 0.30f, 0.85f),  // 1 Water
+        new(0.86f, 0.82f, 0.55f),  // 2 Sand
+        new(0.55f, 0.73f, 0.28f),  // 3 Grass
+        new(0.05f, 0.46f, 0.07f),  // 4 Forest
+        new(0.47f, 0.44f, 0.40f),  // 5 Hills
+        new(0.54f, 0.50f, 0.46f),  // 6 Mountain
+        new(0.96f, 0.97f, 0.98f),  // 7 Snow
     };
 
-    // Elevation rank per terrain type (used for height shading)
     private static readonly float[] ElevationRank =
-    {
-        0.0f, 0.5f, 2.0f, 3.0f, 3.5f, 5.0f, 7.0f, 8.0f
-    };
+        { 0f, 0.5f, 2f, 3f, 3.5f, 5f, 7f, 8f };
 
-    // ── State ───────────────────────────────────────────────────
     private WorldData? _world;
     private int _chunksX, _chunksY;
-    private bool _initialized = false;
+    private bool _initialized;
 
-    // Loaded chunk sprites indexed by (cx, cy) packed as cx * 10000 + cy
-    private readonly Dictionary<int, Sprite2D> _loadedChunks = new();
-
-    // Track which chunks we need to load (queue spread across frames)
+    // Loaded chunks: key = cx * 10000 + cy
+    private readonly Dictionary<int, Sprite2D> _loaded = new();
     private readonly List<(int cx, int cy)> _bakeQueue = new();
+    private int _lastCamCX = -999, _lastCamCY = -999;
 
-    // Last known camera chunk position (avoid re-checking every frame)
-    private int _lastCamChunkX = -999, _lastCamChunkY = -999;
-
-    /// <summary>
-    /// Initialize streaming with world data. Does NOT bake anything upfront.
-    /// Chunks are baked on-demand in _Process based on camera position.
-    /// </summary>
-    public void BakeChunks(WorldData world)
+    public void Initialize(WorldData world)
     {
-        if (world.TerrainMap == null) return;
+        if (world.TerrainMap == null)
+        {
+            GD.PrintErr("[TerrainChunks] No terrain map!");
+            return;
+        }
 
-        // Clear any existing chunks
+        // Clear old chunks
         foreach (var child in GetChildren())
-            if (child is Sprite2D) child.QueueFree();
-        _loadedChunks.Clear();
+            if (child is Node n) n.QueueFree();
+        _loaded.Clear();
         _bakeQueue.Clear();
 
         _world = world;
         _chunksX = (world.MapWidth + ChunkTiles - 1) / ChunkTiles;
         _chunksY = (world.MapHeight + ChunkTiles - 1) / ChunkTiles;
         _initialized = true;
-        _lastCamChunkX = -999; // force first update
+        _lastCamCX = -999;
 
-        GD.Print($"[ChunkRenderer] Streaming mode: {_chunksX}x{_chunksY} = {_chunksX * _chunksY} total chunks, loading on demand");
+        GD.Print($"[TerrainChunks] Streaming {_chunksX}x{_chunksY} chunks on demand");
+
+        // Draw rivers on a layer above terrain
+        if (world.RiverPaths.Count > 0)
+        {
+            var riverLayer = new RiverDrawLayer();
+            riverLayer.Name = "Rivers";
+            riverLayer.SetRivers(world.RiverPaths, TileSize);
+            AddChild(riverLayer);
+        }
     }
 
     public override void _Process(double delta)
     {
         if (!_initialized || _world == null) return;
 
-        // Get camera position to determine which chunks to load
         var camera = GetViewport().GetCamera2D();
         if (camera == null) return;
 
@@ -104,63 +97,50 @@ public partial class TerrainChunkRenderer : Node2D
         float zoom = camera.Zoom.X;
         var vpSize = GetViewportRect().Size;
 
-        // Calculate visible chunk range
+        // Visible chunk range
         float halfW = vpSize.X / (2f * zoom);
         float halfH = vpSize.Y / (2f * zoom);
+        int chunkPx = ChunkTiles * TileSize;
 
-        int minChunkX = (int)((camPos.X - halfW) / (ChunkTiles * TileSize)) - LoadBufferChunks;
-        int maxChunkX = (int)((camPos.X + halfW) / (ChunkTiles * TileSize)) + LoadBufferChunks;
-        int minChunkY = (int)((camPos.Y - halfH) / (ChunkTiles * TileSize)) - LoadBufferChunks;
-        int maxChunkY = (int)((camPos.Y + halfH) / (ChunkTiles * TileSize)) + LoadBufferChunks;
+        int minCX = System.Math.Max(0, (int)((camPos.X - halfW) / chunkPx) - LoadBuffer);
+        int maxCX = System.Math.Min(_chunksX - 1, (int)((camPos.X + halfW) / chunkPx) + LoadBuffer);
+        int minCY = System.Math.Max(0, (int)((camPos.Y - halfH) / chunkPx) - LoadBuffer);
+        int maxCY = System.Math.Min(_chunksY - 1, (int)((camPos.Y + halfH) / chunkPx) + LoadBuffer);
 
-        // Clamp to map bounds
-        minChunkX = System.Math.Max(0, minChunkX);
-        maxChunkX = System.Math.Min(_chunksX - 1, maxChunkX);
-        minChunkY = System.Math.Max(0, minChunkY);
-        maxChunkY = System.Math.Min(_chunksY - 1, maxChunkY);
+        // Only re-evaluate when camera moves to a new chunk
+        int camCX = (int)(camPos.X / chunkPx);
+        int camCY = (int)(camPos.Y / chunkPx);
 
-        // Check if camera has moved to a different chunk — skip expensive work if not
-        int camChunkX = (int)(camPos.X / (ChunkTiles * TileSize));
-        int camChunkY = (int)(camPos.Y / (ChunkTiles * TileSize));
-
-        if (camChunkX != _lastCamChunkX || camChunkY != _lastCamChunkY)
+        if (camCX != _lastCamCX || camCY != _lastCamCY)
         {
-            _lastCamChunkX = camChunkX;
-            _lastCamChunkY = camChunkY;
+            _lastCamCX = camCX;
+            _lastCamCY = camCY;
 
-            // Queue chunks that need loading
+            // Queue chunks to load
             _bakeQueue.Clear();
-            for (int cx = minChunkX; cx <= maxChunkX; cx++)
-            {
-                for (int cy = minChunkY; cy <= maxChunkY; cy++)
-                {
-                    int key = ChunkKey(cx, cy);
-                    if (!_loadedChunks.ContainsKey(key))
-                    {
+            for (int cx = minCX; cx <= maxCX; cx++)
+                for (int cy = minCY; cy <= maxCY; cy++)
+                    if (!_loaded.ContainsKey(Key(cx, cy)))
                         _bakeQueue.Add((cx, cy));
-                    }
-                }
-            }
 
             // Unload distant chunks
-            int unloadMinX = minChunkX - UnloadBufferChunks;
-            int unloadMaxX = maxChunkX + UnloadBufferChunks;
-            int unloadMinY = minChunkY - UnloadBufferChunks;
-            int unloadMaxY = maxChunkY + UnloadBufferChunks;
+            int uMinX = minCX - UnloadBuffer;
+            int uMaxX = maxCX + UnloadBuffer;
+            int uMinY = minCY - UnloadBuffer;
+            int uMaxY = maxCY + UnloadBuffer;
 
-            var toRemove = new List<int>();
-            foreach (var (key, sprite) in _loadedChunks)
+            var remove = new List<int>();
+            foreach (var (key, sprite) in _loaded)
             {
-                int cx = key / 10000;
-                int cy = key % 10000;
-                if (cx < unloadMinX || cx > unloadMaxX || cy < unloadMinY || cy > unloadMaxY)
+                int cx = key / 10000, cy = key % 10000;
+                if (cx < uMinX || cx > uMaxX || cy < uMinY || cy > uMaxY)
                 {
                     sprite.QueueFree();
-                    toRemove.Add(key);
+                    remove.Add(key);
                 }
             }
-            foreach (var key in toRemove)
-                _loadedChunks.Remove(key);
+            foreach (int k in remove)
+                _loaded.Remove(k);
         }
 
         // Bake queued chunks (spread across frames)
@@ -170,94 +150,79 @@ public partial class TerrainChunkRenderer : Node2D
             var (cx, cy) = _bakeQueue[0];
             _bakeQueue.RemoveAt(0);
 
-            int key = ChunkKey(cx, cy);
-            if (_loadedChunks.ContainsKey(key)) continue; // already loaded
+            int key = Key(cx, cy);
+            if (_loaded.ContainsKey(key)) continue;
 
-            var sprite = BakeSingleChunk(cx, cy);
+            var sprite = BakeChunk(cx, cy);
             if (sprite != null)
             {
                 AddChild(sprite);
-                _loadedChunks[key] = sprite;
+                _loaded[key] = sprite;
             }
             baked++;
         }
     }
 
-    /// <summary>Bake a single chunk into a Sprite2D texture.</summary>
-    private Sprite2D? BakeSingleChunk(int cx, int cy)
+    private Sprite2D? BakeChunk(int cx, int cy)
     {
         if (_world?.TerrainMap == null) return null;
 
-        int mapW = _world.MapWidth;
-        int mapH = _world.MapHeight;
+        int mapW = _world.MapWidth, mapH = _world.MapHeight;
         int seed = _world.Seed;
-
-        int startTileX = cx * ChunkTiles;
-        int startTileY = cy * ChunkTiles;
-        int tilesW = System.Math.Min(ChunkTiles, mapW - startTileX);
-        int tilesH = System.Math.Min(ChunkTiles, mapH - startTileY);
+        int startX = cx * ChunkTiles, startY = cy * ChunkTiles;
+        int tilesW = System.Math.Min(ChunkTiles, mapW - startX);
+        int tilesH = System.Math.Min(ChunkTiles, mapH - startY);
         if (tilesW <= 0 || tilesH <= 0) return null;
 
-        int imgW = tilesW * TileSize;
-        int imgH = tilesH * TileSize;
+        int imgW = tilesW * TileSize, imgH = tilesH * TileSize;
         var img = Image.CreateEmpty(imgW, imgH, false, Image.Format.Rgba8);
 
         for (int tx = 0; tx < tilesW; tx++)
         {
             for (int ty = 0; ty < tilesH; ty++)
             {
-                int worldTX = startTileX + tx;
-                int worldTY = startTileY + ty;
-                int terrain = _world.TerrainMap[worldTX, worldTY];
-                int pxStart = tx * TileSize;
-                int pyStart = ty * TileSize;
+                int wx = startX + tx, wy = startY + ty;
+                int terrain = _world.TerrainMap[wx, wy];
+                if (terrain < 0 || terrain >= Colors.Length) terrain = 0;
 
-                // Step 1: Base color
-                Color baseColor = TerrainColors[terrain];
+                Color baseColor = Colors[terrain];
 
-                // Step 2: Height-based relief shading
-                float myElev = GetTileElevation(_world.TerrainMap, worldTX, worldTY, mapW, mapH, seed);
-                float northElev = GetTileElevation(_world.TerrainMap, worldTX, worldTY - 1, mapW, mapH, seed);
-                float heightDiff = myElev - northElev;
+                // Relief shading: compare with north neighbor
+                float myElev = TileElevation(_world.TerrainMap, wx, wy, mapW, mapH, seed);
+                float northElev = TileElevation(_world.TerrainMap, wx, wy - 1, mapW, mapH, seed);
+                float diff = myElev - northElev;
 
-                float shadeMul = 1.0f;
-                if (heightDiff > 0.3f)
-                    shadeMul = 1.12f;
-                else if (heightDiff > 0.1f)
-                    shadeMul = 1.06f;
-                else if (heightDiff < -0.3f)
-                    shadeMul = 0.85f;
-                else if (heightDiff < -0.1f)
-                    shadeMul = 0.92f;
+                float shade = 1.0f;
+                if (diff > 0.3f) shade = 1.12f;
+                else if (diff > 0.1f) shade = 1.06f;
+                else if (diff < -0.3f) shade = 0.85f;
+                else if (diff < -0.1f) shade = 0.92f;
 
-                // Step 3: Water depth gradient
+                // Water depth gradient
                 if (terrain <= 1)
                 {
-                    int coastDist = GetCoastDistance(_world.TerrainMap, worldTX, worldTY, mapW, mapH, 6);
-                    if (coastDist <= 1)
-                        shadeMul *= 1.25f;
-                    else if (coastDist <= 3)
-                        shadeMul *= 1.12f;
+                    int coastDist = CoastDistance(_world.TerrainMap, wx, wy, mapW, mapH, 6);
+                    if (coastDist <= 1) shade *= 1.25f;
+                    else if (coastDist <= 3) shade *= 1.12f;
                 }
 
-                Color shadedBase = ApplyShade(baseColor, shadeMul);
+                Color shaded = Shade(baseColor, shade);
 
-                // Step 4: Sub-block pixel detail (4x4 blocks with jitter)
-                int subCountX = TileSize / SubBlock;
-                int subCountY = TileSize / SubBlock;
+                // Sub-block detail (4x4 pixel blocks with jitter)
+                int pxBase = tx * TileSize, pyBase = ty * TileSize;
+                int subCount = TileSize / SubBlock;
 
-                for (int sx = 0; sx < subCountX; sx++)
+                for (int sx = 0; sx < subCount; sx++)
                 {
-                    for (int sy = 0; sy < subCountY; sy++)
+                    for (int sy = 0; sy < subCount; sy++)
                     {
                         float jitter = TerrainGenerator.HashFloat(seed,
-                            worldTX * 5003 + worldTY * 3001 + sx * 71 + sy * 37);
-
+                            wx * 5003 + wy * 3001 + sx * 71 + sy * 37);
                         float subShade = 1.0f + (jitter - 0.5f) * 0.08f;
-                        Color subColor = ApplyShade(shadedBase, subShade);
+                        Color subColor = Shade(shaded, subShade);
 
-                        int bx = pxStart + sx * SubBlock;
-                        int by = pyStart + sy * SubBlock;
+                        int bx = pxBase + sx * SubBlock;
+                        int by = pyBase + sy * SubBlock;
                         for (int px = 0; px < SubBlock; px++)
                             for (int py = 0; py < SubBlock; py++)
                                 img.SetPixel(bx + px, by + py, subColor);
@@ -271,25 +236,25 @@ public partial class TerrainChunkRenderer : Node2D
         {
             Texture = texture,
             Centered = false,
-            Position = new Vector2(startTileX * TileSize, startTileY * TileSize),
+            Position = new Vector2(startX * TileSize, startY * TileSize),
             TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
         };
     }
 
-    private static int ChunkKey(int cx, int cy) => cx * 10000 + cy;
+    // ── Helpers ──
 
-    // ── Shared helpers (unchanged) ──────────────────────────────
+    private static int Key(int cx, int cy) => cx * 10000 + cy;
 
-    private static float GetTileElevation(int[,] terrainMap, int x, int y, int mapW, int mapH, int seed)
+    private static float TileElevation(int[,] map, int x, int y, int w, int h, int seed)
     {
-        x = System.Math.Clamp(x, 0, mapW - 1);
-        y = System.Math.Clamp(y, 0, mapH - 1);
-        float baseElev = ElevationRank[terrainMap[x, y]];
+        x = System.Math.Clamp(x, 0, w - 1);
+        y = System.Math.Clamp(y, 0, h - 1);
+        float baseElev = ElevationRank[map[x, y]];
         float noise = TerrainGenerator.HashFloat(seed, x * 9173 + y * 4111) * 1.2f;
         return baseElev + noise;
     }
 
-    private static int GetCoastDistance(int[,] terrainMap, int x, int y, int mapW, int mapH, int maxDist)
+    private static int CoastDistance(int[,] map, int x, int y, int w, int h, int maxDist)
     {
         for (int d = 1; d <= maxDist; d++)
         {
@@ -299,15 +264,15 @@ public partial class TerrainChunkRenderer : Node2D
                 {
                     if (System.Math.Abs(dx) != d && System.Math.Abs(dy) != d) continue;
                     int nx = x + dx, ny = y + dy;
-                    if (nx < 0 || nx >= mapW || ny < 0 || ny >= mapH) continue;
-                    if (terrainMap[nx, ny] >= 2) return d;
+                    if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+                    if (map[nx, ny] >= 2) return d;
                 }
             }
         }
         return maxDist + 1;
     }
 
-    private static Color ApplyShade(Color c, float mul)
+    private static Color Shade(Color c, float mul)
     {
         return new Color(
             System.Math.Clamp(c.R * mul, 0f, 1f),
@@ -315,48 +280,37 @@ public partial class TerrainChunkRenderer : Node2D
             System.Math.Clamp(c.B * mul, 0f, 1f),
             c.A);
     }
-
-    /// <summary>Draw rivers on top of terrain (called once after baking).</summary>
-    public void DrawRivers(WorldData world)
-    {
-        if (world.RiverPaths.Count == 0) return;
-        var riverLayer = new RiverDrawLayer();
-        riverLayer.SetRivers(world.RiverPaths, TileSize);
-        AddChild(riverLayer);
-    }
-
-    public bool IsBaked => _initialized;
 }
 
-/// <summary>Draws rivers as polylines on a separate layer above terrain chunks.</summary>
+/// <summary>Draws river polylines above terrain chunks.</summary>
 public partial class RiverDrawLayer : Node2D
 {
-    private System.Collections.Generic.List<Vector2[]> _riverPixelPaths = new();
+    private readonly List<Vector2[]> _paths = new();
 
-    public void SetRivers(System.Collections.Generic.List<Vector2[]> riverTilePaths, int tileSize)
+    public void SetRivers(List<Vector2[]> tilePaths, int tileSize)
     {
-        _riverPixelPaths.Clear();
-        foreach (var path in riverTilePaths)
+        _paths.Clear();
+        foreach (var path in tilePaths)
         {
-            var pixelPath = new Vector2[path.Length];
+            var pixels = new Vector2[path.Length];
             for (int i = 0; i < path.Length; i++)
-                pixelPath[i] = new Vector2(
+                pixels[i] = new Vector2(
                     path[i].X * tileSize + tileSize / 2f,
                     path[i].Y * tileSize + tileSize / 2f);
-            _riverPixelPaths.Add(pixelPath);
+            _paths.Add(pixels);
         }
         QueueRedraw();
     }
 
     public override void _Draw()
     {
-        var riverColor = new Color(0.25f, 0.30f, 0.85f);
-        var riverShadow = new Color(0.15f, 0.20f, 0.55f);
-        foreach (var path in _riverPixelPaths)
+        var blue = new Color(0.25f, 0.30f, 0.85f);
+        var shadow = new Color(0.15f, 0.20f, 0.55f);
+        foreach (var path in _paths)
         {
             if (path.Length < 2) continue;
-            DrawPolyline(path, riverShadow, 5, true);
-            DrawPolyline(path, riverColor, 3, true);
+            DrawPolyline(path, shadow, 5, true);
+            DrawPolyline(path, blue, 3, true);
         }
     }
 }
